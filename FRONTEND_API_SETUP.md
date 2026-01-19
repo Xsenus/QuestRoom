@@ -20,6 +20,13 @@ VITE_API_URL=http://localhost:5000/api
 VITE_API_URL=https://your-api-domain.com/api
 ```
 
+Также можно использовать разные файлы окружения:
+
+```bash
+# Для разработки
+cp .env.development.example .env
+```
+
 ### 2. Установите зависимости
 
 ```bash
@@ -262,7 +269,7 @@ try {
 
 Если видите CORS ошибки, убедитесь что:
 1. C# API запущен
-2. В Program.cs настроен правильный origin для CORS
+2. В appsettings.json или appsettings.Production.json настроены Cors:AllowedOrigins
 3. Фронтенд использует правильный API_URL
 
 ### 401 Unauthorized

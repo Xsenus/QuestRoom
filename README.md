@@ -218,6 +218,10 @@ dotnet watch run
 npm run dev
 ```
 
+> Для разных окружений используйте `.env.development.example` и `.env.production.example` на фронте,
+> а для API настройте `Cors:AllowedOrigins` в `appsettings.json` или
+> `appsettings.Production.json`.
+
 ### Сборка для production
 
 Frontend:

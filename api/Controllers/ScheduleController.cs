@@ -35,6 +35,18 @@ public class ScheduleController : ControllerBase
     }
 
     [Authorize(Roles = "admin")]
+    [HttpPost("generate")]
+    public async Task<ActionResult<object>> GenerateSchedule([FromBody] QuestScheduleGenerateDto request)
+    {
+        var createdCount = await _scheduleService.GenerateScheduleAsync(
+            request.QuestId,
+            request.FromDate,
+            request.ToDate);
+
+        return Ok(new { createdCount });
+    }
+
+    [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateSlot(Guid id, [FromBody] QuestScheduleUpsertDto slot)
     {

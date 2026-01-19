@@ -20,6 +20,7 @@ import CertificatesAdminPage from './pages/admin/CertificatesPage';
 import ReviewsAdminPage from './pages/admin/ReviewsAdminPage';
 import PromotionsAdminPage from './pages/admin/PromotionsAdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import PricingRulesPage from './pages/admin/PricingRulesPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -43,6 +44,7 @@ function App() {
                 <Route index element={<QuestsPage />} />
                 <Route path="quests" element={<QuestsPage />} />
                 <Route path="bookings" element={<BookingsPage />} />
+                <Route path="pricing" element={<PricingRulesPage />} />
                 <Route path="rules" element={<RulesAdminPage />} />
                 <Route path="about" element={<AboutAdminPage />} />
                 <Route path="certificates" element={<CertificatesAdminPage />} />

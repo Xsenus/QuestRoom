@@ -163,6 +163,22 @@ export default function QuestsPage() {
     }
   };
 
+  const handleImageUpload = async (file?: File) => {
+    if (!file || !editingQuest) return;
+
+    try {
+      const image = await api.uploadImage(file);
+      const images = [...(editingQuest.images || []), image.url];
+      setEditingQuest({
+        ...editingQuest,
+        images,
+        mainImage: editingQuest.mainImage || image.url,
+      });
+    } catch (error) {
+      alert('Ошибка загрузки изображения: ' + (error as Error).message);
+    }
+  };
+
   if (editingQuest) {
     return (
       <div className="max-w-5xl">
@@ -207,6 +223,21 @@ export default function QuestsPage() {
                 Изображения квеста
               </label>
               <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors cursor-pointer">
+                    <Upload className="w-4 h-4" />
+                    Загрузить файл
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleImageUpload(e.target.files?.[0])}
+                    />
+                  </label>
+                  <span className="text-sm text-gray-500">
+                    Можно загрузить изображение в базу или вставить URL вручную.
+                  </span>
+                </div>
                 {(editingQuest.images || []).map((img, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <input

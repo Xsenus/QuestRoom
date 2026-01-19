@@ -74,6 +74,10 @@ export default function QuestDetailPage() {
     return grouped;
   };
 
+  const getUniquePrices = (slots: QuestSchedule[]) => {
+    return Array.from(new Set(slots.map((slot) => slot.price))).sort((a, b) => a - b);
+  };
+
   const getDayName = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('ru-RU', { weekday: 'long' });
@@ -206,13 +210,16 @@ export default function QuestDetailPage() {
                             : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                       >
-                        {slot.timeSlot.substring(0, 5)}
+                        <div className="text-sm">{slot.timeSlot.substring(0, 5)}</div>
+                        <div className="text-xs opacity-80">{slot.price} ₽</div>
                       </button>
                     ))}
                   </div>
 
                   <div className="flex-shrink-0 text-white text-sm">
-                    {slots[0]?.price} ₽
+                    {getUniquePrices(slots).map((price) => (
+                      <div key={price}>{price} ₽</div>
+                    ))}
                   </div>
                 </div>
               ))}

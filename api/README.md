@@ -33,7 +33,10 @@ dotnet restore
     "Password": "admin12345"
   },
   "Cors": {
-    "AllowAnyOrigin": false
+    "AllowAnyOrigin": false,
+    "AllowedOrigins": [
+      "http://localhost:5173"
+    ]
   },
   "Swagger": {
     "Enabled": true
@@ -81,7 +84,20 @@ Swagger UI: `http://localhost:5000/swagger`
 
 - `GET /api/schedule/quest/{questId}` - Получить расписание квеста
 - `POST /api/schedule` - Создать слот расписания (требуется авторизация admin)
+- `POST /api/schedule/generate` - Сгенерировать слоты по правилам цен (admin)
 - `PUT /api/schedule/{id}` - Обновить слот (требуется авторизация admin)
+
+### Ценовые правила
+
+- `GET /api/pricingrules` - Получить правила (можно фильтровать по questId)
+- `POST /api/pricingrules` - Создать правило (admin)
+- `PUT /api/pricingrules/{id}` - Обновить правило (admin)
+- `DELETE /api/pricingrules/{id}` - Удалить правило (admin)
+
+### Изображения
+
+- `POST /api/images` - Загрузить изображение в базу (admin)
+- `GET /api/images/{id}` - Получить изображение по ID
 
 ### Бронирования
 
