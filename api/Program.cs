@@ -119,6 +119,8 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    c.OperationFilter<QuestRoomApi.Swagger.FileUploadOperationFilter>();
 });
 
 var app = builder.Build();
