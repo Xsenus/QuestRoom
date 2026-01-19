@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { supabase, Rule } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { Rule, RuleUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 
 export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingRule, setEditingRule] = useState<Partial<Rule> | null>(null);
+  const [editingRule, setEditingRule] = useState<(RuleUpsert & { id?: string }) | null>(
+    null
+  );
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -13,15 +16,11 @@ export default function RulesPage() {
   }, []);
 
   const loadRules = async () => {
-    const { data, error } = await supabase
-      .from('rules')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading rules:', error);
-    } else {
+    try {
+      const data = await api.getRules();
       setRules(data || []);
+    } catch (error) {
+      console.error('Error loading rules:', error);
     }
     setLoading(false);
   };
@@ -30,8 +29,8 @@ export default function RulesPage() {
     setEditingRule({
       title: '',
       content: '',
-      sort_order: rules.length,
-      is_visible: true,
+      sortOrder: rules.length,
+      isVisible: true,
     });
     setIsCreating(true);
   };
@@ -39,21 +38,17 @@ export default function RulesPage() {
   const handleSave = async () => {
     if (!editingRule) return;
 
-    if (isCreating) {
-      const { error } = await supabase.from('rules').insert([editingRule]);
-      if (error) {
-        alert('Ошибка при создании правила: ' + error.message);
-        return;
+    const { id, ...payload } = editingRule;
+
+    try {
+      if (isCreating) {
+        await api.createRule(payload);
+      } else if (id) {
+        await api.updateRule(id, payload);
       }
-    } else {
-      const { error } = await supabase
-        .from('rules')
-        .update(editingRule)
-        .eq('id', editingRule.id);
-      if (error) {
-        alert('Ошибка при обновлении правила: ' + error.message);
-        return;
-      }
+    } catch (error) {
+      alert('Ошибка при сохранении правила: ' + (error as Error).message);
+      return;
     }
 
     setEditingRule(null);
@@ -67,27 +62,23 @@ export default function RulesPage() {
   };
 
   const handleToggleVisibility = async (rule: Rule) => {
-    const { error } = await supabase
-      .from('rules')
-      .update({ is_visible: !rule.is_visible })
-      .eq('id', rule.id);
-
-    if (error) {
-      alert('Ошибка при изменении видимости: ' + error.message);
-    } else {
+    try {
+      const { id, createdAt, updatedAt, ...payload } = rule;
+      await api.updateRule(id, { ...payload, isVisible: !rule.isVisible });
       loadRules();
+    } catch (error) {
+      alert('Ошибка при изменении видимости: ' + (error as Error).message);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить это правило?')) return;
 
-    const { error } = await supabase.from('rules').delete().eq('id', id);
-
-    if (error) {
-      alert('Ошибка при удалении правила: ' + error.message);
-    } else {
+    try {
+      await api.deleteRule(id);
       loadRules();
+    } catch (error) {
+      alert('Ошибка при удалении правила: ' + (error as Error).message);
     }
   };
 
@@ -141,11 +132,11 @@ export default function RulesPage() {
                 </label>
                 <input
                   type="number"
-                  value={editingRule.sort_order || 0}
+                  value={editingRule.sortOrder || 0}
                   onChange={(e) =>
                     setEditingRule({
                       ...editingRule,
-                      sort_order: parseInt(e.target.value) || 0,
+                      sortOrder: parseInt(e.target.value) || 0,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -156,9 +147,9 @@ export default function RulesPage() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={editingRule.is_visible !== false}
+                    checked={editingRule.isVisible !== false}
                     onChange={(e) =>
-                      setEditingRule({ ...editingRule, is_visible: e.target.checked })
+                      setEditingRule({ ...editingRule, isVisible: e.target.checked })
                     }
                     className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                   />
@@ -209,14 +200,14 @@ export default function RulesPage() {
           <div
             key={rule.id}
             className={`bg-white rounded-lg shadow-lg p-6 ${
-              !rule.is_visible ? 'opacity-60' : ''
+              !rule.isVisible ? 'opacity-60' : ''
             }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-xl font-bold text-gray-900">{rule.title}</h3>
-                  {!rule.is_visible && (
+                  {!rule.isVisible && (
                     <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
                       СКРЫТ
                     </span>
@@ -236,9 +227,9 @@ export default function RulesPage() {
                 <button
                   onClick={() => handleToggleVisibility(rule)}
                   className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
-                  title={rule.is_visible ? 'Скрыть' : 'Показать'}
+                  title={rule.isVisible ? 'Скрыть' : 'Показать'}
                 >
-                  {rule.is_visible ? (
+                  {rule.isVisible ? (
                     <Eye className="w-5 h-5" />
                   ) : (
                     <EyeOff className="w-5 h-5" />

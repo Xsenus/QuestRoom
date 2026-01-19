@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Settings } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { Settings, SettingsUpdate } from '../../lib/types';
 import { Save, ExternalLink } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -12,28 +13,22 @@ export default function SettingsPage() {
   }, []);
 
   const loadSettings = async () => {
-    const { data, error } = await supabase
-      .from('settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error loading settings:', error);
-    } else if (data) {
+    try {
+      const data = await api.getSettings();
       setSettings(data);
-    } else {
+    } catch (error) {
+      console.error('Error loading settings:', error);
       setSettings({
         id: '00000000-0000-0000-0000-000000000001',
-        vk_url: null,
-        youtube_url: null,
-        instagram_url: null,
-        telegram_url: null,
+        vkUrl: null,
+        youtubeUrl: null,
+        instagramUrl: null,
+        telegramUrl: null,
         address: null,
         email: null,
         phone: null,
-        logo_url: null,
-        updated_at: new Date().toISOString(),
+        logoUrl: null,
+        updatedAt: new Date().toISOString(),
       });
     }
     setLoading(false);
@@ -44,17 +39,22 @@ export default function SettingsPage() {
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from('settings')
-      .upsert({
-        ...settings,
-        updated_at: new Date().toISOString(),
-      });
+    const payload: SettingsUpdate = {
+      vkUrl: settings.vkUrl,
+      youtubeUrl: settings.youtubeUrl,
+      instagramUrl: settings.instagramUrl,
+      telegramUrl: settings.telegramUrl,
+      address: settings.address,
+      email: settings.email,
+      phone: settings.phone,
+      logoUrl: settings.logoUrl,
+    };
 
-    if (error) {
-      alert('Ошибка при сохранении настроек: ' + error.message);
-    } else {
+    try {
+      await api.updateSettings(payload);
       alert('Настройки успешно сохранены!');
+    } catch (error) {
+      alert('Ошибка при сохранении настроек: ' + (error as Error).message);
     }
 
     setSaving(false);
@@ -89,9 +89,9 @@ export default function SettingsPage() {
               </label>
               <input
                 type="url"
-                value={settings.vk_url || ''}
+                value={settings.vkUrl || ''}
                 onChange={(e) =>
-                  setSettings({ ...settings, vk_url: e.target.value })
+                  setSettings({ ...settings, vkUrl: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="https://vk.com/your_page"
@@ -107,9 +107,9 @@ export default function SettingsPage() {
               </label>
               <input
                 type="url"
-                value={settings.youtube_url || ''}
+                value={settings.youtubeUrl || ''}
                 onChange={(e) =>
-                  setSettings({ ...settings, youtube_url: e.target.value })
+                  setSettings({ ...settings, youtubeUrl: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="https://youtube.com/@your_channel"
@@ -125,9 +125,9 @@ export default function SettingsPage() {
               </label>
               <input
                 type="url"
-                value={settings.instagram_url || ''}
+                value={settings.instagramUrl || ''}
                 onChange={(e) =>
-                  setSettings({ ...settings, instagram_url: e.target.value })
+                  setSettings({ ...settings, instagramUrl: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="https://instagram.com/your_profile"
@@ -143,9 +143,9 @@ export default function SettingsPage() {
               </label>
               <input
                 type="url"
-                value={settings.telegram_url || ''}
+                value={settings.telegramUrl || ''}
                 onChange={(e) =>
-                  setSettings({ ...settings, telegram_url: e.target.value })
+                  setSettings({ ...settings, telegramUrl: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="https://t.me/your_channel"
@@ -218,18 +218,18 @@ export default function SettingsPage() {
             </label>
             <input
               type="url"
-              value={settings.logo_url || ''}
+              value={settings.logoUrl || ''}
               onChange={(e) =>
-                setSettings({ ...settings, logo_url: e.target.value })
+                setSettings({ ...settings, logoUrl: e.target.value })
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               placeholder="https://example.com/logo.png"
             />
-            {settings.logo_url && (
+            {settings.logoUrl && (
               <div className="mt-4">
                 <p className="text-sm text-gray-600 mb-2">Предпросмотр:</p>
                 <img
-                  src={settings.logo_url}
+                  src={settings.logoUrl}
                   alt="Logo preview"
                   className="max-h-20 object-contain border border-gray-300 rounded p-2"
                 />

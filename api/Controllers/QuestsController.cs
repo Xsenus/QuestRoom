@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuestRoomApi.Data;
-using QuestRoomApi.Models;
+using QuestRoomApi.DTOs.Quests;
+using QuestRoomApi.Services;
 
 namespace QuestRoomApi.Controllers;
 
@@ -10,103 +9,48 @@ namespace QuestRoomApi.Controllers;
 [Route("api/[controller]")]
 public class QuestsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IQuestService _questService;
 
-    public QuestsController(AppDbContext context)
+    public QuestsController(IQuestService questService)
     {
-        _context = context;
+        _questService = questService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Quest>>> GetQuests([FromQuery] bool? visible = true)
+    public async Task<ActionResult<IEnumerable<QuestDto>>> GetQuests([FromQuery] bool? visible = true)
     {
-        var query = _context.Quests.AsQueryable();
-
-        if (visible.HasValue)
-        {
-            query = query.Where(q => q.IsVisible == visible.Value);
-        }
-
-        var quests = await query
-            .OrderBy(q => q.SortOrder)
-            .ToListAsync();
-
+        var quests = await _questService.GetQuestsAsync(visible);
         return Ok(quests);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Quest>> GetQuest(Guid id)
+    public async Task<ActionResult<QuestDto>> GetQuest(Guid id)
     {
-        var quest = await _context.Quests.FindAsync(id);
-
-        if (quest == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(quest);
+        var quest = await _questService.GetQuestAsync(id);
+        return quest == null ? NotFound() : Ok(quest);
     }
 
     [Authorize(Roles = "admin")]
     [HttpPost]
-    public async Task<ActionResult<Quest>> CreateQuest([FromBody] Quest quest)
+    public async Task<ActionResult<QuestDto>> CreateQuest([FromBody] QuestUpsertDto quest)
     {
-        quest.Id = Guid.NewGuid();
-        quest.CreatedAt = DateTime.UtcNow;
-        quest.UpdatedAt = DateTime.UtcNow;
-
-        _context.Quests.Add(quest);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetQuest), new { id = quest.Id }, quest);
+        var created = await _questService.CreateQuestAsync(quest);
+        return CreatedAtAction(nameof(GetQuest), new { id = created.Id }, created);
     }
 
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateQuest(Guid id, [FromBody] Quest quest)
+    public async Task<IActionResult> UpdateQuest(Guid id, [FromBody] QuestUpsertDto quest)
     {
-        if (id != quest.Id)
-        {
-            return BadRequest();
-        }
-
-        quest.UpdatedAt = DateTime.UtcNow;
-        _context.Entry(quest).State = EntityState.Modified;
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!await QuestExists(id))
-            {
-                return NotFound();
-            }
-            throw;
-        }
-
-        return NoContent();
+        var updated = await _questService.UpdateQuestAsync(id, quest);
+        return updated ? NoContent() : NotFound();
     }
 
     [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteQuest(Guid id)
     {
-        var quest = await _context.Quests.FindAsync(id);
-        if (quest == null)
-        {
-            return NotFound();
-        }
-
-        _context.Quests.Remove(quest);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    private async Task<bool> QuestExists(Guid id)
-    {
-        return await _context.Quests.AnyAsync(e => e.Id == id);
+        var deleted = await _questService.DeleteQuestAsync(id);
+        return deleted ? NoContent() : NotFound();
     }
 }

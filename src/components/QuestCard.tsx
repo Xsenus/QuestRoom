@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Users, XCircle, Phone, Clock } from 'lucide-react';
-import { Quest } from '../lib/supabase';
+import { Quest } from '../lib/types';
 
 interface QuestCardProps {
   quest: Quest;
@@ -8,7 +8,7 @@ interface QuestCardProps {
 
 export default function QuestCard({ quest }: QuestCardProps) {
   const navigate = useNavigate();
-  const mainImage = quest.main_image || quest.images?.[0] || '/images/image.png';
+  const mainImage = quest.mainImage || quest.images?.[0] || '/images/image.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
   const durationBadgeUrl = `/images/badges/${quest.duration}min.svg`;
 
@@ -30,7 +30,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
         />
       </div>
 
-      {quest.is_new && (
+      {quest.isNew && (
         <div className="absolute top-6 md:top-8 -right-1 md:-right-2 z-20 w-44 h-44 md:w-60 md:h-60 overflow-hidden pointer-events-none">
           <div className="absolute top-12 -right-10 md:top-16 md:-right-14 w-56 md:w-72 bg-red-600 text-white text-center py-2 md:py-3 transform rotate-45 shadow-2xl">
             <span className="text-base md:text-xl font-bold tracking-wider">NEW</span>
@@ -95,7 +95,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
               <XCircle className="w-5 h-5 md:w-6 md:h-6 text-red-600 flex-shrink-0 mt-1" />
               <div className="text-sm md:text-base">
                 <div className="font-bold text-gray-900 mb-1">Возрастное ограничение</div>
-                <div className="text-gray-700 leading-relaxed">{quest.age_restriction}</div>
+                <div className="text-gray-700 leading-relaxed">{quest.ageRestriction}</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -122,7 +122,9 @@ export default function QuestCard({ quest }: QuestCardProps) {
               <Users className="w-5 h-5 md:w-6 md:h-6 text-red-600 flex-shrink-0 mt-1" />
               <div className="text-sm md:text-base">
                 <div className="font-bold text-gray-900 mb-1">Количество участников</div>
-                <div className="text-gray-700">от {quest.participants_min} до {quest.participants_max} человек</div>
+                <div className="text-gray-700">
+                  от {quest.participantsMin} до {quest.participantsMax} человек
+                </div>
               </div>
             </div>
             {quest.phones && quest.phones.length > 0 && (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, AboutInfo } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { AboutInfo, AboutInfoUpdate } from '../../lib/types';
 import { Save } from 'lucide-react';
 
 export default function AboutPage() {
@@ -12,16 +13,11 @@ export default function AboutPage() {
   }, []);
 
   const loadAboutInfo = async () => {
-    const { data, error } = await supabase
-      .from('about_info')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error loading about info:', error);
-    } else if (data) {
+    try {
+      const data = await api.getAboutInfo();
       setAboutInfo(data);
+    } catch (error) {
+      console.error('Error loading about info:', error);
     }
     setLoading(false);
   };
@@ -31,17 +27,18 @@ export default function AboutPage() {
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from('about_info')
-      .upsert({
-        ...aboutInfo,
-        updated_at: new Date().toISOString(),
-      });
+    const payload: AboutInfoUpdate = {
+      title: aboutInfo.title,
+      content: aboutInfo.content,
+      mission: aboutInfo.mission,
+      vision: aboutInfo.vision,
+    };
 
-    if (error) {
-      alert('Ошибка при сохранении: ' + error.message);
-    } else {
+    try {
+      await api.updateAboutInfo(payload);
       alert('Информация успешно сохранена');
+    } catch (error) {
+      alert('Ошибка при сохранении: ' + (error as Error).message);
     }
 
     setSaving(false);

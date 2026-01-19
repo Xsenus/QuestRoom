@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Certificate } from '../lib/supabase';
+import { api } from '../lib/api';
+import { Certificate } from '../lib/types';
 
 export default function CertificatePage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -17,16 +18,11 @@ export default function CertificatePage() {
   }, []);
 
   const loadCertificates = async () => {
-    const { data, error } = await supabase
-      .from('certificates')
-      .select('*')
-      .eq('is_visible', true)
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading certificates:', error);
-    } else {
+    try {
+      const data = await api.getCertificates(true);
       setCertificates(data || []);
+    } catch (error) {
+      console.error('Error loading certificates:', error);
     }
     setLoading(false);
   };
@@ -66,9 +62,9 @@ export default function CertificatePage() {
           <div className="grid gap-6 md:grid-cols-2 mb-8">
             {certificates.map((cert) => (
               <div key={cert.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-                {cert.image_url && (
+                {cert.imageUrl && (
                   <img
-                    src={cert.image_url}
+                    src={cert.imageUrl}
                     alt={cert.title}
                     className="w-full h-64 object-cover rounded-lg mb-4"
                   />
@@ -76,7 +72,7 @@ export default function CertificatePage() {
                 <h3 className="text-xl font-bold text-white mb-2">{cert.title}</h3>
                 <p className="text-white/80 text-sm mb-2">{cert.description}</p>
                 <p className="text-white/60 text-xs">
-                  Дата выдачи: {new Date(cert.issued_date).toLocaleDateString('ru-RU')}
+                  Дата выдачи: {new Date(cert.issuedDate).toLocaleDateString('ru-RU')}
                 </p>
               </div>
             ))}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Star, User } from 'lucide-react';
-import { supabase, Review } from '../lib/supabase';
+import { api } from '../lib/api';
+import { Review } from '../lib/types';
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -11,16 +12,11 @@ export default function ReviewsPage() {
   }, []);
 
   const loadReviews = async () => {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('*')
-      .eq('is_visible', true)
-      .order('review_date', { ascending: false });
-
-    if (error) {
-      console.error('Error loading reviews:', error);
-    } else {
+    try {
+      const data = await api.getReviews(true);
       setReviews(data || []);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
     }
     setLoading(false);
   };
@@ -72,19 +68,19 @@ export default function ReviewsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-base md:text-lg font-bold text-white truncate">
-                    {review.customer_name}
+                    {review.customerName}
                   </h3>
-                  <p className="text-xs md:text-sm text-pink-300 truncate">{review.quest_title}</p>
+                  <p className="text-xs md:text-sm text-pink-300 truncate">{review.questTitle}</p>
                 </div>
                 <div className="flex-shrink-0">{renderStars(review.rating)}</div>
               </div>
 
               <p className="text-sm md:text-base text-white/90 leading-relaxed mb-3 md:mb-4">
-                {review.review_text}
+                {review.reviewText}
               </p>
 
               <div className="text-xs md:text-sm text-white/60">
-                {new Date(review.review_date).toLocaleDateString('ru-RU', {
+                {new Date(review.reviewDate).toLocaleDateString('ru-RU', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'

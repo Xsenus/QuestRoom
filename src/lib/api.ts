@@ -1,3 +1,26 @@
+import type {
+  AboutInfo,
+  AboutInfoUpdate,
+  Booking,
+  BookingCreate,
+  BookingUpdate,
+  Certificate,
+  CertificateUpsert,
+  DurationBadge,
+  Promotion,
+  PromotionUpsert,
+  Quest,
+  QuestSchedule,
+  QuestScheduleUpsert,
+  QuestUpsert,
+  Review,
+  ReviewUpsert,
+  Rule,
+  RuleUpsert,
+  Settings,
+  SettingsUpdate,
+} from './types';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const getAuthToken = () => {
@@ -65,27 +88,31 @@ class ApiClient {
   }
 
   // Quests
-  async getQuests(visible?: boolean) {
+  async getQuests(visible?: boolean): Promise<Quest[]> {
     const params = visible !== undefined ? `?visible=${visible}` : '';
     return this.request(`/quests${params}`);
   }
 
-  async getQuest(id: string) {
+  async getQuest(id: string): Promise<Quest> {
     return this.request(`/quests/${id}`);
   }
 
-  async createQuest(quest: any) {
+  async createQuest(quest: QuestUpsert): Promise<Quest> {
     return this.request('/quests', {
       method: 'POST',
       body: JSON.stringify(quest),
     });
   }
 
-  async updateQuest(id: string, quest: any) {
+  async updateQuest(id: string, quest: QuestUpsert) {
     return this.request(`/quests/${id}`, {
       method: 'PUT',
       body: JSON.stringify(quest),
     });
+  }
+
+  async getDurationBadges(): Promise<DurationBadge[]> {
+    return this.request('/durationbadges');
   }
 
   async deleteQuest(id: string) {
@@ -95,7 +122,11 @@ class ApiClient {
   }
 
   // Schedule
-  async getQuestSchedule(questId: string, fromDate?: string, toDate?: string) {
+  async getQuestSchedule(
+    questId: string,
+    fromDate?: string,
+    toDate?: string
+  ): Promise<QuestSchedule[]> {
     let params = '';
     if (fromDate || toDate) {
       const urlParams = new URLSearchParams();
@@ -106,14 +137,14 @@ class ApiClient {
     return this.request(`/schedule/quest/${questId}${params}`);
   }
 
-  async createScheduleSlot(slot: any) {
+  async createScheduleSlot(slot: QuestScheduleUpsert): Promise<QuestSchedule> {
     return this.request('/schedule', {
       method: 'POST',
       body: JSON.stringify(slot),
     });
   }
 
-  async updateScheduleSlot(id: string, slot: any) {
+  async updateScheduleSlot(id: string, slot: QuestScheduleUpsert) {
     return this.request(`/schedule/${id}`, {
       method: 'PUT',
       body: JSON.stringify(slot),
@@ -121,18 +152,18 @@ class ApiClient {
   }
 
   // Bookings
-  async getBookings() {
+  async getBookings(): Promise<Booking[]> {
     return this.request('/bookings');
   }
 
-  async createBooking(booking: any) {
+  async createBooking(booking: BookingCreate): Promise<Booking> {
     return this.request('/bookings', {
       method: 'POST',
       body: JSON.stringify(booking),
     });
   }
 
-  async updateBooking(id: string, booking: any) {
+  async updateBooking(id: string, booking: BookingUpdate) {
     return this.request(`/bookings/${id}`, {
       method: 'PUT',
       body: JSON.stringify(booking),
@@ -146,19 +177,19 @@ class ApiClient {
   }
 
   // Rules
-  async getRules(visible?: boolean) {
+  async getRules(visible?: boolean): Promise<Rule[]> {
     const params = visible !== undefined ? `?visible=${visible}` : '';
     return this.request(`/rules${params}`);
   }
 
-  async createRule(rule: any) {
+  async createRule(rule: RuleUpsert): Promise<Rule> {
     return this.request('/rules', {
       method: 'POST',
       body: JSON.stringify(rule),
     });
   }
 
-  async updateRule(id: string, rule: any) {
+  async updateRule(id: string, rule: RuleUpsert) {
     return this.request(`/rules/${id}`, {
       method: 'PUT',
       body: JSON.stringify(rule),
@@ -172,19 +203,19 @@ class ApiClient {
   }
 
   // Reviews
-  async getReviews(visible?: boolean) {
+  async getReviews(visible?: boolean): Promise<Review[]> {
     const params = visible !== undefined ? `?visible=${visible}` : '';
     return this.request(`/reviews${params}`);
   }
 
-  async createReview(review: any) {
+  async createReview(review: ReviewUpsert): Promise<Review> {
     return this.request('/reviews', {
       method: 'POST',
       body: JSON.stringify(review),
     });
   }
 
-  async updateReview(id: string, review: any) {
+  async updateReview(id: string, review: ReviewUpsert) {
     return this.request(`/reviews/${id}`, {
       method: 'PUT',
       body: JSON.stringify(review),
@@ -198,19 +229,19 @@ class ApiClient {
   }
 
   // Promotions
-  async getPromotions(active?: boolean) {
+  async getPromotions(active?: boolean): Promise<Promotion[]> {
     const params = active !== undefined ? `?active=${active}` : '';
     return this.request(`/promotions${params}`);
   }
 
-  async createPromotion(promotion: any) {
+  async createPromotion(promotion: PromotionUpsert): Promise<Promotion> {
     return this.request('/promotions', {
       method: 'POST',
       body: JSON.stringify(promotion),
     });
   }
 
-  async updatePromotion(id: string, promotion: any) {
+  async updatePromotion(id: string, promotion: PromotionUpsert) {
     return this.request(`/promotions/${id}`, {
       method: 'PUT',
       body: JSON.stringify(promotion),
@@ -224,19 +255,19 @@ class ApiClient {
   }
 
   // Certificates
-  async getCertificates(visible?: boolean) {
+  async getCertificates(visible?: boolean): Promise<Certificate[]> {
     const params = visible !== undefined ? `?visible=${visible}` : '';
     return this.request(`/certificates${params}`);
   }
 
-  async createCertificate(certificate: any) {
+  async createCertificate(certificate: CertificateUpsert): Promise<Certificate> {
     return this.request('/certificates', {
       method: 'POST',
       body: JSON.stringify(certificate),
     });
   }
 
-  async updateCertificate(id: string, certificate: any) {
+  async updateCertificate(id: string, certificate: CertificateUpsert) {
     return this.request(`/certificates/${id}`, {
       method: 'PUT',
       body: JSON.stringify(certificate),
@@ -250,11 +281,11 @@ class ApiClient {
   }
 
   // About
-  async getAboutInfo() {
+  async getAboutInfo(): Promise<AboutInfo> {
     return this.request('/about');
   }
 
-  async updateAboutInfo(about: any) {
+  async updateAboutInfo(about: AboutInfoUpdate) {
     return this.request('/about', {
       method: 'PUT',
       body: JSON.stringify(about),
@@ -262,11 +293,11 @@ class ApiClient {
   }
 
   // Settings
-  async getSettings() {
+  async getSettings(): Promise<Settings> {
     return this.request('/settings');
   }
 
-  async updateSettings(settings: any) {
+  async updateSettings(settings: SettingsUpdate) {
     return this.request('/settings', {
       method: 'PUT',
       body: JSON.stringify(settings),

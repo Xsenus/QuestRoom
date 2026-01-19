@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, UserPlus, GraduationCap, Heart, Baby } from 'lucide-react';
-import { supabase, AboutInfo } from '../lib/supabase';
+import { api } from '../lib/api';
+import { AboutInfo } from '../lib/types';
 
 export default function AboutPage() {
   const [aboutInfo, setAboutInfo] = useState<AboutInfo | null>(null);
@@ -11,16 +12,11 @@ export default function AboutPage() {
   }, []);
 
   const loadAboutInfo = async () => {
-    const { data, error } = await supabase
-      .from('about_info')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error loading about info:', error);
-    } else if (data) {
+    try {
+      const data = await api.getAboutInfo();
       setAboutInfo(data);
+    } catch (error) {
+      console.error('Error loading about info:', error);
     }
     setLoading(false);
   };

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { supabase, Certificate } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { Certificate, CertificateUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingCert, setEditingCert] = useState<Partial<Certificate> | null>(null);
+  const [editingCert, setEditingCert] = useState<
+    (CertificateUpsert & { id?: string }) | null
+  >(null);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -13,15 +16,11 @@ export default function CertificatesPage() {
   }, []);
 
   const loadCertificates = async () => {
-    const { data, error } = await supabase
-      .from('certificates')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading certificates:', error);
-    } else {
+    try {
+      const data = await api.getCertificates();
       setCertificates(data || []);
+    } catch (error) {
+      console.error('Error loading certificates:', error);
     }
     setLoading(false);
   };
@@ -30,10 +29,10 @@ export default function CertificatesPage() {
     setEditingCert({
       title: '',
       description: '',
-      image_url: '',
-      issued_date: new Date().toISOString().split('T')[0],
-      sort_order: certificates.length,
-      is_visible: true,
+      imageUrl: '',
+      issuedDate: new Date().toISOString().split('T')[0],
+      sortOrder: certificates.length,
+      isVisible: true,
     });
     setIsCreating(true);
   };
@@ -41,21 +40,17 @@ export default function CertificatesPage() {
   const handleSave = async () => {
     if (!editingCert) return;
 
-    if (isCreating) {
-      const { error } = await supabase.from('certificates').insert([editingCert]);
-      if (error) {
-        alert('Ошибка при создании сертификата: ' + error.message);
-        return;
+    const { id, ...payload } = editingCert;
+
+    try {
+      if (isCreating) {
+        await api.createCertificate(payload);
+      } else if (id) {
+        await api.updateCertificate(id, payload);
       }
-    } else {
-      const { error } = await supabase
-        .from('certificates')
-        .update(editingCert)
-        .eq('id', editingCert.id);
-      if (error) {
-        alert('Ошибка при обновлении сертификата: ' + error.message);
-        return;
-      }
+    } catch (error) {
+      alert('Ошибка при сохранении сертификата: ' + (error as Error).message);
+      return;
     }
 
     setEditingCert(null);
@@ -69,27 +64,23 @@ export default function CertificatesPage() {
   };
 
   const handleToggleVisibility = async (cert: Certificate) => {
-    const { error } = await supabase
-      .from('certificates')
-      .update({ is_visible: !cert.is_visible })
-      .eq('id', cert.id);
-
-    if (error) {
-      alert('Ошибка при изменении видимости: ' + error.message);
-    } else {
+    try {
+      const { id, createdAt, updatedAt, ...payload } = cert;
+      await api.updateCertificate(id, { ...payload, isVisible: !cert.isVisible });
       loadCertificates();
+    } catch (error) {
+      alert('Ошибка при изменении видимости: ' + (error as Error).message);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить этот сертификат?')) return;
 
-    const { error } = await supabase.from('certificates').delete().eq('id', id);
-
-    if (error) {
-      alert('Ошибка при удалении сертификата: ' + error.message);
-    } else {
+    try {
+      await api.deleteCertificate(id);
       loadCertificates();
+    } catch (error) {
+      alert('Ошибка при удалении сертификата: ' + (error as Error).message);
     }
   };
 
@@ -142,16 +133,16 @@ export default function CertificatesPage() {
               </label>
               <input
                 type="text"
-                value={editingCert.image_url || ''}
+                value={editingCert.imageUrl || ''}
                 onChange={(e) =>
-                  setEditingCert({ ...editingCert, image_url: e.target.value })
+                  setEditingCert({ ...editingCert, imageUrl: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="/images/certificates/cert1.jpg"
               />
-              {editingCert.image_url && (
+              {editingCert.imageUrl && (
                 <img
-                  src={editingCert.image_url}
+                  src={editingCert.imageUrl}
                   alt="Preview"
                   className="mt-3 max-w-xs rounded-lg border"
                 />
@@ -165,9 +156,9 @@ export default function CertificatesPage() {
                 </label>
                 <input
                   type="date"
-                  value={editingCert.issued_date || ''}
+                  value={editingCert.issuedDate || ''}
                   onChange={(e) =>
-                    setEditingCert({ ...editingCert, issued_date: e.target.value })
+                    setEditingCert({ ...editingCert, issuedDate: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
@@ -179,11 +170,11 @@ export default function CertificatesPage() {
                 </label>
                 <input
                   type="number"
-                  value={editingCert.sort_order || 0}
+                  value={editingCert.sortOrder || 0}
                   onChange={(e) =>
                     setEditingCert({
                       ...editingCert,
-                      sort_order: parseInt(e.target.value) || 0,
+                      sortOrder: parseInt(e.target.value) || 0,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -195,9 +186,9 @@ export default function CertificatesPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editingCert.is_visible !== false}
+                  checked={editingCert.isVisible !== false}
                   onChange={(e) =>
-                    setEditingCert({ ...editingCert, is_visible: e.target.checked })
+                    setEditingCert({ ...editingCert, isVisible: e.target.checked })
                   }
                   className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
@@ -247,19 +238,19 @@ export default function CertificatesPage() {
           <div
             key={cert.id}
             className={`bg-white rounded-lg shadow-lg p-6 ${
-              !cert.is_visible ? 'opacity-60' : ''
+              !cert.isVisible ? 'opacity-60' : ''
             }`}
           >
-            {cert.image_url && (
+            {cert.imageUrl && (
               <img
-                src={cert.image_url}
+                src={cert.imageUrl}
                 alt={cert.title}
                 className="w-full h-48 object-cover rounded-lg mb-4"
               />
             )}
             <div className="flex items-center gap-3 mb-2">
               <h3 className="text-lg font-bold text-gray-900">{cert.title}</h3>
-              {!cert.is_visible && (
+              {!cert.isVisible && (
                 <span className="bg-gray-400 text-white text-xs font-bold px-2 py-1 rounded-full">
                   СКРЫТ
                 </span>
@@ -267,7 +258,7 @@ export default function CertificatesPage() {
             </div>
             <p className="text-gray-600 text-sm mb-2">{cert.description}</p>
             <p className="text-gray-500 text-xs mb-4">
-              Дата выдачи: {new Date(cert.issued_date).toLocaleDateString('ru-RU')}
+              Дата выдачи: {new Date(cert.issuedDate).toLocaleDateString('ru-RU')}
             </p>
 
             <div className="flex gap-2">
@@ -281,9 +272,9 @@ export default function CertificatesPage() {
               <button
                 onClick={() => handleToggleVisibility(cert)}
                 className="flex-1 p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
-                title={cert.is_visible ? 'Скрыть' : 'Показать'}
+                title={cert.isVisible ? 'Скрыть' : 'Показать'}
               >
-                {cert.is_visible ? (
+                {cert.isVisible ? (
                   <Eye className="w-5 h-5 mx-auto" />
                 ) : (
                   <EyeOff className="w-5 h-5 mx-auto" />
