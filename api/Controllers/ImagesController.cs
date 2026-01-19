@@ -20,6 +20,7 @@ public class ImagesController : ControllerBase
 
     [Authorize(Roles = "admin")]
     [HttpPost]
+    [Consumes("multipart/form-data")]
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<ActionResult<ImageAssetDto>> UploadImage([FromForm] IFormFile file)
     {
