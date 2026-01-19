@@ -112,6 +112,7 @@ project.lock.json
 *.rsuser
 *.VC.db
 *.VC.VC.opendb
+*.cr/
 
 # Visual Studio build logs
 *.tlog
