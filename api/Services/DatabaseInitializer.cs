@@ -22,14 +22,19 @@ public class DatabaseInitializer : IDatabaseInitializer
 
     public async Task InitializeAsync()
     {
-        if (await _context.Database.GetMigrationsAsync() is { } migrations && migrations.Any())
+        if (_context.Database.IsRelational())
         {
-            await _context.Database.MigrateAsync();
+            var pending = await _context.Database.GetPendingMigrationsAsync();
+            if (pending.Any())
+                await _context.Database.MigrateAsync();
+            else
+                await _context.Database.EnsureCreatedAsync();
         }
         else
         {
             await _context.Database.EnsureCreatedAsync();
         }
+
         await SeedAsync();
     }
 
