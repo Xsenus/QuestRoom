@@ -1,0 +1,94 @@
+import { useState, useEffect } from 'react';
+import { supabase, Promotion } from '../lib/supabase';
+
+export default function PromotionsPage() {
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPromotions();
+  }, []);
+
+  const loadPromotions = async () => {
+    const { data, error } = await supabase
+      .from('promotions')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error loading promotions:', error);
+    } else {
+      setPromotions(data || []);
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen py-12 flex items-center justify-center">
+        <div className="text-white text-xl">Загрузка...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-12">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-8">
+            Акции
+          </h1>
+        </div>
+
+        <div className="grid gap-8">
+          {promotions.map((promo) => (
+            <div
+              key={promo.id}
+              className="relative overflow-hidden rounded-lg shadow-2xl bg-white"
+            >
+              <div
+                className="relative h-96 bg-cover bg-center"
+                style={{
+                  backgroundImage: promo.image_url
+                    ? `url(${promo.image_url})`
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60"></div>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                  <h2 className="text-4xl md:text-5xl font-black text-white mb-4 drop-shadow-2xl tracking-wide uppercase">
+                    {promo.title}
+                  </h2>
+                  {promo.discount_text && (
+                    <div className="text-7xl md:text-8xl font-black text-red-600 drop-shadow-2xl mb-4">
+                      {promo.discount_text}
+                    </div>
+                  )}
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 bg-amber-800/90 backdrop-blur-sm py-4 px-6">
+                  <p className="text-white text-center text-base md:text-lg font-semibold tracking-wide">
+                    {promo.description}
+                  </p>
+                  {promo.valid_until && (
+                    <p className="text-white/80 text-center text-sm mt-2">
+                      Действует до: {new Date(promo.valid_until).toLocaleDateString('ru-RU')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {promotions.length === 0 && (
+          <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-lg">
+            <p className="text-white text-lg">Нет активных акций</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
