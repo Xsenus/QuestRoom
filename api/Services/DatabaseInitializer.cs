@@ -13,11 +13,19 @@ public class DatabaseInitializer : IDatabaseInitializer
 {
     private readonly AppDbContext _context;
     private readonly ILogger<DatabaseInitializer> _logger;
+    private readonly IAuthService _authService;
+    private readonly IConfiguration _configuration;
 
-    public DatabaseInitializer(AppDbContext context, ILogger<DatabaseInitializer> logger)
+    public DatabaseInitializer(
+        AppDbContext context,
+        ILogger<DatabaseInitializer> logger,
+        IAuthService authService,
+        IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
+        _authService = authService;
+        _configuration = configuration;
     }
 
     public async Task InitializeAsync()
@@ -205,6 +213,29 @@ public class DatabaseInitializer : IDatabaseInitializer
                 LogoUrl = null,
                 UpdatedAt = DateTime.UtcNow
             });
+        }
+
+        if (!await _context.Users.AnyAsync(u => u.Role == "admin"))
+        {
+            var adminEmail = _configuration["AdminUser:Email"];
+            var adminPassword = _configuration["AdminUser:Password"];
+
+            if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
+            {
+                _context.Users.Add(new User
+                {
+                    Id = Guid.NewGuid(),
+                    Email = adminEmail,
+                    PasswordHash = _authService.HashPassword(adminPassword),
+                    Role = "admin",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                _logger.LogWarning("Admin user was not created because AdminUser credentials are missing.");
+            }
         }
 
         await _context.SaveChangesAsync();

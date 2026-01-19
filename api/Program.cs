@@ -50,17 +50,29 @@ builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 // Configure CORS
 builder.Services.AddCors(options =>
 {
+    var allowAnyOrigin = builder.Configuration.GetValue<bool>("Cors:AllowAnyOrigin");
+
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins(
-                    "http://localhost:5173",
-                    "https://localhost:5173",
-                    "http://localhost:3000",
-                    "https://localhost:3000")
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials();
+            if (allowAnyOrigin)
+            {
+                policy
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+            }
+            else
+            {
+                policy.WithOrigins(
+                        "http://localhost:5173",
+                        "https://localhost:5173",
+                        "http://localhost:3000",
+                        "https://localhost:3000")
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
+            }
         });
 });
 
@@ -109,7 +121,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+var swaggerEnabled = builder.Configuration.GetValue<bool>("Swagger:Enabled");
+if (app.Environment.IsDevelopment() || swaggerEnabled)
 {
     app.UseSwagger();
     app.UseSwaggerUI();

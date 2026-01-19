@@ -69,16 +69,8 @@ Swagger UI: `http://localhost:5000/swagger`
 
 #### Создание администратора
 
-После первого запуска API, создайте администратора через Swagger или curl:
-
-```bash
-curl -X POST http://localhost:5000/api/auth/register-admin \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@questroom.ru",
-    "password": "your_secure_password"
-  }'
-```
+Администратор создается автоматически при первом запуске API. Настройки берутся из `api/appsettings.json`
+в секции `AdminUser` (можно переопределить через переменные окружения).
 
 ### 3. Запуск Frontend
 
@@ -86,8 +78,8 @@ curl -X POST http://localhost:5000/api/auth/register-admin \
 # В корневой папке проекта
 npm install
 
-# Создайте .env файл
-echo "VITE_API_URL=http://localhost:5000/api" > .env
+# Создайте .env файл (можно взять пример из .env.example)
+cp .env.example .env
 
 # Запустите фронтенд
 npm run dev
