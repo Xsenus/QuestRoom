@@ -7,11 +7,15 @@ import type {
   Certificate,
   CertificateUpsert,
   DurationBadge,
+  ImageAsset,
   Promotion,
   PromotionUpsert,
   Quest,
+  QuestPricingRule,
+  QuestPricingRuleUpsert,
   QuestSchedule,
   QuestScheduleUpsert,
+  ScheduleGenerateRequest,
   QuestUpsert,
   Review,
   ReviewUpsert,
@@ -149,6 +153,60 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(slot),
     });
+  }
+
+  async generateSchedule(request: ScheduleGenerateRequest): Promise<{ createdCount: number }> {
+    return this.request('/schedule/generate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Pricing rules
+  async getPricingRules(questId?: string): Promise<QuestPricingRule[]> {
+    const params = questId ? `?questId=${questId}` : '';
+    return this.request(`/pricingrules${params}`);
+  }
+
+  async createPricingRule(rule: QuestPricingRuleUpsert): Promise<QuestPricingRule> {
+    return this.request('/pricingrules', {
+      method: 'POST',
+      body: JSON.stringify(rule),
+    });
+  }
+
+  async updatePricingRule(id: string, rule: QuestPricingRuleUpsert) {
+    return this.request(`/pricingrules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(rule),
+    });
+  }
+
+  async deletePricingRule(id: string) {
+    return this.request(`/pricingrules/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Images
+  async uploadImage(file: File): Promise<ImageAsset> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/images`, {
+      method: 'POST',
+      headers: {
+        ...(getAuthToken() ? { 'Authorization': `Bearer ${getAuthToken()}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
   }
 
   // Bookings

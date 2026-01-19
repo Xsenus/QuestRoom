@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Calendar, Settings, ListChecks, FileText, Info, Award, MessageSquare, Tag } from 'lucide-react';
+import { LogOut, Calendar, Settings, ListChecks, FileText, Info, Award, MessageSquare, Tag, CalendarClock } from 'lucide-react';
 
 export default function AdminLayout() {
   const { signOut, user } = useAuth();
@@ -50,6 +50,10 @@ export default function AdminLayout() {
             <NavLink to="/adm/bookings" className={navLinkClass}>
               <Calendar className="w-5 h-5" />
               Бронь
+            </NavLink>
+            <NavLink to="/adm/pricing" className={navLinkClass}>
+              <CalendarClock className="w-5 h-5" />
+              Календарь и цены
             </NavLink>
             <NavLink to="/adm/rules" className={navLinkClass}>
               <FileText className="w-5 h-5" />

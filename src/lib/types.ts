@@ -147,3 +147,39 @@ export type QuestSchedule = {
 };
 
 export type QuestScheduleUpsert = Omit<QuestSchedule, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type QuestPricingRule = {
+  id: string;
+  questId: string;
+  title: string;
+  startDate: string | null;
+  endDate: string | null;
+  daysOfWeek: number[];
+  startTime: string;
+  endTime: string;
+  intervalMinutes: number;
+  price: number;
+  priority: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuestPricingRuleUpsert = Omit<
+  QuestPricingRule,
+  'id' | 'createdAt' | 'updatedAt'
+>;
+
+export type ScheduleGenerateRequest = {
+  questId: string;
+  fromDate: string;
+  toDate: string;
+};
+
+export type ImageAsset = {
+  id: string;
+  fileName: string;
+  contentType: string;
+  url: string;
+  createdAt: string;
+};

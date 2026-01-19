@@ -45,12 +45,14 @@ builder.Services.AddScoped<IQuestService, QuestService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<IPricingRuleService, PricingRuleService>();
 builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 
 // Configure CORS
 builder.Services.AddCors(options =>
 {
     var allowAnyOrigin = builder.Configuration.GetValue<bool>("Cors:AllowAnyOrigin");
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 
     options.AddPolicy("AllowFrontend",
         policy =>
@@ -61,6 +63,13 @@ builder.Services.AddCors(options =>
                     .AllowAnyOrigin()
                     .AllowAnyMethod()
                     .AllowAnyHeader();
+            }
+            else if (allowedOrigins != null && allowedOrigins.Length > 0)
+            {
+                policy.WithOrigins(allowedOrigins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
             }
             else
             {
