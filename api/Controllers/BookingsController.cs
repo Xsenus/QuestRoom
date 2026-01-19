@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuestRoomApi.Data;
-using QuestRoomApi.Models;
+using QuestRoomApi.DTOs.Bookings;
+using QuestRoomApi.Services;
 
 namespace QuestRoomApi.Controllers;
 
@@ -10,115 +9,41 @@ namespace QuestRoomApi.Controllers;
 [Route("api/[controller]")]
 public class BookingsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IBookingService _bookingService;
 
-    public BookingsController(AppDbContext context)
+    public BookingsController(IBookingService bookingService)
     {
-        _context = context;
+        _bookingService = bookingService;
     }
 
     [Authorize(Roles = "admin")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Booking>>> GetBookings()
+    public async Task<ActionResult<IEnumerable<BookingDto>>> GetBookings()
     {
-        var bookings = await _context.Bookings
-            .Include(b => b.Quest)
-            .OrderByDescending(b => b.CreatedAt)
-            .ToListAsync();
-
+        var bookings = await _bookingService.GetBookingsAsync();
         return Ok(bookings);
     }
 
     [HttpPost]
-    public async Task<ActionResult<Booking>> CreateBooking([FromBody] Booking booking)
+    public async Task<ActionResult<BookingDto>> CreateBooking([FromBody] BookingCreateDto booking)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
-        {
-            booking.Id = Guid.NewGuid();
-            booking.CreatedAt = DateTime.UtcNow;
-            booking.UpdatedAt = DateTime.UtcNow;
-
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
-
-            // Update schedule if schedule ID provided
-            if (booking.QuestScheduleId.HasValue)
-            {
-                var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
-                if (schedule != null)
-                {
-                    schedule.IsBooked = true;
-                    schedule.BookingId = booking.Id;
-                    schedule.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            await transaction.CommitAsync();
-
-            return CreatedAtAction(nameof(GetBookings), new { id = booking.Id }, booking);
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        var created = await _bookingService.CreateBookingAsync(booking);
+        return CreatedAtAction(nameof(GetBookings), new { id = created.Id }, created);
     }
 
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateBooking(Guid id, [FromBody] Booking booking)
+    public async Task<IActionResult> UpdateBooking(Guid id, [FromBody] BookingUpdateDto booking)
     {
-        if (id != booking.Id)
-        {
-            return BadRequest();
-        }
-
-        booking.UpdatedAt = DateTime.UtcNow;
-        _context.Entry(booking).State = EntityState.Modified;
-
-        await _context.SaveChangesAsync();
-        return NoContent();
+        var updated = await _bookingService.UpdateBookingAsync(id, booking);
+        return updated ? NoContent() : NotFound();
     }
 
     [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteBooking(Guid id)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
-        {
-            var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null)
-            {
-                return NotFound();
-            }
-
-            // Free up schedule slot if exists
-            if (booking.QuestScheduleId.HasValue)
-            {
-                var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
-                if (schedule != null)
-                {
-                    schedule.IsBooked = false;
-                    schedule.BookingId = null;
-                    schedule.UpdatedAt = DateTime.UtcNow;
-                }
-            }
-
-            _context.Bookings.Remove(booking);
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            return NoContent();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        var deleted = await _bookingService.DeleteBookingAsync(id);
+        return deleted ? NoContent() : NotFound();
     }
 }

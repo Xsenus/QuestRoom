@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<Quest> Quests { get; set; }
+    public DbSet<DurationBadge> DurationBadges { get; set; }
     public DbSet<QuestSchedule> QuestSchedules { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<Rule> Rules { get; set; }

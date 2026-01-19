@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { supabase, Review } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { Review, ReviewUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Star } from 'lucide-react';
 
 export default function ReviewsAdminPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingReview, setEditingReview] = useState<Partial<Review> | null>(null);
+  const [editingReview, setEditingReview] = useState<
+    (ReviewUpsert & { id?: string }) | null
+  >(null);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -13,28 +16,24 @@ export default function ReviewsAdminPage() {
   }, []);
 
   const loadReviews = async () => {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('*')
-      .order('review_date', { ascending: false });
-
-    if (error) {
-      console.error('Error loading reviews:', error);
-    } else {
+    try {
+      const data = await api.getReviews();
       setReviews(data || []);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
     }
     setLoading(false);
   };
 
   const handleCreate = () => {
     setEditingReview({
-      customer_name: '',
-      quest_title: '',
+      customerName: '',
+      questTitle: '',
       rating: 5,
-      review_text: '',
-      review_date: new Date().toISOString().split('T')[0],
-      is_visible: true,
-      is_featured: false,
+      reviewText: '',
+      reviewDate: new Date().toISOString().split('T')[0],
+      isVisible: true,
+      isFeatured: false,
     });
     setIsCreating(true);
   };
@@ -42,21 +41,17 @@ export default function ReviewsAdminPage() {
   const handleSave = async () => {
     if (!editingReview) return;
 
-    if (isCreating) {
-      const { error } = await supabase.from('reviews').insert([editingReview]);
-      if (error) {
-        alert('Ошибка при создании отзыва: ' + error.message);
-        return;
+    const { id, ...payload } = editingReview;
+
+    try {
+      if (isCreating) {
+        await api.createReview(payload);
+      } else if (id) {
+        await api.updateReview(id, payload);
       }
-    } else {
-      const { error } = await supabase
-        .from('reviews')
-        .update(editingReview)
-        .eq('id', editingReview.id);
-      if (error) {
-        alert('Ошибка при обновлении отзыва: ' + error.message);
-        return;
-      }
+    } catch (error) {
+      alert('Ошибка при сохранении отзыва: ' + (error as Error).message);
+      return;
     }
 
     setEditingReview(null);
@@ -70,40 +65,33 @@ export default function ReviewsAdminPage() {
   };
 
   const handleToggleVisibility = async (review: Review) => {
-    const { error } = await supabase
-      .from('reviews')
-      .update({ is_visible: !review.is_visible })
-      .eq('id', review.id);
-
-    if (error) {
-      alert('Ошибка при изменении видимости: ' + error.message);
-    } else {
+    try {
+      const { id, createdAt, updatedAt, ...payload } = review;
+      await api.updateReview(id, { ...payload, isVisible: !review.isVisible });
       loadReviews();
+    } catch (error) {
+      alert('Ошибка при изменении видимости: ' + (error as Error).message);
     }
   };
 
   const handleToggleFeatured = async (review: Review) => {
-    const { error } = await supabase
-      .from('reviews')
-      .update({ is_featured: !review.is_featured })
-      .eq('id', review.id);
-
-    if (error) {
-      alert('Ошибка при изменении статуса избранного: ' + error.message);
-    } else {
+    try {
+      const { id, createdAt, updatedAt, ...payload } = review;
+      await api.updateReview(id, { ...payload, isFeatured: !review.isFeatured });
       loadReviews();
+    } catch (error) {
+      alert('Ошибка при изменении статуса избранного: ' + (error as Error).message);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить этот отзыв?')) return;
 
-    const { error } = await supabase.from('reviews').delete().eq('id', id);
-
-    if (error) {
-      alert('Ошибка при удалении отзыва: ' + error.message);
-    } else {
+    try {
+      await api.deleteReview(id);
       loadReviews();
+    } catch (error) {
+      alert('Ошибка при удалении отзыва: ' + (error as Error).message);
     }
   };
 
@@ -127,9 +115,9 @@ export default function ReviewsAdminPage() {
                 </label>
                 <input
                   type="text"
-                  value={editingReview.customer_name || ''}
+                  value={editingReview.customerName || ''}
                   onChange={(e) =>
-                    setEditingReview({ ...editingReview, customer_name: e.target.value })
+                    setEditingReview({ ...editingReview, customerName: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="Иван Иванов"
@@ -142,9 +130,9 @@ export default function ReviewsAdminPage() {
                 </label>
                 <input
                   type="text"
-                  value={editingReview.quest_title || ''}
+                  value={editingReview.questTitle || ''}
                   onChange={(e) =>
-                    setEditingReview({ ...editingReview, quest_title: e.target.value })
+                    setEditingReview({ ...editingReview, questTitle: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="ШЕРЛОК"
@@ -178,9 +166,9 @@ export default function ReviewsAdminPage() {
                 </label>
                 <input
                   type="date"
-                  value={editingReview.review_date || ''}
+                  value={editingReview.reviewDate || ''}
                   onChange={(e) =>
-                    setEditingReview({ ...editingReview, review_date: e.target.value })
+                    setEditingReview({ ...editingReview, reviewDate: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
@@ -192,9 +180,9 @@ export default function ReviewsAdminPage() {
                 Текст отзыва
               </label>
               <textarea
-                value={editingReview.review_text || ''}
+                value={editingReview.reviewText || ''}
                 onChange={(e) =>
-                  setEditingReview({ ...editingReview, review_text: e.target.value })
+                  setEditingReview({ ...editingReview, reviewText: e.target.value })
                 }
                 rows={6}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -206,9 +194,9 @@ export default function ReviewsAdminPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editingReview.is_visible !== false}
+                  checked={editingReview.isVisible !== false}
                   onChange={(e) =>
-                    setEditingReview({ ...editingReview, is_visible: e.target.checked })
+                    setEditingReview({ ...editingReview, isVisible: e.target.checked })
                   }
                   className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
@@ -220,9 +208,9 @@ export default function ReviewsAdminPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editingReview.is_featured || false}
+                  checked={editingReview.isFeatured || false}
                   onChange={(e) =>
-                    setEditingReview({ ...editingReview, is_featured: e.target.checked })
+                    setEditingReview({ ...editingReview, isFeatured: e.target.checked })
                   }
                   className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
@@ -272,14 +260,14 @@ export default function ReviewsAdminPage() {
           <div
             key={review.id}
             className={`bg-white rounded-lg shadow-lg p-6 ${
-              !review.is_visible ? 'opacity-60' : ''
+              !review.isVisible ? 'opacity-60' : ''
             }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-xl font-bold text-gray-900">
-                    {review.customer_name}
+                    {review.customerName}
                   </h3>
                   <div className="flex items-center gap-1">
                     {[...Array(5)].map((_, i) => (
@@ -291,23 +279,23 @@ export default function ReviewsAdminPage() {
                       />
                     ))}
                   </div>
-                  {review.is_featured && (
+                  {review.isFeatured && (
                     <span className="bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full">
                       ИЗБРАННЫЙ
                     </span>
                   )}
-                  {!review.is_visible && (
+                  {!review.isVisible && (
                     <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
                       СКРЫТ
                     </span>
                   )}
                 </div>
                 <p className="text-gray-600 text-sm mb-2">
-                  Квест: <span className="font-semibold">{review.quest_title}</span>
+                  Квест: <span className="font-semibold">{review.questTitle}</span>
                 </p>
-                <p className="text-gray-700 mb-2">{review.review_text}</p>
+                <p className="text-gray-700 mb-2">{review.reviewText}</p>
                 <p className="text-gray-500 text-xs">
-                  {new Date(review.review_date).toLocaleDateString('ru-RU')}
+                  {new Date(review.reviewDate).toLocaleDateString('ru-RU')}
                 </p>
               </div>
 
@@ -322,20 +310,20 @@ export default function ReviewsAdminPage() {
                 <button
                   onClick={() => handleToggleFeatured(review)}
                   className={`p-2 rounded-lg transition-colors ${
-                    review.is_featured
+                    review.isFeatured
                       ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                   }`}
-                  title={review.is_featured ? 'Убрать из избранных' : 'Добавить в избранные'}
+                  title={review.isFeatured ? 'Убрать из избранных' : 'Добавить в избранные'}
                 >
-                  <Star className="w-5 h-5" fill={review.is_featured ? 'currentColor' : 'none'} />
+                  <Star className="w-5 h-5" fill={review.isFeatured ? 'currentColor' : 'none'} />
                 </button>
                 <button
                   onClick={() => handleToggleVisibility(review)}
                   className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
-                  title={review.is_visible ? 'Скрыть' : 'Показать'}
+                  title={review.isVisible ? 'Скрыть' : 'Показать'}
                 >
-                  {review.is_visible ? (
+                  {review.isVisible ? (
                     <Eye className="w-5 h-5" />
                   ) : (
                     <EyeOff className="w-5 h-5" />

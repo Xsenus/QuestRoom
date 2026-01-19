@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase, Quest, QuestSchedule } from '../lib/supabase';
+import { api } from '../lib/api';
+import { Quest, QuestSchedule } from '../lib/types';
 import { Users, Clock, Star } from 'lucide-react';
 import BookingModal from '../components/BookingModal';
 
@@ -20,17 +21,15 @@ export default function QuestDetailPage() {
   }, [id]);
 
   const loadQuest = async () => {
-    const { data, error } = await supabase
-      .from('quests')
-      .select('*')
-      .eq('id', id)
-      .eq('is_visible', true)
-      .maybeSingle();
-
-    if (error) {
+    try {
+      const data = await api.getQuest(id!);
+      if (data.isVisible) {
+        setQuest(data);
+      } else {
+        setQuest(null);
+      }
+    } catch (error) {
       console.error('Error loading quest:', error);
-    } else {
-      setQuest(data);
     }
   };
 
@@ -39,25 +38,21 @@ export default function QuestDetailPage() {
     const nextWeek = new Date();
     nextWeek.setDate(today.getDate() + 14);
 
-    const { data, error } = await supabase
-      .from('quest_schedule')
-      .select('*')
-      .eq('quest_id', id)
-      .gte('date', today.toISOString().split('T')[0])
-      .lte('date', nextWeek.toISOString().split('T')[0])
-      .order('date', { ascending: true })
-      .order('time_slot', { ascending: true });
-
-    if (error) {
-      console.error('Error loading schedule:', error);
-    } else {
+    try {
+      const data = await api.getQuestSchedule(
+        id!,
+        today.toISOString().split('T')[0],
+        nextWeek.toISOString().split('T')[0]
+      );
       setSchedule(data || []);
+    } catch (error) {
+      console.error('Error loading schedule:', error);
     }
     setLoading(false);
   };
 
   const handleSlotClick = (slot: QuestSchedule) => {
-    if (!slot.is_booked) {
+    if (!slot.isBooked) {
       setSelectedSlot(slot);
       setShowBookingModal(true);
     }
@@ -112,9 +107,9 @@ export default function QuestDetailPage() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           <div className="relative">
-            {quest.main_image && (
+            {quest.mainImage && (
               <img
-                src={quest.main_image}
+                src={quest.mainImage}
                 alt={quest.title}
                 className="w-full h-96 object-cover rounded-lg shadow-2xl"
               />
@@ -126,7 +121,7 @@ export default function QuestDetailPage() {
               <h1 className="text-4xl font-bold">{quest.title}</h1>
               <div className="bg-red-600 rounded-full px-4 py-2 flex items-center gap-2">
                 <Star className="w-5 h-5 fill-white" />
-                <span className="font-bold">{quest.age_rating}</span>
+                <span className="font-bold">{quest.ageRating}</span>
               </div>
             </div>
 
@@ -138,7 +133,7 @@ export default function QuestDetailPage() {
                   <Clock className="w-5 h-5 text-yellow-400" />
                   <span className="text-sm text-white/80">Возрастное ограничение</span>
                 </div>
-                <p className="text-xl font-bold">с {quest.age_restriction}</p>
+                <p className="text-xl font-bold">с {quest.ageRestriction}</p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
@@ -146,7 +141,9 @@ export default function QuestDetailPage() {
                   <Users className="w-5 h-5 text-blue-400" />
                   <span className="text-sm text-white/80">Количество участников</span>
                 </div>
-                <p className="text-xl font-bold">от {quest.participants_min} до {quest.participants_max} человек</p>
+                <p className="text-xl font-bold">
+                  от {quest.participantsMin} до {quest.participantsMax} человек
+                </p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
@@ -200,16 +197,16 @@ export default function QuestDetailPage() {
                       <button
                         key={slot.id}
                         onClick={() => handleSlotClick(slot)}
-                        disabled={slot.is_booked}
+                        disabled={slot.isBooked}
                         className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                          slot.is_booked
+                          slot.isBooked
                             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             : slot.price >= 4000
                             ? 'bg-amber-600 hover:bg-amber-700 text-white'
                             : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                       >
-                        {slot.time_slot.substring(0, 5)}
+                        {slot.timeSlot.substring(0, 5)}
                       </button>
                     ))}
                   </div>

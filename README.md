@@ -7,8 +7,8 @@
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
 │   React         │────────▶│   C# API         │────────▶│   PostgreSQL    │
-│   Frontend      │         │   (.NET 8)       │         │   (Supabase)    │
-│   (Vite)        │◀────────│   REST API       │◀────────│   Database      │
+│   Frontend      │         │   (.NET 9)       │         │   Database      │
+│   (Vite)        │◀────────│   REST API       │◀────────│                 │
 └─────────────────┘         └──────────────────┘         └─────────────────┘
 ```
 
@@ -25,7 +25,7 @@
    - Entity Framework Core
    - Swagger documentation
 
-3. **Database (PostgreSQL / Supabase)**
+3. **Database (PostgreSQL)**
    - Данные квестов
    - Расписание и бронирования
    - Контент (правила, отзывы, акции и т.д.)
@@ -36,12 +36,12 @@
 ### Предварительные требования
 
 - Node.js 18+ и npm
-- .NET 8.0 SDK
-- PostgreSQL (Supabase)
+- .NET 9.0 SDK
+- PostgreSQL
 
 ### 1. Настройка базы данных
 
-База данных уже настроена через Supabase миграции. Убедитесь, что все миграции применены.
+При старте API автоматически применяются миграции (или создается схема) и добавляются базовые данные.
 
 ### 2. Запуск C# API
 
@@ -122,11 +122,8 @@ quest-room/
 │   ├── contexts/                 # React контексты
 │   ├── lib/                      # Утилиты
 │   │   ├── api.ts                # API клиент
-│   │   └── supabase.ts           # Типы данных
+│   │   └── types.ts              # Типы данных
 │   └── App.tsx                   # Главный компонент
-│
-├── supabase/                     # Миграции БД
-│   └── migrations/               # SQL миграции
 │
 └── public/                       # Статические файлы
 ```
@@ -168,6 +165,7 @@ quest-room/
 - `POST /api/quests` - Создать квест (admin)
 - `PUT /api/quests/{id}` - Обновить квест (admin)
 - `DELETE /api/quests/{id}` - Удалить квест (admin)
+- `GET /api/durationbadges` - Бейджи длительности
 
 ### Расписание
 - `GET /api/schedule/quest/{questId}` - Расписание квеста
@@ -257,7 +255,7 @@ dotnet publish -c Release
 - Lucide Icons
 
 ### Backend
-- C# / .NET 8.0
+- C# / .NET 9.0
 - ASP.NET Core Web API
 - Entity Framework Core
 - PostgreSQL (Npgsql)
@@ -267,7 +265,6 @@ dotnet publish -c Release
 
 ### Database
 - PostgreSQL 15
-- Supabase (hosting)
 
 ## Лицензия
 

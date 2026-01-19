@@ -41,6 +41,11 @@ builder.Services.AddAuthorization();
 
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IQuestService, QuestService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -96,6 +101,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+    await initializer.InitializeAsync();
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

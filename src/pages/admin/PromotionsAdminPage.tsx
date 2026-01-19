@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { supabase, Promotion } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { Promotion, PromotionUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 
 export default function PromotionsAdminPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingPromo, setEditingPromo] = useState<Partial<Promotion> | null>(null);
+  const [editingPromo, setEditingPromo] = useState<
+    (PromotionUpsert & { id?: string }) | null
+  >(null);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -13,15 +16,11 @@ export default function PromotionsAdminPage() {
   }, []);
 
   const loadPromotions = async () => {
-    const { data, error } = await supabase
-      .from('promotions')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading promotions:', error);
-    } else {
+    try {
+      const data = await api.getPromotions();
       setPromotions(data || []);
+    } catch (error) {
+      console.error('Error loading promotions:', error);
     }
     setLoading(false);
   };
@@ -30,12 +29,12 @@ export default function PromotionsAdminPage() {
     setEditingPromo({
       title: '',
       description: '',
-      discount_text: '',
-      image_url: '',
-      valid_from: new Date().toISOString().split('T')[0],
-      valid_until: null,
-      is_active: true,
-      sort_order: promotions.length,
+      discountText: '',
+      imageUrl: '',
+      validFrom: new Date().toISOString().split('T')[0],
+      validUntil: null,
+      isActive: true,
+      sortOrder: promotions.length,
     });
     setIsCreating(true);
   };
@@ -43,21 +42,17 @@ export default function PromotionsAdminPage() {
   const handleSave = async () => {
     if (!editingPromo) return;
 
-    if (isCreating) {
-      const { error } = await supabase.from('promotions').insert([editingPromo]);
-      if (error) {
-        alert('Ошибка при создании акции: ' + error.message);
-        return;
+    const { id, ...payload } = editingPromo;
+
+    try {
+      if (isCreating) {
+        await api.createPromotion(payload);
+      } else if (id) {
+        await api.updatePromotion(id, payload);
       }
-    } else {
-      const { error } = await supabase
-        .from('promotions')
-        .update(editingPromo)
-        .eq('id', editingPromo.id);
-      if (error) {
-        alert('Ошибка при обновлении акции: ' + error.message);
-        return;
-      }
+    } catch (error) {
+      alert('Ошибка при сохранении акции: ' + (error as Error).message);
+      return;
     }
 
     setEditingPromo(null);
@@ -71,27 +66,23 @@ export default function PromotionsAdminPage() {
   };
 
   const handleToggleActive = async (promo: Promotion) => {
-    const { error } = await supabase
-      .from('promotions')
-      .update({ is_active: !promo.is_active })
-      .eq('id', promo.id);
-
-    if (error) {
-      alert('Ошибка при изменении статуса: ' + error.message);
-    } else {
+    try {
+      const { id, createdAt, updatedAt, ...payload } = promo;
+      await api.updatePromotion(id, { ...payload, isActive: !promo.isActive });
       loadPromotions();
+    } catch (error) {
+      alert('Ошибка при изменении статуса: ' + (error as Error).message);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить эту акцию?')) return;
 
-    const { error } = await supabase.from('promotions').delete().eq('id', id);
-
-    if (error) {
-      alert('Ошибка при удалении акции: ' + error.message);
-    } else {
+    try {
+      await api.deletePromotion(id);
       loadPromotions();
+    } catch (error) {
+      alert('Ошибка при удалении акции: ' + (error as Error).message);
     }
   };
 
@@ -144,9 +135,9 @@ export default function PromotionsAdminPage() {
               </label>
               <input
                 type="text"
-                value={editingPromo.discount_text || ''}
+                value={editingPromo.discountText || ''}
                 onChange={(e) =>
-                  setEditingPromo({ ...editingPromo, discount_text: e.target.value })
+                  setEditingPromo({ ...editingPromo, discountText: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="-20%"
@@ -159,16 +150,16 @@ export default function PromotionsAdminPage() {
               </label>
               <input
                 type="text"
-                value={editingPromo.image_url || ''}
+                value={editingPromo.imageUrl || ''}
                 onChange={(e) =>
-                  setEditingPromo({ ...editingPromo, image_url: e.target.value })
+                  setEditingPromo({ ...editingPromo, imageUrl: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="/images/promotions/promo1.jpg"
               />
-              {editingPromo.image_url && (
+              {editingPromo.imageUrl && (
                 <img
-                  src={editingPromo.image_url}
+                  src={editingPromo.imageUrl}
                   alt="Preview"
                   className="mt-3 max-w-xs rounded-lg border"
                 />
@@ -182,9 +173,9 @@ export default function PromotionsAdminPage() {
                 </label>
                 <input
                   type="date"
-                  value={editingPromo.valid_from || ''}
+                  value={editingPromo.validFrom || ''}
                   onChange={(e) =>
-                    setEditingPromo({ ...editingPromo, valid_from: e.target.value })
+                    setEditingPromo({ ...editingPromo, validFrom: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
@@ -196,9 +187,9 @@ export default function PromotionsAdminPage() {
                 </label>
                 <input
                   type="date"
-                  value={editingPromo.valid_until || ''}
+                  value={editingPromo.validUntil || ''}
                   onChange={(e) =>
-                    setEditingPromo({ ...editingPromo, valid_until: e.target.value || null })
+                    setEditingPromo({ ...editingPromo, validUntil: e.target.value || null })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
@@ -210,11 +201,11 @@ export default function PromotionsAdminPage() {
                 </label>
                 <input
                   type="number"
-                  value={editingPromo.sort_order || 0}
+                  value={editingPromo.sortOrder || 0}
                   onChange={(e) =>
                     setEditingPromo({
                       ...editingPromo,
-                      sort_order: parseInt(e.target.value) || 0,
+                      sortOrder: parseInt(e.target.value) || 0,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -226,9 +217,9 @@ export default function PromotionsAdminPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editingPromo.is_active !== false}
+                  checked={editingPromo.isActive !== false}
                   onChange={(e) =>
-                    setEditingPromo({ ...editingPromo, is_active: e.target.checked })
+                    setEditingPromo({ ...editingPromo, isActive: e.target.checked })
                   }
                   className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
@@ -278,26 +269,26 @@ export default function PromotionsAdminPage() {
           <div
             key={promo.id}
             className={`bg-white rounded-lg shadow-lg p-6 ${
-              !promo.is_active ? 'opacity-60' : ''
+              !promo.isActive ? 'opacity-60' : ''
             }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                {promo.image_url && (
+                {promo.imageUrl && (
                   <img
-                    src={promo.image_url}
+                    src={promo.imageUrl}
                     alt={promo.title}
                     className="w-full max-w-md h-48 object-cover rounded-lg mb-4"
                   />
                 )}
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-2xl font-bold text-gray-900">{promo.title}</h3>
-                  {promo.discount_text && (
+                  {promo.discountText && (
                     <span className="bg-red-600 text-white text-lg font-bold px-4 py-1 rounded-full">
-                      {promo.discount_text}
+                      {promo.discountText}
                     </span>
                   )}
-                  {!promo.is_active && (
+                  {!promo.isActive && (
                     <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
                       НЕАКТИВНА
                     </span>
@@ -306,9 +297,9 @@ export default function PromotionsAdminPage() {
                 <p className="text-gray-600 mb-4">{promo.description}</p>
                 <div className="text-sm text-gray-500">
                   <p>
-                    Действует с: {new Date(promo.valid_from).toLocaleDateString('ru-RU')}
-                    {promo.valid_until && (
-                      <> до {new Date(promo.valid_until).toLocaleDateString('ru-RU')}</>
+                    Действует с: {new Date(promo.validFrom).toLocaleDateString('ru-RU')}
+                    {promo.validUntil && (
+                      <> до {new Date(promo.validUntil).toLocaleDateString('ru-RU')}</>
                     )}
                   </p>
                 </div>
@@ -325,9 +316,9 @@ export default function PromotionsAdminPage() {
                 <button
                   onClick={() => handleToggleActive(promo)}
                   className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
-                  title={promo.is_active ? 'Деактивировать' : 'Активировать'}
+                  title={promo.isActive ? 'Деактивировать' : 'Активировать'}
                 >
-                  {promo.is_active ? (
+                  {promo.isActive ? (
                     <Eye className="w-5 h-5" />
                   ) : (
                     <EyeOff className="w-5 h-5" />

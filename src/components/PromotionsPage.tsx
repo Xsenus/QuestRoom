@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Promotion } from '../lib/supabase';
+import { api } from '../lib/api';
+import { Promotion } from '../lib/types';
 
 export default function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -10,16 +11,11 @@ export default function PromotionsPage() {
   }, []);
 
   const loadPromotions = async () => {
-    const { data, error } = await supabase
-      .from('promotions')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading promotions:', error);
-    } else {
+    try {
+      const data = await api.getPromotions(true);
       setPromotions(data || []);
+    } catch (error) {
+      console.error('Error loading promotions:', error);
     }
     setLoading(false);
   };
@@ -50,8 +46,8 @@ export default function PromotionsPage() {
               <div
                 className="relative h-96 bg-cover bg-center"
                 style={{
-                  backgroundImage: promo.image_url
-                    ? `url(${promo.image_url})`
+                  backgroundImage: promo.imageUrl
+                    ? `url(${promo.imageUrl})`
                     : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                 }}
               >
@@ -61,9 +57,9 @@ export default function PromotionsPage() {
                   <h2 className="text-4xl md:text-5xl font-black text-white mb-4 drop-shadow-2xl tracking-wide uppercase">
                     {promo.title}
                   </h2>
-                  {promo.discount_text && (
+                  {promo.discountText && (
                     <div className="text-7xl md:text-8xl font-black text-red-600 drop-shadow-2xl mb-4">
-                      {promo.discount_text}
+                      {promo.discountText}
                     </div>
                   )}
                 </div>
@@ -72,9 +68,9 @@ export default function PromotionsPage() {
                   <p className="text-white text-center text-base md:text-lg font-semibold tracking-wide">
                     {promo.description}
                   </p>
-                  {promo.valid_until && (
+                  {promo.validUntil && (
                     <p className="text-white/80 text-center text-sm mt-2">
-                      Действует до: {new Date(promo.valid_until).toLocaleDateString('ru-RU')}
+                      Действует до: {new Date(promo.validUntil).toLocaleDateString('ru-RU')}
                     </p>
                   )}
                 </div>

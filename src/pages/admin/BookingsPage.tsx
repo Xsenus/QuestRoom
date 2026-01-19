@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Booking } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { Booking } from '../../lib/types';
 import { Calendar, User, Phone, Mail, Users, FileText } from 'lucide-react';
 
 export default function BookingsPage() {
@@ -12,29 +13,21 @@ export default function BookingsPage() {
   }, []);
 
   const loadBookings = async () => {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('*')
-      .order('booking_date', { ascending: true });
-
-    if (error) {
-      console.error('Error loading bookings:', error);
-    } else {
+    try {
+      const data = await api.getBookings();
       setBookings(data || []);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
     }
     setLoading(false);
   };
 
-  const updateStatus = async (id: string, status: Booking['status']) => {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (error) {
-      alert('Ошибка при обновлении статуса: ' + error.message);
-    } else {
+  const updateStatus = async (booking: Booking, status: Booking['status']) => {
+    try {
+      await api.updateBooking(booking.id, { status, notes: booking.notes });
       loadBookings();
+    } catch (error) {
+      alert('Ошибка при обновлении статуса: ' + (error as Error).message);
     }
   };
 
@@ -146,7 +139,7 @@ export default function BookingsPage() {
               <div className="flex gap-2">
                 {booking.status === 'pending' && (
                   <button
-                    onClick={() => updateStatus(booking.id, 'confirmed')}
+                    onClick={() => updateStatus(booking, 'confirmed')}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors"
                   >
                     Подтвердить
@@ -154,7 +147,7 @@ export default function BookingsPage() {
                 )}
                 {booking.status === 'confirmed' && (
                   <button
-                    onClick={() => updateStatus(booking.id, 'completed')}
+                    onClick={() => updateStatus(booking, 'completed')}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-colors"
                   >
                     Завершить
@@ -162,7 +155,7 @@ export default function BookingsPage() {
                 )}
                 {(booking.status === 'pending' || booking.status === 'confirmed') && (
                   <button
-                    onClick={() => updateStatus(booking.id, 'cancelled')}
+                    onClick={() => updateStatus(booking, 'cancelled')}
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-colors"
                   >
                     Отменить
@@ -175,29 +168,29 @@ export default function BookingsPage() {
               <div className="flex items-center gap-2 text-gray-700">
                 <User className="w-4 h-4 text-red-600" />
                 <span className="font-semibold">Клиент:</span>
-                <span>{booking.customer_name}</span>
+                <span>{booking.customerName}</span>
               </div>
 
               <div className="flex items-center gap-2 text-gray-700">
                 <Phone className="w-4 h-4 text-red-600" />
                 <span className="font-semibold">Телефон:</span>
                 <a
-                  href={`tel:${booking.customer_phone}`}
+                  href={`tel:${booking.customerPhone}`}
                   className="hover:text-red-600"
                 >
-                  {booking.customer_phone}
+                  {booking.customerPhone}
                 </a>
               </div>
 
-              {booking.customer_email && (
+              {booking.customerEmail && (
                 <div className="flex items-center gap-2 text-gray-700">
                   <Mail className="w-4 h-4 text-red-600" />
                   <span className="font-semibold">Email:</span>
                   <a
-                    href={`mailto:${booking.customer_email}`}
+                    href={`mailto:${booking.customerEmail}`}
                     className="hover:text-red-600"
                   >
-                    {booking.customer_email}
+                    {booking.customerEmail}
                   </a>
                 </div>
               )}
@@ -206,7 +199,7 @@ export default function BookingsPage() {
                 <Calendar className="w-4 h-4 text-red-600" />
                 <span className="font-semibold">Дата:</span>
                 <span>
-                  {new Date(booking.booking_date).toLocaleString('ru-RU', {
+                  {new Date(booking.bookingDate).toLocaleString('ru-RU', {
                     dateStyle: 'short',
                     timeStyle: 'short',
                   })}
@@ -216,7 +209,7 @@ export default function BookingsPage() {
               <div className="flex items-center gap-2 text-gray-700">
                 <Users className="w-4 h-4 text-red-600" />
                 <span className="font-semibold">Участников:</span>
-                <span>{booking.participants_count}</span>
+                <span>{booking.participantsCount}</span>
               </div>
             </div>
 

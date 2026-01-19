@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuestRoomApi.Data;
-using QuestRoomApi.Models;
+using QuestRoomApi.DTOs.Schedule;
+using QuestRoomApi.Services;
 
 namespace QuestRoomApi.Controllers;
 
@@ -10,67 +9,36 @@ namespace QuestRoomApi.Controllers;
 [Route("api/[controller]")]
 public class ScheduleController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IScheduleService _scheduleService;
 
-    public ScheduleController(AppDbContext context)
+    public ScheduleController(IScheduleService scheduleService)
     {
-        _context = context;
+        _scheduleService = scheduleService;
     }
 
     [HttpGet("quest/{questId}")]
-    public async Task<ActionResult<IEnumerable<QuestSchedule>>> GetScheduleForQuest(
+    public async Task<ActionResult<IEnumerable<QuestScheduleDto>>> GetScheduleForQuest(
         Guid questId,
         [FromQuery] DateOnly? fromDate = null,
         [FromQuery] DateOnly? toDate = null)
     {
-        var query = _context.QuestSchedules
-            .Where(s => s.QuestId == questId);
-
-        if (fromDate.HasValue)
-        {
-            query = query.Where(s => s.Date >= fromDate.Value);
-        }
-
-        if (toDate.HasValue)
-        {
-            query = query.Where(s => s.Date <= toDate.Value);
-        }
-
-        var schedule = await query
-            .OrderBy(s => s.Date)
-            .ThenBy(s => s.TimeSlot)
-            .ToListAsync();
-
+        var schedule = await _scheduleService.GetScheduleForQuestAsync(questId, fromDate, toDate);
         return Ok(schedule);
     }
 
     [Authorize(Roles = "admin")]
     [HttpPost]
-    public async Task<ActionResult<QuestSchedule>> CreateSlot([FromBody] QuestSchedule slot)
+    public async Task<ActionResult<QuestScheduleDto>> CreateSlot([FromBody] QuestScheduleUpsertDto slot)
     {
-        slot.Id = Guid.NewGuid();
-        slot.CreatedAt = DateTime.UtcNow;
-        slot.UpdatedAt = DateTime.UtcNow;
-
-        _context.QuestSchedules.Add(slot);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetScheduleForQuest), new { questId = slot.QuestId }, slot);
+        var created = await _scheduleService.CreateSlotAsync(slot);
+        return CreatedAtAction(nameof(GetScheduleForQuest), new { questId = created.QuestId }, created);
     }
 
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateSlot(Guid id, [FromBody] QuestSchedule slot)
+    public async Task<IActionResult> UpdateSlot(Guid id, [FromBody] QuestScheduleUpsertDto slot)
     {
-        if (id != slot.Id)
-        {
-            return BadRequest();
-        }
-
-        slot.UpdatedAt = DateTime.UtcNow;
-        _context.Entry(slot).State = EntityState.Modified;
-
-        await _context.SaveChangesAsync();
-        return NoContent();
+        var updated = await _scheduleService.UpdateSlotAsync(id, slot);
+        return updated ? NoContent() : NotFound();
     }
 }

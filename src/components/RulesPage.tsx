@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Rule } from '../lib/supabase';
+import { api } from '../lib/api';
+import { Rule } from '../lib/types';
 
 export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
@@ -10,16 +11,11 @@ export default function RulesPage() {
   }, []);
 
   const loadRules = async () => {
-    const { data, error } = await supabase
-      .from('rules')
-      .select('*')
-      .eq('is_visible', true)
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading rules:', error);
-    } else {
+    try {
+      const data = await api.getRules(true);
       setRules(data || []);
+    } catch (error) {
+      console.error('Error loading rules:', error);
     }
     setLoading(false);
   };

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { supabase, Quest, QuestSchedule } from '../lib/supabase';
+import { api } from '../lib/api';
+import { Quest, QuestSchedule } from '../lib/types';
 
 interface BookingModalProps {
   slot: QuestSchedule;
@@ -31,35 +32,16 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     setSubmitting(true);
 
     try {
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert([
-          {
-            quest_id: quest.id,
-            customer_name: formData.name,
-            customer_phone: formData.phone,
-            customer_email: formData.email || null,
-            booking_date: slot.date,
-            participants_count: quest.participants_min,
-            status: 'pending',
-            notes: formData.comments || null,
-            quest_schedule_id: slot.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (bookingError) throw bookingError;
-
-      const { error: scheduleError } = await supabase
-        .from('quest_schedule')
-        .update({
-          is_booked: true,
-          booking_id: booking.id,
-        })
-        .eq('id', slot.id);
-
-      if (scheduleError) throw scheduleError;
+      await api.createBooking({
+        questId: quest.id,
+        questScheduleId: slot.id,
+        customerName: formData.name,
+        customerPhone: formData.phone,
+        customerEmail: formData.email || null,
+        bookingDate: slot.date,
+        participantsCount: quest.participantsMin,
+        notes: formData.comments || null,
+      });
 
       alert('Бронирование успешно создано! Наш менеджер свяжется с вами для подтверждения.');
       onBookingComplete();
@@ -136,12 +118,12 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
               <div className="flex justify-between">
                 <span>Дата:</span>
                 <span className="font-bold">
-                  {new Date(slot.date + 'T00:00:00').toLocaleDateString('ru-RU')}
+                  {new Date(`${slot.date}T00:00:00`).toLocaleDateString('ru-RU')}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Время:</span>
-                <span className="font-bold">{slot.time_slot.substring(0, 5)}</span>
+                <span className="font-bold">{slot.timeSlot.substring(0, 5)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Стоимость:</span>

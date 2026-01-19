@@ -2,7 +2,7 @@
 
 ## Обзор изменений
 
-Фронтенд теперь использует C# API вместо прямого подключения к Supabase. Все запросы идут через `/api/*` endpoints.
+Фронтенд теперь использует C# API вместо прямого подключения к базе данных. Все запросы идут через `/api/*` endpoints.
 
 ## Настройка
 
@@ -49,7 +49,7 @@ await api.createBooking(bookingData);
 
 ### Обновленный AuthContext
 
-`AuthContext` теперь использует JWT токены вместо Supabase Auth:
+`AuthContext` теперь использует JWT токены вместо внешнего провайдера авторизации:
 
 - Токены хранятся в localStorage
 - Авторизация через `api.login()`
@@ -57,12 +57,12 @@ await api.createBooking(bookingData);
 
 ### Как обновить компоненты
 
-#### Старый код (Supabase):
+#### Старый код (прямой доступ к БД):
 
 ```typescript
-import { supabase } from '../lib/supabase';
+import { dbClient } from '../lib/dbClient';
 
-const { data, error } = await supabase
+const { data, error } = await dbClient
   .from('quests')
   .select('*')
   .eq('is_visible', true);
@@ -82,7 +82,7 @@ const data = await api.getQuests(true);
 
 **Было:**
 ```typescript
-const { data, error } = await supabase
+const { data, error } = await dbClient
   .from('rules')
   .select('*')
   .eq('is_visible', true)
@@ -109,7 +109,7 @@ try {
 
 **Было:**
 ```typescript
-const { error } = await supabase.from('rules').insert([rule]);
+const { error } = await dbClient.from('rules').insert([rule]);
 if (error) {
   alert('Ошибка: ' + error.message);
 }
@@ -128,7 +128,7 @@ try {
 
 **Было:**
 ```typescript
-const { error } = await supabase
+const { error } = await dbClient
   .from('rules')
   .update(rule)
   .eq('id', rule.id);
@@ -143,7 +143,7 @@ await api.updateRule(rule.id, rule);
 
 **Было:**
 ```typescript
-const { error } = await supabase
+const { error } = await dbClient
   .from('rules')
   .delete()
   .eq('id', id);
@@ -219,7 +219,7 @@ await api.deleteRule(id);
 
 ## Типы данных
 
-Все типы остались прежними (Quest, Rule, Review, etc.) и находятся в `src/lib/supabase.ts`. Их можно переименовать в `types.ts` для ясности.
+Все типы (Quest, Rule, Review, etc.) находятся в `src/lib/types.ts`.
 
 ## Безопасность
 

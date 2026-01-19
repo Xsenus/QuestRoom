@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { supabase, Quest, DurationBadge } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { Quest, QuestUpsert, DurationBadge } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 
 export default function QuestsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [durationBadges, setDurationBadges] = useState<DurationBadge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingQuest, setEditingQuest] = useState<Partial<Quest> | null>(null);
+  const [editingQuest, setEditingQuest] = useState<(QuestUpsert & { id?: string }) | null>(
+    null
+  );
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -15,28 +18,20 @@ export default function QuestsPage() {
   }, []);
 
   const loadDurationBadges = async () => {
-    const { data, error } = await supabase
-      .from('duration_badges')
-      .select('*')
-      .order('duration', { ascending: true });
-
-    if (error) {
-      console.error('Error loading duration badges:', error);
-    } else {
+    try {
+      const data = await api.getDurationBadges();
       setDurationBadges(data || []);
+    } catch (error) {
+      console.error('Error loading duration badges:', error);
     }
   };
 
   const loadQuests = async () => {
-    const { data, error } = await supabase
-      .from('quests')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading quests:', error);
-    } else {
+    try {
+      const data = await api.getQuests();
       setQuests(data || []);
+    } catch (error) {
+      console.error('Error loading quests:', error);
     }
     setLoading(false);
   };
@@ -47,17 +42,17 @@ export default function QuestsPage() {
       description: '',
       addresses: [],
       phones: [],
-      participants_min: 2,
-      participants_max: 6,
-      age_restriction: '',
-      age_rating: '18+',
+      participantsMin: 2,
+      participantsMax: 6,
+      ageRestriction: '',
+      ageRating: '18+',
       price: 0,
       duration: 60,
-      is_new: false,
-      is_visible: true,
-      main_image: null,
+      isNew: false,
+      isVisible: true,
+      mainImage: null,
       images: [],
-      sort_order: quests.length,
+      sortOrder: quests.length,
     });
     setIsCreating(true);
   };
@@ -65,21 +60,17 @@ export default function QuestsPage() {
   const handleSave = async () => {
     if (!editingQuest) return;
 
-    if (isCreating) {
-      const { error } = await supabase.from('quests').insert([editingQuest]);
-      if (error) {
-        alert('Ошибка при создании квеста: ' + error.message);
-        return;
+    const { id, ...payload } = editingQuest;
+
+    try {
+      if (isCreating) {
+        await api.createQuest(payload);
+      } else if (id) {
+        await api.updateQuest(id, payload);
       }
-    } else {
-      const { error } = await supabase
-        .from('quests')
-        .update(editingQuest)
-        .eq('id', editingQuest.id);
-      if (error) {
-        alert('Ошибка при обновлении квеста: ' + error.message);
-        return;
-      }
+    } catch (error) {
+      alert('Ошибка при сохранении квеста: ' + (error as Error).message);
+      return;
     }
 
     setEditingQuest(null);
@@ -93,27 +84,23 @@ export default function QuestsPage() {
   };
 
   const handleToggleVisibility = async (quest: Quest) => {
-    const { error } = await supabase
-      .from('quests')
-      .update({ is_visible: !quest.is_visible })
-      .eq('id', quest.id);
-
-    if (error) {
-      alert('Ошибка при изменении видимости: ' + error.message);
-    } else {
+    try {
+      const { id, createdAt, updatedAt, ...payload } = quest;
+      await api.updateQuest(id, { ...payload, isVisible: !quest.isVisible });
       loadQuests();
+    } catch (error) {
+      alert('Ошибка при изменении видимости: ' + (error as Error).message);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить этот квест?')) return;
 
-    const { error } = await supabase.from('quests').delete().eq('id', id);
-
-    if (error) {
-      alert('Ошибка при удалении квеста: ' + error.message);
-    } else {
+    try {
+      await api.deleteQuest(id);
       loadQuests();
+    } catch (error) {
+      alert('Ошибка при удалении квеста: ' + (error as Error).message);
     }
   };
 
@@ -161,7 +148,7 @@ export default function QuestsPage() {
   };
 
   const setMainImage = (url: string) => {
-    setEditingQuest({ ...editingQuest, main_image: url });
+    setEditingQuest({ ...editingQuest, mainImage: url });
   };
 
   const removeImage = (index: number) => {
@@ -169,8 +156,8 @@ export default function QuestsPage() {
     const removedUrl = images[index];
     images.splice(index, 1);
 
-    if (editingQuest?.main_image === removedUrl) {
-      setEditingQuest({ ...editingQuest, images, main_image: images[0] || null });
+    if (editingQuest?.mainImage === removedUrl) {
+      setEditingQuest({ ...editingQuest, images, mainImage: images[0] || null });
     } else {
       setEditingQuest({ ...editingQuest, images });
     }
@@ -236,13 +223,16 @@ export default function QuestsPage() {
                     <button
                       onClick={() => setMainImage(img)}
                       className={`p-2 rounded-lg transition-colors ${
-                        editingQuest.main_image === img
+                        editingQuest.mainImage === img
                           ? 'bg-yellow-500 text-white'
                           : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                       }`}
                       title="Сделать основным"
                     >
-                      <Star className="w-5 h-5" fill={editingQuest.main_image === img ? 'currentColor' : 'none'} />
+                      <Star
+                        className="w-5 h-5"
+                        fill={editingQuest.mainImage === img ? 'currentColor' : 'none'}
+                      />
                     </button>
                     <button
                       onClick={() => removeImage(index)}
@@ -260,9 +250,9 @@ export default function QuestsPage() {
                   Добавить изображение
                 </button>
               </div>
-              {editingQuest.main_image && (
+              {editingQuest.mainImage && (
                 <p className="text-sm text-gray-600 mt-2">
-                  Основное изображение: {editingQuest.main_image}
+                  Основное изображение: {editingQuest.mainImage}
                 </p>
               )}
             </div>
@@ -357,11 +347,11 @@ export default function QuestsPage() {
                 </label>
                 <input
                   type="number"
-                  value={editingQuest.participants_min || 2}
+                  value={editingQuest.participantsMin || 2}
                   onChange={(e) =>
                     setEditingQuest({
                       ...editingQuest,
-                      participants_min: parseInt(e.target.value) || 2,
+                      participantsMin: parseInt(e.target.value) || 2,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -375,11 +365,11 @@ export default function QuestsPage() {
                 </label>
                 <input
                   type="number"
-                  value={editingQuest.participants_max || 6}
+                  value={editingQuest.participantsMax || 6}
                   onChange={(e) =>
                     setEditingQuest({
                       ...editingQuest,
-                      participants_max: parseInt(e.target.value) || 6,
+                      participantsMax: parseInt(e.target.value) || 6,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -395,11 +385,11 @@ export default function QuestsPage() {
                 </label>
                 <input
                   type="text"
-                  value={editingQuest.age_restriction || ''}
+                  value={editingQuest.ageRestriction || ''}
                   onChange={(e) =>
                     setEditingQuest({
                       ...editingQuest,
-                      age_restriction: e.target.value,
+                      ageRestriction: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -412,9 +402,9 @@ export default function QuestsPage() {
                   Возрастной рейтинг
                 </label>
                 <select
-                  value={editingQuest.age_rating || '18+'}
+                  value={editingQuest.ageRating || '18+'}
                   onChange={(e) =>
-                    setEditingQuest({ ...editingQuest, age_rating: e.target.value })
+                    setEditingQuest({ ...editingQuest, ageRating: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 >
@@ -451,11 +441,11 @@ export default function QuestsPage() {
                 </label>
                 <input
                   type="number"
-                  value={editingQuest.sort_order || 0}
+                  value={editingQuest.sortOrder || 0}
                   onChange={(e) =>
                     setEditingQuest({
                       ...editingQuest,
-                      sort_order: parseInt(e.target.value) || 0,
+                      sortOrder: parseInt(e.target.value) || 0,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -467,9 +457,9 @@ export default function QuestsPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editingQuest.is_new || false}
+                  checked={editingQuest.isNew || false}
                   onChange={(e) =>
-                    setEditingQuest({ ...editingQuest, is_new: e.target.checked })
+                    setEditingQuest({ ...editingQuest, isNew: e.target.checked })
                   }
                   className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
@@ -481,9 +471,9 @@ export default function QuestsPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editingQuest.is_visible !== false}
+                  checked={editingQuest.isVisible !== false}
                   onChange={(e) =>
-                    setEditingQuest({ ...editingQuest, is_visible: e.target.checked })
+                    setEditingQuest({ ...editingQuest, isVisible: e.target.checked })
                   }
                   className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
@@ -533,19 +523,19 @@ export default function QuestsPage() {
           <div
             key={quest.id}
             className={`bg-white rounded-lg shadow-lg p-6 ${
-              !quest.is_visible ? 'opacity-60' : ''
+              !quest.isVisible ? 'opacity-60' : ''
             }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-2xl font-bold text-gray-900">{quest.title}</h3>
-                  {quest.is_new && (
+                  {quest.isNew && (
                     <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                       NEW
                     </span>
                   )}
-                  {!quest.is_visible && (
+                  {!quest.isVisible && (
                     <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
                       СКРЫТ
                     </span>
@@ -563,7 +553,7 @@ export default function QuestsPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">Участники:</span>{' '}
-                    от {quest.participants_min} до {quest.participants_max} чел.
+                    от {quest.participantsMin} до {quest.participantsMax} чел.
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">Длительность:</span>{' '}
@@ -590,9 +580,9 @@ export default function QuestsPage() {
                 <button
                   onClick={() => handleToggleVisibility(quest)}
                   className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
-                  title={quest.is_visible ? 'Скрыть' : 'Показать'}
+                  title={quest.isVisible ? 'Скрыть' : 'Показать'}
                 >
-                  {quest.is_visible ? (
+                  {quest.isVisible ? (
                     <Eye className="w-5 h-5" />
                   ) : (
                     <EyeOff className="w-5 h-5" />
