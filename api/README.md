@@ -41,6 +41,9 @@ dotnet restore
   "Swagger": {
     "Enabled": true
   },
+  "DatabaseInitialization": {
+    "SeedMode": "EnsureSeeded"
+  },
   "Jwt": {
     "Key": "ваш_секретный_ключ_минимум_32_символа",
     "Issuer": "QuestRoomApi",
@@ -48,6 +51,12 @@ dotnet restore
   }
 }
 ```
+
+`DatabaseInitialization:SeedMode` управляет тем, как API заполняет тестовые данные при запуске:
+
+- `None` — только создание схемы/миграции без заполнения данных.
+- `EnsureSeeded` — добавляет тестовые данные, если соответствующие таблицы пусты.
+- `Force` — очищает тестовые таблицы и пересоздает тестовый набор данных.
 
 ### 3. Создание первого администратора
 

@@ -137,7 +137,7 @@ export default function QuestDetailPage() {
                   <Clock className="w-5 h-5 text-yellow-400" />
                   <span className="text-sm text-white/80">Возрастное ограничение</span>
                 </div>
-                <p className="text-xl font-bold">с {quest.ageRestriction}</p>
+                <p className="text-xl font-bold">{quest.ageRestriction}</p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
