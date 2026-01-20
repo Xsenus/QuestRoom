@@ -1,11 +1,44 @@
-import { Mail, Instagram } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Instagram, Link2, Mail, Phone, Send, Youtube } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { api } from '../lib/api';
+import { Settings } from '../lib/types';
 
 interface FooterProps {
   setCurrentPage: (page: string) => void;
 }
 
 export default function Footer({ setCurrentPage }: FooterProps) {
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await api.getSettings();
+        setSettings(data);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const socials = useMemo(
+    () =>
+      [
+        { key: 'vk', url: settings?.vkUrl, label: 'VK', icon: Link2 },
+        { key: 'youtube', url: settings?.youtubeUrl, label: 'YouTube', icon: Youtube },
+        { key: 'instagram', url: settings?.instagramUrl, label: 'Instagram', icon: Instagram },
+        { key: 'telegram', url: settings?.telegramUrl, label: 'Telegram', icon: Send },
+      ].filter((item) => item.url),
+    [settings]
+  );
+
+  const address = settings?.address?.trim();
+  const phone = settings?.phone?.trim();
+  const email = settings?.email?.trim();
+
   return (
     <footer className="bg-black/30 backdrop-blur-sm mt-12 md:mt-20 py-6 md:py-8">
       <div className="max-w-7xl mx-auto px-4">
@@ -29,26 +62,54 @@ export default function Footer({ setCurrentPage }: FooterProps) {
           </nav>
         </div>
 
-        <div className="flex flex-col md:flex-row flex-wrap justify-between items-center gap-4 border-t border-white/20 pt-4 md:pt-6">
-          <div className="text-white/80 text-xs md:text-sm space-y-1 text-center md:text-left">
-            <div>г. Красноярск, ул. Кирова, д.43</div>
-            <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2">
-              <span>8 (391) 294-59-50</span>
-              <span className="flex items-center gap-1">
-                <Mail className="w-3 h-3 md:w-4 md:h-4" />
-                krsk@vlovushke24.ru
-              </span>
+        <div className="border-t border-white/20 pt-4 md:pt-6 space-y-4">
+          <div className="grid gap-3 text-white/80 text-xs md:text-sm md:grid-cols-3 items-center">
+            <div className="text-center md:text-left">
+              {address && <div>{address}</div>}
+            </div>
+            <div className="flex justify-center">
+              {email && (
+                <a
+                  href={`mailto:${email}`}
+                  className="inline-flex items-center gap-2 hover:text-white transition-colors"
+                >
+                  <Mail className="w-3 h-3 md:w-4 md:h-4" />
+                  {email}
+                </a>
+              )}
+            </div>
+            <div className="flex justify-center md:justify-end">
+              {phone && (
+                <a
+                  href={`tel:${phone}`}
+                  className="inline-flex items-center gap-2 hover:text-white transition-colors"
+                >
+                  <Phone className="w-3 h-3 md:w-4 md:h-4" />
+                  {phone}
+                </a>
+              )}
             </div>
           </div>
 
-          <div className="flex gap-3 md:gap-4">
-            <a href="mailto:krsk@vlovushke24.ru" className="w-8 h-8 md:w-10 md:h-10 bg-red-600 hover:bg-red-700 rounded flex items-center justify-center transition-colors">
-              <Mail className="w-4 h-4 md:w-5 md:h-5 text-white" />
-            </a>
-            <a href="https://www.instagram.com/vlovushke_krsk/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 md:w-10 md:h-10 bg-red-600 hover:bg-red-700 rounded flex items-center justify-center transition-colors">
-              <Instagram className="w-4 h-4 md:w-5 md:h-5 text-white" />
-            </a>
-          </div>
+          {socials.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-3 md:gap-4">
+              {socials.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.key}
+                    href={social.url!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.label}
+                    className="w-8 h-8 md:w-10 md:h-10 bg-red-600 hover:bg-red-700 rounded flex items-center justify-center transition-colors"
+                  >
+                    <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </footer>
