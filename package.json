@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "net": "vite --host 0.0.0.0 --port 5173 --strictPort"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",

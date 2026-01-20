@@ -8,23 +8,36 @@ using QuestRoomApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+const string CorsPolicyName = "AllowFrontend";
+
 // Add services to the container
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+
+        // Если будут циклические ссылки в моделях (например, EF навигации) — можно включить:
+        // options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
 // Configure PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not configured.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("JWT Key not configured.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Если API стоит за HTTPS (прод) — оставляйте true (по умолчанию).
+        // Если вы тестируете строго по HTTP — можно временно отключить:
+        // options.RequireHttpsMetadata = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -33,7 +46,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+
+            // Минимальный допуск по времени (на случай рассинхрона часов)
+            ClockSkew = TimeSpan.FromMinutes(1)
         };
     });
 
@@ -54,35 +70,46 @@ builder.Services.AddCors(options =>
     var allowAnyOrigin = builder.Configuration.GetValue<bool>("Cors:AllowAnyOrigin");
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 
-    options.AddPolicy("AllowFrontend",
-        policy =>
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        if (allowAnyOrigin)
         {
-            if (allowAnyOrigin)
-            {
-                policy
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader();
-            }
-            else if (allowedOrigins != null && allowedOrigins.Length > 0)
-            {
-                policy.WithOrigins(allowedOrigins)
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();
-            }
-            else
-            {
-                policy.WithOrigins(
-                        "http://localhost:5173",
-                        "https://localhost:5173",
-                        "http://localhost:3000",
-                        "https://localhost:3000")
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();
-            }
-        });
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+
+            // НЕЛЬЗЯ включать credentials вместе с AllowAnyOrigin:
+            // policy.AllowCredentials();
+        }
+        else if (allowedOrigins is { Length: > 0 })
+        {
+            policy
+                .WithOrigins(allowedOrigins)
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+
+            // Обычно при JWT в заголовке Authorization credentials НЕ нужны:
+            // policy.AllowCredentials();
+
+            // Если у вас будет cookie-auth (или нужно отправлять cookies) — тогда раскомментируйте:
+            // policy.AllowCredentials();
+        }
+        else
+        {
+            // Fallback for local dev
+            policy.WithOrigins(
+                    "http://localhost:5173",
+                    "https://localhost:5173",
+                    "http://localhost:3000",
+                    "https://localhost:3000")
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+
+            // Обычно не нужно:
+            // policy.AllowCredentials();
+        }
+    });
 });
 
 // Configure Swagger
@@ -125,6 +152,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// DB init
 using (var scope = app.Services.CreateScope())
 {
     var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
@@ -139,10 +167,18 @@ if (app.Environment.IsDevelopment() || swaggerEnabled)
     app.UseSwaggerUI();
 }
 
+// Если API работает строго за reverse-proxy (Nginx) и HTTPS терминируется на прокси,
+// то иногда UseHttpsRedirection может мешать при неверных forwarded headers.
+// Тогда либо настраивайте forwarded headers, либо временно отключайте редирект:
+// app.UseHttpsRedirection();
+
 app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
+
+app.UseCors(CorsPolicyName);
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
