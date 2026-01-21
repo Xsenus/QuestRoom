@@ -23,10 +23,10 @@ public class QuestsController : ControllerBase
         return Ok(quests);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<QuestDto>> GetQuest(Guid id)
+    [HttpGet("{idOrSlug}")]
+    public async Task<ActionResult<QuestDto>> GetQuest(string idOrSlug)
     {
-        var quest = await _questService.GetQuestAsync(id);
+        var quest = await _questService.GetQuestAsync(idOrSlug);
         return quest == null ? NotFound() : Ok(quest);
     }
 
@@ -39,7 +39,7 @@ public class QuestsController : ControllerBase
     }
 
     [Authorize(Roles = "admin")]
-    [HttpPut("{id}")]
+    [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateQuest(Guid id, [FromBody] QuestUpsertDto quest)
     {
         var updated = await _questService.UpdateQuestAsync(id, quest);
@@ -47,7 +47,7 @@ public class QuestsController : ControllerBase
     }
 
     [Authorize(Roles = "admin")]
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteQuest(Guid id)
     {
         var deleted = await _questService.DeleteQuestAsync(id);

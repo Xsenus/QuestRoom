@@ -36,15 +36,35 @@ public class BookingService : IBookingService
 
         try
         {
+            QuestSchedule? schedule = null;
+            if (dto.QuestScheduleId.HasValue)
+            {
+                schedule = await _context.QuestSchedules.FindAsync(dto.QuestScheduleId.Value);
+                if (schedule == null)
+                {
+                    throw new InvalidOperationException("Слот расписания не найден.");
+                }
+
+                if (schedule.IsBooked)
+                {
+                    throw new InvalidOperationException("Выбранное время уже забронировано.");
+                }
+            }
+
+            if (!dto.QuestId.HasValue && schedule == null)
+            {
+                throw new InvalidOperationException("Не указан квест для бронирования.");
+            }
+
             var booking = new Booking
             {
                 Id = Guid.NewGuid(),
-                QuestId = dto.QuestId,
+                QuestId = dto.QuestId ?? schedule?.QuestId,
                 QuestScheduleId = dto.QuestScheduleId,
                 CustomerName = dto.CustomerName,
                 CustomerPhone = dto.CustomerPhone,
                 CustomerEmail = dto.CustomerEmail,
-                BookingDate = dto.BookingDate,
+                BookingDate = schedule?.Date ?? dto.BookingDate,
                 ParticipantsCount = dto.ParticipantsCount,
                 Status = "pending",
                 Notes = dto.Notes,
@@ -55,16 +75,12 @@ public class BookingService : IBookingService
             _context.Bookings.Add(booking);
             await _context.SaveChangesAsync();
 
-            if (booking.QuestScheduleId.HasValue)
+            if (schedule != null)
             {
-                var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
-                if (schedule != null)
-                {
-                    schedule.IsBooked = true;
-                    schedule.BookingId = booking.Id;
-                    schedule.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                }
+                schedule.IsBooked = true;
+                schedule.BookingId = booking.Id;
+                schedule.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
 
             await transaction.CommitAsync();
@@ -85,9 +101,21 @@ public class BookingService : IBookingService
             return false;
         }
 
+        var wasCancelled = booking.Status == "cancelled";
         booking.Status = dto.Status;
         booking.Notes = dto.Notes;
         booking.UpdatedAt = DateTime.UtcNow;
+
+        if (dto.Status == "cancelled" && !wasCancelled && booking.QuestScheduleId.HasValue)
+        {
+            var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
+            if (schedule != null)
+            {
+                schedule.IsBooked = false;
+                schedule.BookingId = null;
+                schedule.UpdatedAt = DateTime.UtcNow;
+            }
+        }
 
         await _context.SaveChangesAsync();
         return true;

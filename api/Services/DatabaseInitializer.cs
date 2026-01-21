@@ -247,6 +247,11 @@ public class DatabaseInitializer : IDatabaseInitializer
                 }
             };
 
+            foreach (var quest in questData)
+            {
+                quest.Slug = Slugify(quest.Title);
+            }
+
             _context.Quests.AddRange(questData);
         }
 
@@ -387,5 +392,33 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.Settings.RemoveRange(await _context.Settings.ToListAsync());
 
         await _context.SaveChangesAsync();
+    }
+
+    private static string Slugify(string value)
+    {
+        var trimmed = value.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return string.Empty;
+        }
+
+        var builder = new System.Text.StringBuilder();
+        var previousDash = false;
+
+        foreach (var ch in trimmed)
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                builder.Append(char.ToLowerInvariant(ch));
+                previousDash = false;
+            }
+            else if (!previousDash)
+            {
+                builder.Append('-');
+                previousDash = true;
+            }
+        }
+
+        return builder.ToString().Trim('-');
     }
 }

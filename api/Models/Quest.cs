@@ -17,6 +17,9 @@ public class Quest
     [Column("description")]
     public string Description { get; set; } = string.Empty;
 
+    [Column("slug")]
+    public string Slug { get; set; } = string.Empty;
+
     [Column("addresses", TypeName = "text[]")]
     public string[] Addresses { get; set; } = Array.Empty<string>();
 
