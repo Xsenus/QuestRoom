@@ -111,7 +111,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Id = Guid.NewGuid(),
                     Duration = 60,
                     Label = "60 минут",
-                    BadgeImageUrl = null,
+                    BadgeImageUrl = "/images/other/60min.png",
                     CreatedAt = DateTime.UtcNow
                 },
                 new DurationBadge
@@ -119,7 +119,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Id = Guid.NewGuid(),
                     Duration = 75,
                     Label = "75 минут",
-                    BadgeImageUrl = null,
+                    BadgeImageUrl = "/images/other/75min.png",
                     CreatedAt = DateTime.UtcNow
                 },
                 new DurationBadge
@@ -127,7 +127,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Id = Guid.NewGuid(),
                     Duration = 90,
                     Label = "90 минут",
-                    BadgeImageUrl = null,
+                    BadgeImageUrl = "/images/other/90min.png",
                     CreatedAt = DateTime.UtcNow
                 });
         }
@@ -152,8 +152,14 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Duration = 75,
                     IsNew = true,
                     IsVisible = true,
-                    MainImage = null,
-                    Images = Array.Empty<string>(),
+                    MainImage = "/images/quest/sherlok/0.jpg",
+                    Images = new[]
+                    {
+                        "/images/quest/sherlok/1.jpg",
+                        "/images/quest/sherlok/2.jpg",
+                        "/images/quest/sherlok/3.jpg",
+                        "/images/quest/sherlok/4.jpg"
+                    },
                     SortOrder = 1,
                     CreatedAt = now,
                     UpdatedAt = now
@@ -173,8 +179,14 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Duration = 75,
                     IsNew = false,
                     IsVisible = true,
-                    MainImage = null,
-                    Images = Array.Empty<string>(),
+                    MainImage = "/images/quest/alice/0.JPG",
+                    Images = new[]
+                    {
+                        "/images/quest/alice/1.JPG",
+                        "/images/quest/alice/2.JPG",
+                        "/images/quest/alice/3.JPG",
+                        "/images/quest/alice/4.JPG"
+                    },
                     SortOrder = 2,
                     CreatedAt = now,
                     UpdatedAt = now
@@ -194,8 +206,14 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Duration = 60,
                     IsNew = false,
                     IsVisible = true,
-                    MainImage = null,
-                    Images = Array.Empty<string>(),
+                    MainImage = "/images/quest/hog/0.JPG",
+                    Images = new[]
+                    {
+                        "/images/quest/hog/1.JPG",
+                        "/images/quest/hog/2.JPG",
+                        "/images/quest/hog/3.JPG",
+                        "/images/quest/hog/4.JPG"
+                    },
                     SortOrder = 3,
                     CreatedAt = now,
                     UpdatedAt = now
@@ -215,8 +233,14 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Duration = 90,
                     IsNew = false,
                     IsVisible = true,
-                    MainImage = null,
-                    Images = Array.Empty<string>(),
+                    MainImage = "/images/quest/ograb/0.jpg",
+                    Images = new[]
+                    {
+                        "/images/quest/ograb/1.jpg",
+                        "/images/quest/ograb/2.jpg",
+                        "/images/quest/ograb/3.jpg",
+                        "/images/quest/ograb/4.jpg"
+                    },
                     SortOrder = 4,
                     CreatedAt = now,
                     UpdatedAt = now
@@ -236,8 +260,14 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Duration = 75,
                     IsNew = false,
                     IsVisible = true,
-                    MainImage = null,
-                    Images = Array.Empty<string>(),
+                    MainImage = "/images/quest/zvonok/0.jpg",
+                    Images = new[]
+                    {
+                        "/images/quest/zvonok/1.jpg",
+                        "/images/quest/zvonok/2.jpg",
+                        "/images/quest/zvonok/3.jpg",
+                        "/images/quest/zvonok/4.jpg"
+                    },
                     SortOrder = 5,
                     CreatedAt = now,
                     UpdatedAt = now
@@ -257,8 +287,14 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Duration = 75,
                     IsNew = false,
                     IsVisible = true,
-                    MainImage = null,
-                    Images = Array.Empty<string>(),
+                    MainImage = "/images/quest/key/0.jpg",
+                    Images = new[]
+                    {
+                        "/images/quest/key/1.jpg",
+                        "/images/quest/key/2.jpg",
+                        "/images/quest/key/3.jpg",
+                        "/images/quest/key/4.jpg"
+                    },
                     SortOrder = 6,
                     CreatedAt = now,
                     UpdatedAt = now
@@ -277,16 +313,101 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         if (!await _context.Rules.AnyAsync())
         {
-            _context.Rules.Add(new Rule
+            var rules = new[]
             {
-                Id = Guid.NewGuid(),
-                Title = "Приходите за 10 минут",
-                Content = "Просим вас приходить заранее, чтобы пройти инструктаж.",
-                SortOrder = 0,
-                IsVisible = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Для участия в квесте необходима команда игроков от 2 до 4 человек.",
+                    Content = string.Empty,
+                    SortOrder = 0,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "На прохождение квеста у вас ровно 60 минут. Если вы не уложитесь в отведенное время, двери откроются, и смотрители вас выпустят.",
+                    Content = string.Empty,
+                    SortOrder = 1,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Личные вещи, сумки и телефоны необходимо оставить в запирающемся шкафчике. Не беспокойтесь, с ними ничего не случится. Все, что вам потребуется для прохождения квеста, вы найдете внутри комнаты.",
+                    Content = string.Empty,
+                    SortOrder = 2,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Ни одно из заданий в наших квестах не требует применения грубой физической силы. Только логика, наблюдательность, смекалка и находчивость.",
+                    Content = string.Empty,
+                    SortOrder = 3,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Во всех комнатах установлены камеры и микрофоны. В любой нестандартной ситуации смотрители придут к вам на помощь. Если вам нужна подсказка, обратитесь за ней к смотрителю.",
+                    Content = string.Empty,
+                    SortOrder = 4,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Смотрители сами приведут квест в первоначальный порядок, но старайтесь не оставлять после себя необратимых изменений.",
+                    Content = string.Empty,
+                    SortOrder = 5,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Не уносите ничего с собой из квестов: главное, что вы можете забрать - это море положительных эмоций и чувство удовлетворения от пройденного испытания.",
+                    Content = string.Empty,
+                    SortOrder = 6,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Не обсуждайте прохождение квеста после того, как выйдите из квеста, - этим вы можете испортить удовольствие тем, кто еще не играл.",
+                    Content = string.Empty,
+                    SortOrder = 7,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Rule
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Мы не допускаем на участие в игре людей:",
+                    Content = "в возрасте младше 14 лет без сопровождения взрослых или нашего детского аниматора.\nв возрасте младше 8 лет.\nв состоянии алкогольного опьянения.\nв состоянии агрессивного, неадекватного поведения, причиной которого может быть причинен ущерб реквизитам или оборудованию игровых комнат.",
+                    SortOrder = 8,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                }
+            };
+
+            _context.Rules.AddRange(rules);
         }
 
         if (!await _context.Reviews.AnyAsync())
@@ -314,7 +435,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Title = "Скидка на утренние игры",
                 Description = "Скидка 10% на будние дни до 12:00.",
                 DiscountText = "-10%",
-                ImageUrl = null,
+                ImageUrl = "/images/stock/1.JPG",
                 ValidFrom = DateOnly.FromDateTime(DateTime.UtcNow),
                 ValidUntil = null,
                 IsActive = true,
@@ -326,18 +447,71 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         if (!await _context.Certificates.AnyAsync())
         {
-            _context.Certificates.Add(new Certificate
+            var certificates = new[]
             {
-                Id = Guid.NewGuid(),
-                Title = "Подарочный сертификат",
-                Description = "Подарите впечатления близким!",
-                ImageUrl = null,
-                IssuedDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                SortOrder = 0,
-                IsVisible = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
+                new Certificate
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Подарочный сертификат №1",
+                    Description = "Подарите впечатления близким!",
+                    ImageUrl = "/images/certificate/1.png",
+                    IssuedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    SortOrder = 0,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Certificate
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Подарочный сертификат №2",
+                    Description = "Сертификат на квест для команды.",
+                    ImageUrl = "/images/certificate/2.png",
+                    IssuedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    SortOrder = 1,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Certificate
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Подарочный сертификат №3",
+                    Description = "Новый формат подарка для любителей приключений.",
+                    ImageUrl = "/images/certificate/3.png",
+                    IssuedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    SortOrder = 2,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Certificate
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Подарочный сертификат №4",
+                    Description = "Подарите эмоции и впечатления.",
+                    ImageUrl = "/images/certificate/4.png",
+                    IssuedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    SortOrder = 3,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Certificate
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Подарочный сертификат №5",
+                    Description = "Сертификат для квестов «Вловушке24».",
+                    ImageUrl = "/images/certificate/5.png",
+                    IssuedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    SortOrder = 4,
+                    IsVisible = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                }
+            };
+
+            _context.Certificates.AddRange(certificates);
         }
 
         if (!await _context.AboutInfos.AnyAsync())
@@ -345,10 +519,10 @@ public class DatabaseInitializer : IDatabaseInitializer
             _context.AboutInfos.Add(new AboutInfo
             {
                 Id = Guid.NewGuid(),
-                Title = "Quest Room",
-                Content = "Мы создаем лучшие квесты для вашей команды.",
-                Mission = "Дарить эмоции и приключения.",
-                Vision = "Стать лидером среди квестов в регионе.",
+                Title = "О проекте",
+                Content = "Реалити-квест «Вловушке24» – уникальный шанс оказаться в совершенно новой, интригующей ситуации, где придется проявить нестандартное мышление, наблюдательность, внимательность, смекалку и логику.\n\nЭто командная игра в которой участвуют от 2 до 5 человек, попадающих в одну из запертых квест-комнат, потрясающих атмосферой реальности!\n\nРеалити-квест «Вловушке24» не только правдоподобная имитация экстремальной ситуации, из которой непросто выбраться! Это и 75 или 90 минут незабываемых, неповторимых, свежих, идеально продуманных механических головоломок, хитрых и коварных задач, непредвиденных развязок и сюжетных поворотов через которые Вам предстоит пройти. Да и это лишь малая часть, что ожидает Вас в нашем Квеструме!\n\nМы гарантируем: массу незабываемых впечатлений, бурю положительных эмоций, повышение уровня адреналина в крови, улыбки, азарт и желание идти до конца, чтобы победить!\n\nКвест в реальности «Вловушке24» – это путешествие в чужой, нетронутый мир, полный загадок, тайн и неожиданных сюрпризов. Сможете ли вы из него выбраться?",
+                Mission = string.Empty,
+                Vision = string.Empty,
                 UpdatedAt = DateTime.UtcNow
             });
         }
@@ -358,14 +532,14 @@ public class DatabaseInitializer : IDatabaseInitializer
             _context.Settings.Add(new Settings
             {
                 Id = Guid.NewGuid(),
-                VkUrl = null,
+                VkUrl = "https://vk.com/vlovushkekrsk",
                 YoutubeUrl = null,
                 InstagramUrl = "https://www.instagram.com/vlovushke_krsk/",
                 TelegramUrl = null,
-                Address = "г. Красноярск, ул. Кирова, д.43",
+                Address = "г. Красноярск, ул. Кирова, 43",
                 Email = "krsk@vlovushke24.ru",
                 Phone = "8 (391) 294-59-50",
-                LogoUrl = null,
+                LogoUrl = "/images/logo.png",
                 UpdatedAt = DateTime.UtcNow
             });
         }
