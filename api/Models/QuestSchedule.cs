@@ -1,6 +1,7 @@
-using QuestRoomApi.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+
+namespace QuestRoomApi.Models;
 
 [Table("quest_schedule")]
 public class QuestSchedule

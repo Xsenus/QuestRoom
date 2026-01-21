@@ -7,5 +7,4 @@ public class QuestScheduleUpsertDto
     public TimeOnly TimeSlot { get; set; }
     public int Price { get; set; }
     public bool IsBooked { get; set; }
-    public Guid? BookingId { get; set; }
 }
