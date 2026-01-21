@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using QuestRoomApi.Data;
 using QuestRoomApi.Models;
 
@@ -39,7 +41,27 @@ public class DatabaseInitializer : IDatabaseInitializer
     {
         if (_context.Database.IsRelational())
         {
-            await _context.Database.MigrateAsync();
+            var databaseCreator = _context.Database.GetService<IRelationalDatabaseCreator>();
+
+            if (!await databaseCreator.ExistsAsync())
+            {
+                _logger.LogInformation("Database does not exist. Creating database before applying migrations.");
+                await databaseCreator.CreateAsync();
+            }
+
+            var migrations = _context.Database.GetMigrations().ToList();
+            if (migrations.Count == 0)
+            {
+                _logger.LogWarning("No EF Core migrations were found. Creating tables from the current model.");
+                if (!await databaseCreator.HasTablesAsync())
+                {
+                    await databaseCreator.CreateTablesAsync();
+                }
+            }
+            else
+            {
+                await _context.Database.MigrateAsync();
+            }
         }
         else
         {
