@@ -39,11 +39,7 @@ public class DatabaseInitializer : IDatabaseInitializer
     {
         if (_context.Database.IsRelational())
         {
-            var pending = await _context.Database.GetPendingMigrationsAsync();
-            if (pending.Any())
-                await _context.Database.MigrateAsync();
-            else
-                await _context.Database.EnsureCreatedAsync();
+            await _context.Database.MigrateAsync();
         }
         else
         {
@@ -247,9 +243,11 @@ public class DatabaseInitializer : IDatabaseInitializer
                 }
             };
 
+            var usedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var quest in questData)
             {
-                quest.Slug = Slugify(quest.Title);
+                quest.Slug = BuildUniqueSlug(quest.Title, quest.Id, usedSlugs);
+                usedSlugs.Add(quest.Slug);
             }
 
             _context.Quests.AddRange(questData);
@@ -392,6 +390,30 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.Settings.RemoveRange(await _context.Settings.ToListAsync());
 
         await _context.SaveChangesAsync();
+    }
+
+    private static string BuildUniqueSlug(string title, Guid questId, ISet<string> existingSlugs)
+    {
+        var baseSlug = Slugify(title);
+        if (string.IsNullOrWhiteSpace(baseSlug))
+        {
+            baseSlug = "quest";
+        }
+
+        var slug = baseSlug;
+        if (existingSlugs.Contains(slug))
+        {
+            slug = $"{baseSlug}-{questId.ToString("N")[..8]}";
+        }
+
+        var counter = 1;
+        while (existingSlugs.Contains(slug))
+        {
+            slug = $"{baseSlug}-{counter}";
+            counter++;
+        }
+
+        return slug;
     }
 
     private static string Slugify(string value)
