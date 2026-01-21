@@ -1,7 +1,6 @@
+using QuestRoomApi.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-
-namespace QuestRoomApi.Models;
 
 [Table("quest_schedule")]
 public class QuestSchedule
@@ -25,18 +24,13 @@ public class QuestSchedule
     [Column("is_booked")]
     public bool IsBooked { get; set; }
 
-    [Column("booking_id")]
-    public Guid? BookingId { get; set; }
-
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [ForeignKey("QuestId")]
     public Quest? Quest { get; set; }
 
-    [ForeignKey("BookingId")]
     public Booking? Booking { get; set; }
 }
