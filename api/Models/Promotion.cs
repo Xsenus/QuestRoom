@@ -24,6 +24,9 @@ public class Promotion
     [Column("image_url")]
     public string? ImageUrl { get; set; }
 
+    [Column("display_mode")]
+    public string DisplayMode { get; set; } = "text_description";
+
     [Column("valid_from")]
     public DateOnly ValidFrom { get; set; }
 

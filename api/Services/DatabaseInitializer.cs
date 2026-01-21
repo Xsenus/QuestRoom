@@ -436,6 +436,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Description = "Скидка 10% на будние дни до 12:00.",
                 DiscountText = "-10%",
                 ImageUrl = "/images/stock/1.JPG",
+                DisplayMode = "image",
                 ValidFrom = DateOnly.FromDateTime(DateTime.UtcNow),
                 ValidUntil = null,
                 IsActive = true,

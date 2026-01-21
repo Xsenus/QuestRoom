@@ -38,17 +38,41 @@ export default function RulesPage() {
         </div>
 
         <div className="space-y-6">
-          {rules.map((rule, index) => (
-            <div key={rule.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-              <div className="flex gap-4">
-                <span className="text-red-500 font-bold text-xl flex-shrink-0">{index + 1}.</span>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">{rule.title}</h3>
-                  <p className="text-white/90 leading-relaxed whitespace-pre-wrap">{rule.content}</p>
+          {rules.map((rule, index) => {
+            const isWarningRule = rule.title.toLowerCase().startsWith('мы не допускаем');
+            if (isWarningRule) {
+              return (
+                <div
+                  key={rule.id}
+                  className="bg-white/5 border border-red-500/70 rounded-lg p-6 md:p-8 text-center"
+                >
+                  <h3 className="text-xl md:text-2xl font-bold text-white mb-4">
+                    {rule.title}
+                  </h3>
+                  <div className="text-white/90 leading-relaxed whitespace-pre-wrap space-y-2">
+                    {rule.content
+                      .split('\n')
+                      .filter(Boolean)
+                      .map((line, idx) => (
+                        <p key={idx}>{line}</p>
+                      ))}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div key={rule.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+                <div className="flex gap-4">
+                  <span className="text-red-500 font-bold text-xl flex-shrink-0">{index + 1}.</span>
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-2">{rule.title}</h3>
+                    <p className="text-white/90 leading-relaxed whitespace-pre-wrap">{rule.content}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {rules.length === 0 && (
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 text-center">
