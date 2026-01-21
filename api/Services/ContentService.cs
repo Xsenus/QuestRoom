@@ -198,6 +198,7 @@ public class ContentService : IContentService
             Description = dto.Description,
             DiscountText = dto.DiscountText,
             ImageUrl = dto.ImageUrl,
+            DisplayMode = dto.DisplayMode,
             ValidFrom = dto.ValidFrom,
             ValidUntil = dto.ValidUntil,
             IsActive = dto.IsActive,
@@ -223,6 +224,7 @@ public class ContentService : IContentService
         promotion.Description = dto.Description;
         promotion.DiscountText = dto.DiscountText;
         promotion.ImageUrl = dto.ImageUrl;
+        promotion.DisplayMode = dto.DisplayMode;
         promotion.ValidFrom = dto.ValidFrom;
         promotion.ValidUntil = dto.ValidUntil;
         promotion.IsActive = dto.IsActive;
@@ -431,6 +433,7 @@ public class ContentService : IContentService
             Description = promotion.Description,
             DiscountText = promotion.DiscountText,
             ImageUrl = promotion.ImageUrl,
+            DisplayMode = promotion.DisplayMode,
             ValidFrom = promotion.ValidFrom,
             ValidUntil = promotion.ValidUntil,
             IsActive = promotion.IsActive,

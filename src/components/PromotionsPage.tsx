@@ -37,46 +37,89 @@ export default function PromotionsPage() {
           </h1>
         </div>
 
-        <div className="grid gap-8">
-          {promotions.map((promo) => (
-            <div
-              key={promo.id}
-              className="relative overflow-hidden rounded-lg shadow-2xl bg-white"
-            >
-              <div
-                className="relative h-96 bg-cover bg-center"
-                style={{
-                  backgroundImage: promo.imageUrl
-                    ? `url(${promo.imageUrl})`
-                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60"></div>
+        <div className="space-y-8">
+          {promotions.map((promo) => {
+            const displayMode = promo.displayMode || 'text_description';
 
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-                  <h2 className="text-4xl md:text-5xl font-black text-white mb-4 drop-shadow-2xl tracking-wide uppercase">
+            if (displayMode === 'image') {
+              return (
+                <div
+                  key={promo.id}
+                  className="overflow-hidden rounded-lg shadow-2xl bg-white p-4"
+                >
+                  {promo.imageUrl ? (
+                    <img
+                      src={promo.imageUrl}
+                      alt={promo.title}
+                      className="w-full max-h-[520px] object-contain"
+                    />
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-gray-500">
+                      Изображение не указано
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            if (displayMode === 'text') {
+              return (
+                <div
+                  key={promo.id}
+                  className="rounded-lg shadow-2xl bg-white p-8 text-center space-y-4"
+                >
+                  <h2 className="text-3xl md:text-4xl font-black text-gray-900 tracking-wide uppercase">
                     {promo.title}
                   </h2>
                   {promo.discountText && (
-                    <div className="text-7xl md:text-8xl font-black text-red-600 drop-shadow-2xl mb-4">
+                    <div className="text-5xl md:text-6xl font-black text-red-600">
                       {promo.discountText}
                     </div>
                   )}
                 </div>
+              );
+            }
 
-                <div className="absolute bottom-0 left-0 right-0 bg-amber-800/90 backdrop-blur-sm py-4 px-6">
-                  <p className="text-white text-center text-base md:text-lg font-semibold tracking-wide">
-                    {promo.description}
-                  </p>
-                  {promo.validUntil && (
-                    <p className="text-white/80 text-center text-sm mt-2">
-                      Действует до: {new Date(promo.validUntil).toLocaleDateString('ru-RU')}
+            return (
+              <div
+                key={promo.id}
+                className="relative overflow-hidden rounded-lg shadow-2xl bg-white"
+              >
+                <div
+                  className="relative h-96 bg-cover bg-center"
+                  style={{
+                    backgroundImage: promo.imageUrl
+                      ? `url(${promo.imageUrl})`
+                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60"></div>
+
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                    <h2 className="text-4xl md:text-5xl font-black text-white mb-4 drop-shadow-2xl tracking-wide uppercase">
+                      {promo.title}
+                    </h2>
+                    {promo.discountText && (
+                      <div className="text-7xl md:text-8xl font-black text-red-600 drop-shadow-2xl mb-4">
+                        {promo.discountText}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 bg-amber-800/90 backdrop-blur-sm py-4 px-6">
+                    <p className="text-white text-center text-base md:text-lg font-semibold tracking-wide">
+                      {promo.description}
                     </p>
-                  )}
+                    {promo.validUntil && (
+                      <p className="text-white/80 text-center text-sm mt-2">
+                        Действует до: {new Date(promo.validUntil).toLocaleDateString('ru-RU')}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {promotions.length === 0 && (

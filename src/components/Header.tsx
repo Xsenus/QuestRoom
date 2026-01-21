@@ -31,7 +31,7 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
             className="flex flex-col items-center hover:scale-105 transition-transform cursor-pointer"
           >
             <img
-              src="/images/image.png"
+              src="/images/logo.png"
               alt="Вловушке24"
               className="h-24 md:h-32 w-auto object-contain"
             />

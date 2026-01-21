@@ -31,6 +31,7 @@ export default function PromotionsAdminPage() {
       description: '',
       discountText: '',
       imageUrl: '',
+      displayMode: 'text_description',
       validFrom: new Date().toISOString().split('T')[0],
       validUntil: null,
       isActive: true,
@@ -164,6 +165,26 @@ export default function PromotionsAdminPage() {
                   className="mt-3 max-w-xs rounded-lg border"
                 />
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Формат отображения
+              </label>
+              <select
+                value={editingPromo.displayMode || 'text_description'}
+                onChange={(e) =>
+                  setEditingPromo({
+                    ...editingPromo,
+                    displayMode: e.target.value as PromotionUpsert['displayMode'],
+                  })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              >
+                <option value="image">Только картинка</option>
+                <option value="text">Только текст</option>
+                <option value="text_description">Текст + описание</option>
+              </select>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">

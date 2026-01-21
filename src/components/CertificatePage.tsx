@@ -59,21 +59,20 @@ export default function CertificatePage() {
         </div>
 
         {certificates.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 mb-8">
+          <div className="space-y-6 mb-8">
             {certificates.map((cert) => (
               <div key={cert.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-                {cert.imageUrl && (
+                {cert.imageUrl ? (
                   <img
                     src={cert.imageUrl}
                     alt={cert.title}
-                    className="w-full h-64 object-cover rounded-lg mb-4"
+                    className="w-full max-h-[520px] object-contain rounded-lg"
                   />
+                ) : (
+                  <div className="text-white/80 text-center py-10">
+                    Изображение сертификата не задано
+                  </div>
                 )}
-                <h3 className="text-xl font-bold text-white mb-2">{cert.title}</h3>
-                <p className="text-white/80 text-sm mb-2">{cert.description}</p>
-                <p className="text-white/60 text-xs">
-                  Дата выдачи: {new Date(cert.issuedDate).toLocaleDateString('ru-RU')}
-                </p>
               </div>
             ))}
           </div>

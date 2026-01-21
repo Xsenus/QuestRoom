@@ -8,9 +8,9 @@ interface QuestCardProps {
 
 export default function QuestCard({ quest }: QuestCardProps) {
   const navigate = useNavigate();
-  const mainImage = quest.mainImage || quest.images?.[0] || '/images/image.png';
+  const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
-  const durationBadgeUrl = `/images/badges/${quest.duration}min.svg`;
+  const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
 
   while (additionalImages.length < 4) {
     additionalImages.push(mainImage);

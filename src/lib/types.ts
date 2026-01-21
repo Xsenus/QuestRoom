@@ -125,6 +125,7 @@ export type Promotion = {
   description: string;
   discountText: string;
   imageUrl: string | null;
+  displayMode: 'image' | 'text' | 'text_description';
   validFrom: string;
   validUntil: string | null;
   isActive: boolean;

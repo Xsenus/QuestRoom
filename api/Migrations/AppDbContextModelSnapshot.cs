@@ -233,6 +233,11 @@ public partial class AppDbContextModelSnapshot : ModelSnapshot
                 .HasColumnType("text")
                 .HasColumnName("discount_text");
 
+            b.Property<string>("DisplayMode")
+                .IsRequired()
+                .HasColumnType("text")
+                .HasColumnName("display_mode");
+
             b.Property<string>("ImageUrl")
                 .HasColumnType("text")
                 .HasColumnName("image_url");
