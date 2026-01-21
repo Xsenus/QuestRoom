@@ -1,23 +1,35 @@
 import { useState, useEffect } from 'react';
 import { Star, User } from 'lucide-react';
 import { api } from '../lib/api';
-import { Review } from '../lib/types';
+import { Review, Settings } from '../lib/types';
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadReviews();
+    loadData();
   }, []);
 
-  const loadReviews = async () => {
-    try {
-      const data = await api.getReviews(true);
-      setReviews(data || []);
-    } catch (error) {
-      console.error('Error loading reviews:', error);
+  const loadData = async () => {
+    const [reviewsResult, settingsResult] = await Promise.allSettled([
+      api.getReviews(true),
+      api.getSettings(),
+    ]);
+
+    if (reviewsResult.status === 'fulfilled') {
+      setReviews(reviewsResult.value || []);
+    } else {
+      console.error('Error loading reviews:', reviewsResult.reason);
     }
+
+    if (settingsResult.status === 'fulfilled') {
+      setSettings(settingsResult.value);
+    } else {
+      console.error('Error loading settings:', settingsResult.reason);
+    }
+
     setLoading(false);
   };
 
@@ -36,6 +48,11 @@ export default function ReviewsPage() {
     );
   };
 
+  const phoneNumber = settings?.phone?.trim();
+  const phoneLink = phoneNumber
+    ? `tel:${phoneNumber.replace(/[^\d+]/g, '')}`
+    : null;
+
   if (loading) {
     return (
       <div className="min-h-screen py-12 flex items-center justify-center">
@@ -46,7 +63,7 @@ export default function ReviewsPage() {
 
   return (
     <div className="min-h-screen py-8 md:py-12">
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-8 md:mb-12">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-8">
             Отзывы наших клиентов
@@ -103,12 +120,14 @@ export default function ReviewsPage() {
           <p className="text-sm md:text-base text-white/80 mb-4 md:mb-6">
             Мы будем рады узнать ваше мнение о прохождении наших квестов
           </p>
-          <a
-            href="tel:+73912945950"
-            className="inline-block bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-lg transition-all hover:scale-105 shadow-lg text-sm md:text-base"
-          >
-            Позвонить нам
-          </a>
+          {phoneLink && (
+            <a
+              href={phoneLink}
+              className="inline-block bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-lg transition-all hover:scale-105 shadow-lg text-sm md:text-base"
+            >
+              Позвонить нам
+            </a>
+          )}
         </div>
       </div>
     </div>

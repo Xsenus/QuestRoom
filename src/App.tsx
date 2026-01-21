@@ -21,6 +21,7 @@ import ReviewsAdminPage from './pages/admin/ReviewsAdminPage';
 import PromotionsAdminPage from './pages/admin/PromotionsAdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PricingRulesPage from './pages/admin/PricingRulesPage';
+import ScrollToTopButton from './components/ScrollToTopButton';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -71,6 +72,7 @@ function App() {
               <Route path="/promotions" element={<PromotionsPage />} />
               <Route path="/quest/:id" element={<QuestDetailPage />} />
             </Routes>
+            <ScrollToTopButton />
             <Footer setCurrentPage={handlePageChange} />
           </div>
         }

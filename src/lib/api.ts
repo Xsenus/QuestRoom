@@ -5,6 +5,8 @@ import type {
   BookingCreate,
   BookingUpdate,
   Certificate,
+  CertificateOrder,
+  CertificateOrderCreate,
   CertificateUpsert,
   DurationBadge,
   ImageAsset,
@@ -335,6 +337,18 @@ class ApiClient {
   async deleteCertificate(id: string) {
     return this.request(`/certificates/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Certificate orders
+  async getCertificateOrders(): Promise<CertificateOrder[]> {
+    return this.request('/certificateorders');
+  }
+
+  async createCertificateOrder(order: CertificateOrderCreate): Promise<CertificateOrder> {
+    return this.request('/certificateorders', {
+      method: 'POST',
+      body: JSON.stringify(order),
     });
   }
 

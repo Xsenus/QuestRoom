@@ -104,6 +104,24 @@ export type Certificate = {
 
 export type CertificateUpsert = Omit<Certificate, 'id' | 'createdAt' | 'updatedAt'>;
 
+export type CertificateOrder = {
+  id: string;
+  certificateId: string;
+  certificateTitle: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  notes: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CertificateOrderCreate = Omit<
+  CertificateOrder,
+  'id' | 'status' | 'createdAt' | 'updatedAt'
+>;
+
 export type Review = {
   id: string;
   customerName: string;

@@ -30,7 +30,7 @@ export default function RulesPage() {
 
   return (
     <div className="min-h-screen py-12">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-12">
             Правила участия
