@@ -134,6 +134,7 @@ namespace QuestRoomApi.Migrations
                     age_rating = table.Column<string>(type: "text", nullable: false),
                     price = table.Column<int>(type: "integer", nullable: false),
                     duration = table.Column<int>(type: "integer", nullable: false),
+                    difficulty = table.Column<int>(type: "integer", nullable: false),
                     is_new = table.Column<bool>(type: "boolean", nullable: false),
                     is_visible = table.Column<bool>(type: "boolean", nullable: false),
                     main_image = table.Column<string>(type: "text", nullable: true),

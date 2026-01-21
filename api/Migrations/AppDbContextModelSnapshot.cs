@@ -375,6 +375,10 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("duration");
 
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("integer")
+                        .HasColumnName("difficulty");
+
                     b.PrimitiveCollection<string[]>("Images")
                         .IsRequired()
                         .HasColumnType("text[]")

@@ -70,8 +70,7 @@ export default function PricingRulesPage() {
     try {
       const data = await api.getQuests();
       setQuests(data || []);
-      if (data?.length) {
-        setSelectedQuestId(data[0].id);
+      if (data?.length && !generationQuestId) {
         setGenerationQuestId(data[0].id);
       }
     } catch (error) {
@@ -90,7 +89,10 @@ export default function PricingRulesPage() {
   };
 
   const handleCreate = () => {
-    if (!selectedQuestId) return;
+    if (!selectedQuestId) {
+      alert('Выберите квест для нового правила.');
+      return;
+    }
     setEditingRule(buildEmptyRule([selectedQuestId]));
   };
 
@@ -152,18 +154,27 @@ export default function PricingRulesPage() {
   };
 
   const handleGenerate = async () => {
-    if (!generationQuestId || !generateFrom || !generateTo) {
-      setGenerateResult('Заполните квест и диапазон дат.');
+    if (!generateFrom || !generateTo) {
+      setGenerateResult('Заполните диапазон дат.');
       return;
     }
 
     try {
-      const result = await api.generateSchedule({
-        questId: generationQuestId,
-        fromDate: generateFrom,
-        toDate: generateTo,
-      });
-      setGenerateResult(`Создано слотов: ${result.createdCount}`);
+      const isAllQuests = !generationQuestId;
+      if (isAllQuests && !confirm('Сгенерировать расписание для всех квестов?')) {
+        return;
+      }
+
+      const result = await api.generateSchedule(
+        isAllQuests
+          ? { fromDate: generateFrom, toDate: generateTo }
+          : { questId: generationQuestId, fromDate: generateFrom, toDate: generateTo }
+      );
+      setGenerateResult(
+        isAllQuests
+          ? `Создано слотов по всем квестам: ${result.createdCount}`
+          : `Создано слотов: ${result.createdCount}`
+      );
     } catch (error) {
       setGenerateResult('Ошибка генерации: ' + (error as Error).message);
     }
@@ -172,6 +183,14 @@ export default function PricingRulesPage() {
   const questOptions = useMemo(
     () => quests.map((quest) => ({ value: quest.id, label: quest.title })),
     [quests]
+  );
+  const questFilterOptions = useMemo(
+    () => [{ value: '', label: 'Все квесты' }, ...questOptions],
+    [questOptions]
+  );
+  const generationOptions = useMemo(
+    () => [{ value: '', label: 'Все квесты' }, ...questOptions],
+    [questOptions]
   );
   const questMap = useMemo(
     () => new Map(questOptions.map((quest) => [quest.value, quest.label])),
@@ -211,8 +230,8 @@ export default function PricingRulesPage() {
               onChange={(e) => setSelectedQuestId(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
             >
-              {questOptions.map((quest) => (
-                <option key={quest.value} value={quest.value}>
+              {questFilterOptions.map((quest) => (
+                <option key={quest.value || 'all'} value={quest.value}>
                   {quest.label}
                 </option>
               ))}
@@ -524,8 +543,8 @@ export default function PricingRulesPage() {
               onChange={(e) => setGenerationQuestId(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
             >
-              {questOptions.map((quest) => (
-                <option key={quest.value} value={quest.value}>
+              {generationOptions.map((quest) => (
+                <option key={quest.value || 'all'} value={quest.value}>
                   {quest.label}
                 </option>
               ))}

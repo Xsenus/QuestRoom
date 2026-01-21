@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Quest, QuestSchedule } from '../lib/types';
-import { Users, Clock, Star } from 'lucide-react';
+import { Users, Clock, Star, BadgeDollarSign } from 'lucide-react';
 import BookingModal from '../components/BookingModal';
 
 export default function QuestDetailPage() {
@@ -12,6 +12,8 @@ export default function QuestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<QuestSchedule | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const thumbnailsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -51,11 +53,27 @@ export default function QuestDetailPage() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    if (quest) {
+      setSelectedImage(quest.mainImage || quest.images?.[0] || null);
+    }
+  }, [quest]);
+
   const handleSlotClick = (slot: QuestSchedule) => {
     if (!slot.isBooked) {
       setSelectedSlot(slot);
       setShowBookingModal(true);
     }
+  };
+
+  const handleThumbnailScroll = (direction: 'left' | 'right') => {
+    const container = thumbnailsRef.current;
+    if (!container) return;
+    const scrollAmount = container.clientWidth * 0.8;
+    container.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
   };
 
   const handleBookingComplete = () => {
@@ -105,18 +123,63 @@ export default function QuestDetailPage() {
   }
 
   const groupedSchedule = groupScheduleByDate();
+  const galleryImages = [
+    quest.mainImage,
+    ...(quest.images || []),
+  ].filter((img, index, arr): img is string => Boolean(img) && arr.indexOf(img) === index);
 
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           <div className="relative">
-            {quest.mainImage && (
+            {selectedImage && (
               <img
-                src={quest.mainImage}
+                src={selectedImage}
                 alt={quest.title}
                 className="w-full h-96 object-cover rounded-lg shadow-2xl"
               />
+            )}
+            {galleryImages.length > 1 && (
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={() => handleThumbnailScroll('left')}
+                  className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                  type="button"
+                  aria-label="Прокрутить влево"
+                >
+                  ‹
+                </button>
+                <div
+                  ref={thumbnailsRef}
+                  className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth flex-1"
+                >
+                  {galleryImages.map((img) => (
+                    <button
+                      key={img}
+                      onClick={() => setSelectedImage(img)}
+                      className={`flex-shrink-0 rounded-lg border-2 transition-all ${
+                        selectedImage === img ? 'border-yellow-400' : 'border-transparent'
+                      }`}
+                      type="button"
+                    >
+                      <img
+                        src={img}
+                        alt={`${quest.title} фото`}
+                        className="h-20 w-28 object-cover rounded-md"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleThumbnailScroll('right')}
+                  className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                  type="button"
+                  aria-label="Прокрутить вправо"
+                >
+                  ›
+                </button>
+              </div>
             )}
           </div>
 
@@ -132,16 +195,16 @@ export default function QuestDetailPage() {
             <p className="text-lg mb-6 whitespace-pre-wrap">{quest.description}</p>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
+                <div className="flex items-center gap-2 mb-2 justify-center">
                   <Clock className="w-5 h-5 text-yellow-400" />
                   <span className="text-sm text-white/80">Возрастное ограничение</span>
                 </div>
                 <p className="text-xl font-bold">{quest.ageRestriction}</p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
+                <div className="flex items-center gap-2 mb-2 justify-center">
                   <Users className="w-5 h-5 text-blue-400" />
                   <span className="text-sm text-white/80">Количество участников</span>
                 </div>
@@ -150,16 +213,17 @@ export default function QuestDetailPage() {
                 </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
+                <div className="flex items-center gap-2 mb-2 justify-center">
                   <Clock className="w-5 h-5 text-green-400" />
                   <span className="text-sm text-white/80">Длительность</span>
                 </div>
                 <p className="text-xl font-bold">{quest.duration} минут</p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
+                <div className="flex items-center gap-2 mb-2 justify-center">
+                  <BadgeDollarSign className="w-5 h-5 text-emerald-400" />
                   <span className="text-sm text-white/80">Стоимость</span>
                 </div>
                 <p className="text-xl font-bold">от {quest.price} ₽</p>

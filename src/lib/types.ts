@@ -11,6 +11,7 @@ export type Quest = {
   ageRating: string;
   price: number;
   duration: number;
+  difficulty: number;
   isNew: boolean;
   isVisible: boolean;
   mainImage: string | null;
@@ -192,7 +193,7 @@ export type QuestPricingRuleUpsert = Omit<
 >;
 
 export type ScheduleGenerateRequest = {
-  questId: string;
+  questId?: string | null;
   fromDate: string;
   toDate: string;
 };

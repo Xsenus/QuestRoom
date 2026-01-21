@@ -12,6 +12,7 @@ public class QuestUpsertDto
     public string AgeRating { get; set; } = string.Empty;
     public int Price { get; set; }
     public int Duration { get; set; }
+    public int Difficulty { get; set; }
     public bool IsNew { get; set; }
     public bool IsVisible { get; set; }
     public string? MainImage { get; set; }

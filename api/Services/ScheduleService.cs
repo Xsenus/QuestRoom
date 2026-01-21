@@ -10,7 +10,7 @@ public interface IScheduleService
     Task<IReadOnlyList<QuestScheduleDto>> GetScheduleForQuestAsync(Guid questId, DateOnly? fromDate, DateOnly? toDate);
     Task<QuestScheduleDto> CreateSlotAsync(QuestScheduleUpsertDto dto);
     Task<bool> UpdateSlotAsync(Guid id, QuestScheduleUpsertDto dto);
-    Task<int> GenerateScheduleAsync(Guid questId, DateOnly fromDate, DateOnly toDate);
+    Task<int> GenerateScheduleAsync(Guid? questId, DateOnly fromDate, DateOnly toDate);
 }
 
 public class ScheduleService : IScheduleService
@@ -85,13 +85,33 @@ public class ScheduleService : IScheduleService
         return true;
     }
 
-    public async Task<int> GenerateScheduleAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
+    public async Task<int> GenerateScheduleAsync(Guid? questId, DateOnly fromDate, DateOnly toDate)
     {
         if (fromDate > toDate)
         {
             return 0;
         }
 
+        var questIds = questId.HasValue
+            ? new List<Guid> { questId.Value }
+            : await _context.Quests.Select(q => q.Id).ToListAsync();
+
+        if (!questIds.Any())
+        {
+            return 0;
+        }
+
+        var totalCreated = 0;
+        foreach (var id in questIds)
+        {
+            totalCreated += await GenerateScheduleForQuestAsync(id, fromDate, toDate);
+        }
+
+        return totalCreated;
+    }
+
+    private async Task<int> GenerateScheduleForQuestAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
+    {
         var rules = await _context.QuestPricingRules
             .Where(rule =>
                 (rule.QuestIds.Contains(questId) || rule.QuestId == questId) &&
@@ -154,7 +174,13 @@ public class ScheduleService : IScheduleService
                     var key = $"{date:yyyy-MM-dd}|{time}";
                     if (bookedKeys.Contains(key))
                     {
-                        time = time.AddMinutes(rule.IntervalMinutes);
+                        var nextTime = time.AddMinutes(rule.IntervalMinutes);
+                        if (nextTime <= time)
+                        {
+                            break;
+                        }
+
+                        time = nextTime;
                         continue;
                     }
 
@@ -165,19 +191,37 @@ public class ScheduleService : IScheduleService
                             blockedSlots.Add(key);
                         }
 
-                        time = time.AddMinutes(rule.IntervalMinutes);
+                        var nextTime = time.AddMinutes(rule.IntervalMinutes);
+                        if (nextTime <= time)
+                        {
+                            break;
+                        }
+
+                        time = nextTime;
                         continue;
                     }
 
                     if (blockedSlots.Contains(key) || selectedSlots.ContainsKey(key))
                     {
-                        time = time.AddMinutes(rule.IntervalMinutes);
+                        var nextTime = time.AddMinutes(rule.IntervalMinutes);
+                        if (nextTime <= time)
+                        {
+                            break;
+                        }
+
+                        time = nextTime;
                         continue;
                     }
 
                     selectedSlots[key] = rule.Price;
 
-                    time = time.AddMinutes(rule.IntervalMinutes);
+                    var updatedTime = time.AddMinutes(rule.IntervalMinutes);
+                    if (updatedTime <= time)
+                    {
+                        break;
+                    }
+
+                    time = updatedTime;
                 }
             }
         }
