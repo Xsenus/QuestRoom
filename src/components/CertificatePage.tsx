@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { api } from '../lib/api';
 import { Certificate } from '../lib/types';
 
 export default function CertificatePage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
+    notes: '',
   });
-
+  const [submitting, setSubmitting] = useState(false);
   const [showThanks, setShowThanks] = useState(false);
 
   useEffect(() => {
@@ -27,18 +30,54 @@ export default function CertificatePage() {
     setLoading(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowThanks(true);
-    setFormData({ name: '', phone: '', email: '' });
-    setTimeout(() => setShowThanks(false), 5000);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedCertificate) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await api.createCertificateOrder({
+        certificateId: selectedCertificate.id,
+        certificateTitle: selectedCertificate.title,
+        customerName: formData.name,
+        customerPhone: formData.phone,
+        customerEmail: formData.email || null,
+        notes: formData.notes || null,
+      });
+
+      setShowThanks(true);
+      setSelectedCertificate(null);
+      setFormData({ name: '', phone: '', email: '', notes: '' });
+      setTimeout(() => setShowThanks(false), 5000);
+    } catch (error) {
+      console.error('Error creating certificate order:', error);
+      alert('Ошибка при создании заказа. Попробуйте еще раз.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openOrderModal = (certificate: Certificate) => {
+    setSelectedCertificate(certificate);
+  };
+
+  const closeOrderModal = () => {
+    if (!submitting) {
+      setSelectedCertificate(null);
+    }
   };
 
   if (loading) {
@@ -51,7 +90,7 @@ export default function CertificatePage() {
 
   return (
     <div className="min-h-screen py-8 md:py-12">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-8 md:mb-12">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 md:mb-8">
             Сертификаты и награды
@@ -61,7 +100,13 @@ export default function CertificatePage() {
         {certificates.length > 0 && (
           <div className="space-y-6 mb-8">
             {certificates.map((cert) => (
-              <div key={cert.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+              <button
+                key={cert.id}
+                type="button"
+                onClick={() => openOrderModal(cert)}
+                className="w-full text-left bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all"
+                aria-label={`Заказать сертификат: ${cert.title}`}
+              >
                 {cert.imageUrl ? (
                   <img
                     src={cert.imageUrl}
@@ -73,7 +118,7 @@ export default function CertificatePage() {
                     Изображение сертификата не задано
                   </div>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -94,52 +139,88 @@ export default function CertificatePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 md:p-8 shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            <div>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Имя"
-                required
-                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
-              />
-            </div>
+        {selectedCertificate && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-lg p-6 md:p-8 max-w-lg w-full shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                    Заказ сертификата
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">{selectedCertificate.title}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeOrderModal}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  aria-label="Закрыть"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
 
-            <div>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="Телефон"
-                required
-                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
-              />
-            </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Имя"
+                    required
+                    className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+                  />
+                </div>
 
-            <div>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="E-mail"
-                required
-                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
-              />
-            </div>
+                <div>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="Телефон"
+                    required
+                    className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+                  />
+                </div>
 
-            <button
-              type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 text-sm md:text-base rounded-lg transition-all hover:scale-105 shadow-lg"
-            >
-              Заказать
-            </button>
-          </form>
-        </div>
+                <div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="E-mail"
+                    className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="Комментарий"
+                    className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 text-sm md:text-base rounded-lg transition-all hover:scale-[1.01] shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {submitting ? 'Отправка...' : 'Заказать'}
+                </button>
+
+                <p className="text-xs text-gray-500 text-center">
+                  Нажимая на кнопку, вы даете согласие на обработку персональных данных.
+                </p>
+              </form>
+            </div>
+          </div>
+        )}
 
         {showThanks && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">

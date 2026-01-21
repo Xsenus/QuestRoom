@@ -413,19 +413,88 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         if (!await _context.Reviews.AnyAsync())
         {
-            _context.Reviews.Add(new Review
-            {
-                Id = Guid.NewGuid(),
-                CustomerName = "Алексей",
-                QuestTitle = "Загадка старого особняка",
-                Rating = 5,
-                ReviewText = "Очень атмосферно и интересно!",
-                ReviewDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                IsVisible = true,
-                IsFeatured = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+            _context.Reviews.AddRange(
+                new Review
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerName = "Алексей",
+                    QuestTitle = "Загадка старого особняка",
+                    Rating = 5,
+                    ReviewText = "Очень атмосферно и интересно!",
+                    ReviewDate = today.AddDays(-2),
+                    IsVisible = true,
+                    IsFeatured = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Review
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerName = "Марина",
+                    QuestTitle = "Шерлок",
+                    Rating = 5,
+                    ReviewText = "Логические загадки супер, команда осталась в восторге.",
+                    ReviewDate = today.AddDays(-6),
+                    IsVisible = true,
+                    IsFeatured = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Review
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerName = "Илья",
+                    QuestTitle = "Идеальное ограбление",
+                    Rating = 4,
+                    ReviewText = "Очень динамично, понравились декорации и атмосфера.",
+                    ReviewDate = today.AddDays(-10),
+                    IsVisible = true,
+                    IsFeatured = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Review
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerName = "Ольга",
+                    QuestTitle = "Алиса в стране чудес",
+                    Rating = 5,
+                    ReviewText = "Сказочно и красиво, детям очень понравилось!",
+                    ReviewDate = today.AddDays(-14),
+                    IsVisible = true,
+                    IsFeatured = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Review
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerName = "Дмитрий",
+                    QuestTitle = "Звонок",
+                    Rating = 4,
+                    ReviewText = "Немного страшно, но именно этого и хотелось.",
+                    ReviewDate = today.AddDays(-20),
+                    IsVisible = true,
+                    IsFeatured = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Review
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerName = "Екатерина",
+                    QuestTitle = "Школа магии Хогвартс",
+                    Rating = 5,
+                    ReviewText = "Очень волшебно! Задания продуманы до мелочей.",
+                    ReviewDate = today.AddDays(-28),
+                    IsVisible = true,
+                    IsFeatured = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                }
+            );
         }
 
         if (!await _context.Promotions.AnyAsync())
@@ -576,6 +645,7 @@ public class DatabaseInitializer : IDatabaseInitializer
     private async Task ClearSeedDataAsync()
     {
         _context.Bookings.RemoveRange(await _context.Bookings.ToListAsync());
+        _context.CertificateOrders.RemoveRange(await _context.CertificateOrders.ToListAsync());
         _context.QuestSchedules.RemoveRange(await _context.QuestSchedules.ToListAsync());
         _context.QuestPricingRules.RemoveRange(await _context.QuestPricingRules.ToListAsync());
         _context.Quests.RemoveRange(await _context.Quests.ToListAsync());

@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<Review> Reviews { get; set; }
     public DbSet<Promotion> Promotions { get; set; }
     public DbSet<Certificate> Certificates { get; set; }
+    public DbSet<CertificateOrder> CertificateOrders { get; set; }
     public DbSet<AboutInfo> AboutInfos { get; set; }
     public DbSet<Settings> Settings { get; set; }
 
