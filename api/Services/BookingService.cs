@@ -78,7 +78,6 @@ public class BookingService : IBookingService
             if (schedule != null)
             {
                 schedule.IsBooked = true;
-                schedule.BookingId = booking.Id;
                 schedule.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
@@ -112,7 +111,6 @@ public class BookingService : IBookingService
             if (schedule != null)
             {
                 schedule.IsBooked = false;
-                schedule.BookingId = null;
                 schedule.UpdatedAt = DateTime.UtcNow;
             }
         }
@@ -139,7 +137,6 @@ public class BookingService : IBookingService
                 if (schedule != null)
                 {
                     schedule.IsBooked = false;
-                    schedule.BookingId = null;
                     schedule.UpdatedAt = DateTime.UtcNow;
                 }
             }

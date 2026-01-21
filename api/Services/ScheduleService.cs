@@ -56,7 +56,6 @@ public class ScheduleService : IScheduleService
             TimeSlot = dto.TimeSlot,
             Price = dto.Price,
             IsBooked = dto.IsBooked,
-            BookingId = dto.BookingId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -80,7 +79,6 @@ public class ScheduleService : IScheduleService
         slot.TimeSlot = dto.TimeSlot;
         slot.Price = dto.Price;
         slot.IsBooked = dto.IsBooked;
-        slot.BookingId = dto.BookingId;
         slot.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -251,7 +249,6 @@ public class ScheduleService : IScheduleService
             TimeSlot = slot.TimeSlot,
             Price = slot.Price,
             IsBooked = slot.IsBooked,
-            BookingId = slot.BookingId,
             CreatedAt = slot.CreatedAt,
             UpdatedAt = slot.UpdatedAt
         };

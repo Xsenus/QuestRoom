@@ -45,9 +45,7 @@ public class Booking
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [ForeignKey("QuestId")]
     public Quest? Quest { get; set; }
 
-    [ForeignKey("QuestScheduleId")]
     public QuestSchedule? QuestSchedule { get; set; }
 }
