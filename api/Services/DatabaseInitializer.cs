@@ -62,6 +62,8 @@ public class DatabaseInitializer : IDatabaseInitializer
             {
                 await _context.Database.MigrateAsync();
             }
+
+            await EnsurePromotionDisplayModeColumnAsync();
         }
         else
         {
@@ -76,6 +78,48 @@ public class DatabaseInitializer : IDatabaseInitializer
         }
 
         await SeedAsync(seedMode);
+    }
+
+    private async Task EnsurePromotionDisplayModeColumnAsync()
+    {
+        if (!_context.Database.IsRelational())
+        {
+            return;
+        }
+
+        var connection = _context.Database.GetDbConnection();
+        var shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'promotions'
+                  AND column_name = 'display_mode'
+                LIMIT 1
+                """;
+            var exists = await command.ExecuteScalarAsync();
+            if (exists == null || exists == DBNull.Value)
+            {
+                await _context.Database.ExecuteSqlRawAsync("""
+                    ALTER TABLE promotions
+                    ADD COLUMN IF NOT EXISTS display_mode text NOT NULL DEFAULT 'text_description'
+                    """);
+            }
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
+            }
+        }
     }
 
     private SeedMode GetSeedMode()
