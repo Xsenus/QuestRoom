@@ -1,4 +1,4 @@
-import { Home, Info, FileText, Gift, Star, MessageCircle } from 'lucide-react';
+import { Home, Info, ScrollText, Award, BadgePercent, MessageSquareText } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
@@ -12,10 +12,10 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
   const navItems = [
     { id: 'home', label: 'Домашняя', icon: Home, path: '/' },
     { id: 'about', label: 'О проекте', icon: Info, path: '/about' },
-    { id: 'rules', label: 'Правила игры', icon: FileText, path: '/rules' },
-    { id: 'certificate', label: 'Сертификаты', icon: Gift, path: '/certificate' },
-    { id: 'reviews', label: 'Отзывы', icon: MessageCircle, path: '/reviews' },
-    { id: 'promotions', label: 'Акции', icon: Star, path: '/promotions' },
+    { id: 'rules', label: 'Правила игры', icon: ScrollText, path: '/rules' },
+    { id: 'certificate', label: 'Сертификаты', icon: Award, path: '/certificate' },
+    { id: 'reviews', label: 'Отзывы', icon: MessageSquareText, path: '/reviews' },
+    { id: 'promotions', label: 'Акции', icon: BadgePercent, path: '/promotions' },
   ];
 
   const isActive = (path: string) => {
@@ -38,14 +38,14 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
           </Link>
 
           <nav className="w-full bg-slate-900/60 backdrop-blur-sm py-4">
-            <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8 px-4">
+            <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-4">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.id}
                     to={item.path}
-                    className={`flex flex-col items-center space-y-2 px-3 py-3 rounded-lg transition-all hover:scale-105 min-w-[80px] ${
+                    className={`flex flex-1 basis-[120px] flex-col items-center space-y-2 px-3 py-3 rounded-lg transition-all hover:scale-[1.02] ${
                       isActive(item.path)
                         ? 'text-white bg-slate-800/80'
                         : 'text-white/80 hover:text-white hover:bg-slate-800/40'
