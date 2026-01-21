@@ -3,7 +3,7 @@ namespace QuestRoomApi.DTOs.PricingRules;
 public class QuestPricingRuleDto
 {
     public Guid Id { get; set; }
-    public Guid QuestId { get; set; }
+    public Guid[] QuestIds { get; set; } = Array.Empty<Guid>();
     public string Title { get; set; } = string.Empty;
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
@@ -12,6 +12,7 @@ public class QuestPricingRuleDto
     public TimeOnly EndTime { get; set; }
     public int IntervalMinutes { get; set; }
     public int Price { get; set; }
+    public bool IsBlocked { get; set; }
     public int Priority { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }

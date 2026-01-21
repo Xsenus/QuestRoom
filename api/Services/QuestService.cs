@@ -9,7 +9,7 @@ namespace QuestRoomApi.Services;
 public interface IQuestService
 {
     Task<IReadOnlyList<QuestDto>> GetQuestsAsync(bool? visible);
-    Task<QuestDto?> GetQuestAsync(Guid id);
+    Task<QuestDto?> GetQuestAsync(string idOrSlug);
     Task<QuestDto> CreateQuestAsync(QuestUpsertDto dto);
     Task<bool> UpdateQuestAsync(Guid id, QuestUpsertDto dto);
     Task<bool> DeleteQuestAsync(Guid id);
@@ -40,9 +40,19 @@ public class QuestService : IQuestService
             .ToListAsync();
     }
 
-    public async Task<QuestDto?> GetQuestAsync(Guid id)
+    public async Task<QuestDto?> GetQuestAsync(string idOrSlug)
     {
-        var quest = await _context.Quests.FindAsync(id);
+        Quest? quest;
+        if (Guid.TryParse(idOrSlug, out var id))
+        {
+            quest = await _context.Quests.FindAsync(id);
+        }
+        else
+        {
+            var slug = idOrSlug.Trim().ToLowerInvariant();
+            quest = await _context.Quests.FirstOrDefaultAsync(q => q.Slug == slug);
+        }
+
         return quest == null ? null : ToDto(quest);
     }
 
@@ -53,6 +63,7 @@ public class QuestService : IQuestService
             Id = Guid.NewGuid(),
             Title = dto.Title,
             Description = dto.Description,
+            Slug = string.Empty,
             Addresses = dto.Addresses,
             Phones = dto.Phones,
             ParticipantsMin = dto.ParticipantsMin,
@@ -70,6 +81,8 @@ public class QuestService : IQuestService
             UpdatedAt = DateTime.UtcNow
         };
 
+        quest.Slug = await BuildUniqueSlugAsync(quest.Title, quest.Id);
+
         _context.Quests.Add(quest);
         await _context.SaveChangesAsync();
 
@@ -86,6 +99,7 @@ public class QuestService : IQuestService
 
         quest.Title = dto.Title;
         quest.Description = dto.Description;
+        quest.Slug = await BuildUniqueSlugAsync(dto.Title, quest.Id);
         quest.Addresses = dto.Addresses;
         quest.Phones = dto.Phones;
         quest.ParticipantsMin = dto.ParticipantsMin;
@@ -140,6 +154,7 @@ public class QuestService : IQuestService
             Id = quest.Id,
             Title = quest.Title,
             Description = quest.Description,
+            Slug = quest.Slug,
             Addresses = quest.Addresses,
             Phones = quest.Phones,
             ParticipantsMin = quest.ParticipantsMin,
@@ -156,5 +171,52 @@ public class QuestService : IQuestService
             CreatedAt = quest.CreatedAt,
             UpdatedAt = quest.UpdatedAt
         };
+    }
+
+    private async Task<string> BuildUniqueSlugAsync(string title, Guid questId)
+    {
+        var baseSlug = Slugify(title);
+        if (string.IsNullOrWhiteSpace(baseSlug))
+        {
+            baseSlug = "quest";
+        }
+
+        var slug = baseSlug;
+        var exists = await _context.Quests.AnyAsync(q => q.Slug == slug && q.Id != questId);
+        if (exists)
+        {
+            slug = $"{baseSlug}-{questId.ToString("N")[..8]}";
+        }
+
+        return slug;
+    }
+
+    private static string Slugify(string value)
+    {
+        var trimmed = value.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return string.Empty;
+        }
+
+        var builder = new System.Text.StringBuilder();
+        var previousDash = false;
+
+        foreach (var ch in trimmed)
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                builder.Append(char.ToLowerInvariant(ch));
+                previousDash = false;
+            }
+            else if (!previousDash)
+            {
+                builder.Append('-');
+                previousDash = true;
+            }
+        }
+
+        var slug = builder.ToString().Trim('-');
+        return slug;
     }
 }

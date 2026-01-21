@@ -28,7 +28,8 @@ public class PricingRulesController : ControllerBase
     public async Task<ActionResult<QuestPricingRuleDto>> CreateRule([FromBody] QuestPricingRuleUpsertDto rule)
     {
         var created = await _pricingRuleService.CreateRuleAsync(rule);
-        return CreatedAtAction(nameof(GetRules), new { questId = created.QuestId }, created);
+        var questId = created.QuestIds.FirstOrDefault();
+        return CreatedAtAction(nameof(GetRules), new { questId }, created);
     }
 
     [Authorize(Roles = "admin")]

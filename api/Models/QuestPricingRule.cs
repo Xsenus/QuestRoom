@@ -13,6 +13,9 @@ public class QuestPricingRule
     [Column("quest_id")]
     public Guid QuestId { get; set; }
 
+    [Column("quest_ids", TypeName = "uuid[]")]
+    public Guid[] QuestIds { get; set; } = Array.Empty<Guid>();
+
     [Required]
     [Column("title")]
     public string Title { get; set; } = string.Empty;
@@ -37,6 +40,9 @@ public class QuestPricingRule
 
     [Column("price")]
     public int Price { get; set; }
+
+    [Column("is_blocked")]
+    public bool IsBlocked { get; set; }
 
     [Column("priority")]
     public int Priority { get; set; }

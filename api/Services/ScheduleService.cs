@@ -96,11 +96,11 @@ public class ScheduleService : IScheduleService
 
         var rules = await _context.QuestPricingRules
             .Where(rule =>
-                rule.QuestId == questId &&
+                (rule.QuestIds.Contains(questId) || rule.QuestId == questId) &&
                 rule.IsActive &&
                 (rule.StartDate == null || rule.StartDate <= toDate) &&
                 (rule.EndDate == null || rule.EndDate >= fromDate))
-            .OrderBy(rule => rule.Priority)
+            .OrderByDescending(rule => rule.Priority)
             .ToListAsync();
 
         if (!rules.Any())
@@ -110,14 +110,19 @@ public class ScheduleService : IScheduleService
 
         var existingSlots = await _context.QuestSchedules
             .Where(slot => slot.QuestId == questId && slot.Date >= fromDate && slot.Date <= toDate)
-            .Select(slot => new { slot.Date, slot.TimeSlot })
             .ToListAsync();
 
-        var existingSet = existingSlots
+        var existingByKey = existingSlots.ToDictionary(
+            slot => $"{slot.Date:yyyy-MM-dd}|{slot.TimeSlot}",
+            slot => slot);
+
+        var bookedKeys = existingSlots
+            .Where(slot => slot.IsBooked)
             .Select(slot => $"{slot.Date:yyyy-MM-dd}|{slot.TimeSlot}")
             .ToHashSet();
 
-        var newSlots = new List<QuestSchedule>();
+        var selectedSlots = new Dictionary<string, int>();
+        var blockedSlots = new HashSet<string>();
 
         for (var date = fromDate; date <= toDate; date = date.AddDays(1))
         {
@@ -149,30 +154,87 @@ public class ScheduleService : IScheduleService
                 while (time < rule.EndTime)
                 {
                     var key = $"{date:yyyy-MM-dd}|{time}";
-                    if (!existingSet.Contains(key))
+                    if (bookedKeys.Contains(key))
                     {
-                        newSlots.Add(new QuestSchedule
-                        {
-                            Id = Guid.NewGuid(),
-                            QuestId = questId,
-                            Date = date,
-                            TimeSlot = time,
-                            Price = rule.Price,
-                            IsBooked = false,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        });
-                        existingSet.Add(key);
+                        time = time.AddMinutes(rule.IntervalMinutes);
+                        continue;
                     }
+
+                    if (rule.IsBlocked)
+                    {
+                        if (!selectedSlots.ContainsKey(key))
+                        {
+                            blockedSlots.Add(key);
+                        }
+
+                        time = time.AddMinutes(rule.IntervalMinutes);
+                        continue;
+                    }
+
+                    if (blockedSlots.Contains(key) || selectedSlots.ContainsKey(key))
+                    {
+                        time = time.AddMinutes(rule.IntervalMinutes);
+                        continue;
+                    }
+
+                    selectedSlots[key] = rule.Price;
 
                     time = time.AddMinutes(rule.IntervalMinutes);
                 }
             }
         }
 
+        var newSlots = new List<QuestSchedule>();
+        foreach (var (key, price) in selectedSlots)
+        {
+            if (existingByKey.TryGetValue(key, out var slot))
+            {
+                if (!slot.IsBooked && slot.Price != price)
+                {
+                    slot.Price = price;
+                    slot.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                var parts = key.Split('|');
+                var date = DateOnly.Parse(parts[0]);
+                var timeSlot = TimeOnly.Parse(parts[1]);
+
+                newSlots.Add(new QuestSchedule
+                {
+                    Id = Guid.NewGuid(),
+                    QuestId = questId,
+                    Date = date,
+                    TimeSlot = timeSlot,
+                    Price = price,
+                    IsBooked = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        var slotsToRemove = existingSlots
+            .Where(slot =>
+            {
+                var key = $"{slot.Date:yyyy-MM-dd}|{slot.TimeSlot}";
+                return !slot.IsBooked && !selectedSlots.ContainsKey(key);
+            })
+            .ToList();
+
+        if (slotsToRemove.Any())
+        {
+            _context.QuestSchedules.RemoveRange(slotsToRemove);
+        }
+
         if (newSlots.Any())
         {
             _context.QuestSchedules.AddRange(newSlots);
+        }
+
+        if (newSlots.Any() || slotsToRemove.Any() || existingSlots.Any(slot => _context.Entry(slot).State == EntityState.Modified))
+        {
             await _context.SaveChangesAsync();
         }
 

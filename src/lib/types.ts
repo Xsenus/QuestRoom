@@ -2,6 +2,7 @@ export type Quest = {
   id: string;
   title: string;
   description: string;
+  slug: string;
   addresses: string[];
   phones: string[];
   participantsMin: number;
@@ -19,7 +20,7 @@ export type Quest = {
   sortOrder: number;
 };
 
-export type QuestUpsert = Omit<Quest, 'id' | 'createdAt' | 'updatedAt'>;
+export type QuestUpsert = Omit<Quest, 'id' | 'createdAt' | 'updatedAt' | 'slug'>;
 
 export type DurationBadge = {
   id: string;
@@ -150,7 +151,7 @@ export type QuestScheduleUpsert = Omit<QuestSchedule, 'id' | 'createdAt' | 'upda
 
 export type QuestPricingRule = {
   id: string;
-  questId: string;
+  questIds: string[];
   title: string;
   startDate: string | null;
   endDate: string | null;
@@ -159,6 +160,7 @@ export type QuestPricingRule = {
   endTime: string;
   intervalMinutes: number;
   price: number;
+  isBlocked: boolean;
   priority: number;
   isActive: boolean;
   createdAt: string;

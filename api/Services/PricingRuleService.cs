@@ -28,11 +28,11 @@ public class PricingRuleService : IPricingRuleService
 
         if (questId.HasValue)
         {
-            query = query.Where(r => r.QuestId == questId.Value);
+            query = query.Where(r => r.QuestIds.Contains(questId.Value) || r.QuestId == questId.Value);
         }
 
         var rules = await query
-            .OrderBy(r => r.Priority)
+            .OrderByDescending(r => r.Priority)
             .ThenBy(r => r.CreatedAt)
             .ToListAsync();
 
@@ -41,10 +41,16 @@ public class PricingRuleService : IPricingRuleService
 
     public async Task<QuestPricingRuleDto> CreateRuleAsync(QuestPricingRuleUpsertDto dto)
     {
+        if (dto.QuestIds.Length == 0)
+        {
+            throw new InvalidOperationException("Не выбран ни один квест для правила.");
+        }
+
         var rule = new QuestPricingRule
         {
             Id = Guid.NewGuid(),
-            QuestId = dto.QuestId,
+            QuestId = dto.QuestIds[0],
+            QuestIds = dto.QuestIds,
             Title = dto.Title,
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
@@ -53,6 +59,7 @@ public class PricingRuleService : IPricingRuleService
             EndTime = dto.EndTime,
             IntervalMinutes = dto.IntervalMinutes,
             Price = dto.Price,
+            IsBlocked = dto.IsBlocked,
             Priority = dto.Priority,
             IsActive = dto.IsActive,
             CreatedAt = DateTime.UtcNow,
@@ -71,7 +78,13 @@ public class PricingRuleService : IPricingRuleService
         if (rule == null)
             return false;
 
-        rule.QuestId = dto.QuestId;
+        if (dto.QuestIds.Length == 0)
+        {
+            throw new InvalidOperationException("Не выбран ни один квест для правила.");
+        }
+
+        rule.QuestId = dto.QuestIds[0];
+        rule.QuestIds = dto.QuestIds;
         rule.Title = dto.Title;
         rule.StartDate = dto.StartDate;
         rule.EndDate = dto.EndDate;
@@ -80,6 +93,7 @@ public class PricingRuleService : IPricingRuleService
         rule.EndTime = dto.EndTime;
         rule.IntervalMinutes = dto.IntervalMinutes;
         rule.Price = dto.Price;
+        rule.IsBlocked = dto.IsBlocked;
         rule.Priority = dto.Priority;
         rule.IsActive = dto.IsActive;
         rule.UpdatedAt = DateTime.UtcNow;
@@ -104,7 +118,7 @@ public class PricingRuleService : IPricingRuleService
         return new QuestPricingRuleDto
         {
             Id = rule.Id,
-            QuestId = rule.QuestId,
+            QuestIds = rule.QuestIds.Length > 0 ? rule.QuestIds : new[] { rule.QuestId },
             Title = rule.Title,
             StartDate = rule.StartDate,
             EndDate = rule.EndDate,
@@ -113,6 +127,7 @@ public class PricingRuleService : IPricingRuleService
             EndTime = rule.EndTime,
             IntervalMinutes = rule.IntervalMinutes,
             Price = rule.Price,
+            IsBlocked = rule.IsBlocked,
             Priority = rule.Priority,
             IsActive = rule.IsActive,
             CreatedAt = rule.CreatedAt,

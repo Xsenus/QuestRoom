@@ -17,7 +17,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
   }
 
   const handleBookingClick = () => {
-    navigate(`/quest/${quest.id}`);
+    navigate(`/quest/${quest.slug || quest.id}`);
   };
 
   return (
