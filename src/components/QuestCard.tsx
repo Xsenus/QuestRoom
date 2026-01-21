@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Users, ShieldAlert, PhoneCall, Timer } from 'lucide-react';
+import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star } from 'lucide-react';
 import { Quest } from '../lib/types';
 
 interface QuestCardProps {
@@ -11,10 +11,11 @@ export default function QuestCard({ quest }: QuestCardProps) {
   const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
   const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
+  const difficultyValue = quest.difficulty || 1;
   const difficultyBadgeUrl =
-    quest.difficulty >= 3
+    difficultyValue >= 3
       ? '/images/difficulty/star3.png'
-      : quest.difficulty >= 2
+      : difficultyValue >= 2
       ? '/images/difficulty/star2.png'
       : null;
 
@@ -35,16 +36,6 @@ export default function QuestCard({ quest }: QuestCardProps) {
           className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-2xl"
         />
       </div>
-      {difficultyBadgeUrl && (
-        <div className="absolute -top-2 md:-top-4 left-2 md:left-0 z-30">
-          <img
-            src={difficultyBadgeUrl}
-            alt={`Сложность ${quest.difficulty}`}
-            className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-2xl"
-          />
-        </div>
-      )}
-
       {quest.isNew && (
         <div className="absolute top-6 md:top-8 -right-1 md:-right-2 z-20 w-44 h-44 md:w-60 md:h-60 overflow-hidden pointer-events-none">
           <div className="absolute top-12 -right-10 md:top-16 md:-right-14 w-56 md:w-72 bg-red-600 text-white text-center py-2 md:py-3 transform rotate-45 shadow-2xl">
@@ -66,6 +57,24 @@ export default function QuestCard({ quest }: QuestCardProps) {
               <h2 className="text-3xl md:text-5xl font-black text-white mb-4 md:mb-6 tracking-tight uppercase leading-tight">
                 {quest.title}
               </h2>
+              <div className="flex flex-wrap items-center gap-2 mb-4 md:mb-6">
+                <span className="inline-flex items-center gap-2 bg-red-600/90 text-white text-sm md:text-base font-bold px-3 py-1 rounded-full">
+                  <Star className="w-4 h-4 fill-white" />
+                  {quest.ageRating}
+                </span>
+                <span className="inline-flex items-center gap-2 bg-white/20 text-white text-sm md:text-base font-semibold px-3 py-1 rounded-full">
+                  {difficultyBadgeUrl ? (
+                    <img
+                      src={difficultyBadgeUrl}
+                      alt={`Сложность ${difficultyValue}`}
+                      className="w-5 h-5 object-contain"
+                    />
+                  ) : (
+                    <span className="text-yellow-200">★</span>
+                  )}
+                  Сложность {difficultyValue}
+                </span>
+              </div>
               <div className="space-y-2 md:space-y-3">
                 <button
                   onClick={handleBookingClick}

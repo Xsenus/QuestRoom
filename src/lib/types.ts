@@ -193,7 +193,7 @@ export type QuestPricingRuleUpsert = Omit<
 >;
 
 export type ScheduleGenerateRequest = {
-  questId: string;
+  questId?: string | null;
   fromDate: string;
   toDate: string;
 };

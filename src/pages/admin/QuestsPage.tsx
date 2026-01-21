@@ -86,8 +86,25 @@ export default function QuestsPage() {
 
   const handleToggleVisibility = async (quest: Quest) => {
     try {
-      const { id, createdAt, updatedAt, ...payload } = quest;
-      await api.updateQuest(id, { ...payload, isVisible: !quest.isVisible });
+      const payload: QuestUpsert = {
+        title: quest.title,
+        description: quest.description,
+        addresses: quest.addresses || [],
+        phones: quest.phones || [],
+        participantsMin: quest.participantsMin,
+        participantsMax: quest.participantsMax,
+        ageRestriction: quest.ageRestriction,
+        ageRating: quest.ageRating,
+        price: quest.price,
+        duration: quest.duration,
+        difficulty: quest.difficulty || 1,
+        isNew: quest.isNew,
+        isVisible: !quest.isVisible,
+        mainImage: quest.mainImage,
+        images: quest.images || [],
+        sortOrder: quest.sortOrder,
+      };
+      await api.updateQuest(quest.id, payload);
       loadQuests();
     } catch (error) {
       alert('Ошибка при изменении видимости: ' + (error as Error).message);

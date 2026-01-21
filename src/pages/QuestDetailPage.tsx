@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Quest, QuestSchedule } from '../lib/types';
@@ -13,6 +13,7 @@ export default function QuestDetailPage() {
   const [selectedSlot, setSelectedSlot] = useState<QuestSchedule | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const thumbnailsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -63,6 +64,16 @@ export default function QuestDetailPage() {
       setSelectedSlot(slot);
       setShowBookingModal(true);
     }
+  };
+
+  const handleThumbnailScroll = (direction: 'left' | 'right') => {
+    const container = thumbnailsRef.current;
+    if (!container) return;
+    const scrollAmount = container.clientWidth * 0.8;
+    container.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
   };
 
   const handleBookingComplete = () => {
@@ -130,23 +141,44 @@ export default function QuestDetailPage() {
               />
             )}
             {galleryImages.length > 1 && (
-              <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-                {galleryImages.map((img) => (
-                  <button
-                    key={img}
-                    onClick={() => setSelectedImage(img)}
-                    className={`flex-shrink-0 rounded-lg border-2 transition-all ${
-                      selectedImage === img ? 'border-yellow-400' : 'border-transparent'
-                    }`}
-                    type="button"
-                  >
-                    <img
-                      src={img}
-                      alt={`${quest.title} фото`}
-                      className="h-20 w-28 object-cover rounded-md"
-                    />
-                  </button>
-                ))}
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={() => handleThumbnailScroll('left')}
+                  className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                  type="button"
+                  aria-label="Прокрутить влево"
+                >
+                  ‹
+                </button>
+                <div
+                  ref={thumbnailsRef}
+                  className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth flex-1"
+                >
+                  {galleryImages.map((img) => (
+                    <button
+                      key={img}
+                      onClick={() => setSelectedImage(img)}
+                      className={`flex-shrink-0 rounded-lg border-2 transition-all ${
+                        selectedImage === img ? 'border-yellow-400' : 'border-transparent'
+                      }`}
+                      type="button"
+                    >
+                      <img
+                        src={img}
+                        alt={`${quest.title} фото`}
+                        className="h-20 w-28 object-cover rounded-md"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleThumbnailScroll('right')}
+                  className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                  type="button"
+                  aria-label="Прокрутить вправо"
+                >
+                  ›
+                </button>
               </div>
             )}
           </div>
