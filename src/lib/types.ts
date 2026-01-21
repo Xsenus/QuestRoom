@@ -11,6 +11,7 @@ export type Quest = {
   ageRating: string;
   price: number;
   duration: number;
+  difficulty: number;
   isNew: boolean;
   isVisible: boolean;
   mainImage: string | null;

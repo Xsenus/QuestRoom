@@ -48,6 +48,7 @@ export default function QuestsPage() {
       ageRating: '18+',
       price: 0,
       duration: 60,
+      difficulty: 2,
       isNew: false,
       isVisible: true,
       mainImage: null,
@@ -352,7 +353,7 @@ export default function QuestsPage() {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-4 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Длительность
@@ -406,6 +407,28 @@ export default function QuestsPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   min="1"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Сложность
+                </label>
+                <select
+                  value={editingQuest.difficulty ?? 1}
+                  onChange={(e) =>
+                    setEditingQuest({
+                      ...editingQuest,
+                      difficulty: parseInt(e.target.value, 10) || 1,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                  <option value={4}>4</option>
+                  <option value={5}>5</option>
+                </select>
               </div>
             </div>
 
@@ -589,6 +612,10 @@ export default function QuestsPage() {
                   <div>
                     <span className="font-semibold text-gray-700">Длительность:</span>{' '}
                     {quest.duration} минут
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Сложность:</span>{' '}
+                    {quest.difficulty}
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">Цена:</span> {quest.price} ₽

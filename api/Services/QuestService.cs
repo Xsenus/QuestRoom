@@ -72,6 +72,7 @@ public class QuestService : IQuestService
             AgeRating = dto.AgeRating,
             Price = dto.Price,
             Duration = dto.Duration,
+            Difficulty = dto.Difficulty,
             IsNew = dto.IsNew,
             IsVisible = dto.IsVisible,
             MainImage = dto.MainImage,
@@ -108,6 +109,7 @@ public class QuestService : IQuestService
         quest.AgeRating = dto.AgeRating;
         quest.Price = dto.Price;
         quest.Duration = dto.Duration;
+        quest.Difficulty = dto.Difficulty;
         quest.IsNew = dto.IsNew;
         quest.IsVisible = dto.IsVisible;
         quest.MainImage = dto.MainImage;
@@ -163,6 +165,7 @@ public class QuestService : IQuestService
             AgeRating = quest.AgeRating,
             Price = quest.Price,
             Duration = quest.Duration,
+            Difficulty = quest.Difficulty,
             IsNew = quest.IsNew,
             IsVisible = quest.IsVisible,
             MainImage = quest.MainImage,

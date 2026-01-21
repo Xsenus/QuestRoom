@@ -154,7 +154,13 @@ public class ScheduleService : IScheduleService
                     var key = $"{date:yyyy-MM-dd}|{time}";
                     if (bookedKeys.Contains(key))
                     {
-                        time = time.AddMinutes(rule.IntervalMinutes);
+                        var nextTime = time.AddMinutes(rule.IntervalMinutes);
+                        if (nextTime <= time)
+                        {
+                            break;
+                        }
+
+                        time = nextTime;
                         continue;
                     }
 
@@ -165,19 +171,37 @@ public class ScheduleService : IScheduleService
                             blockedSlots.Add(key);
                         }
 
-                        time = time.AddMinutes(rule.IntervalMinutes);
+                        var nextTime = time.AddMinutes(rule.IntervalMinutes);
+                        if (nextTime <= time)
+                        {
+                            break;
+                        }
+
+                        time = nextTime;
                         continue;
                     }
 
                     if (blockedSlots.Contains(key) || selectedSlots.ContainsKey(key))
                     {
-                        time = time.AddMinutes(rule.IntervalMinutes);
+                        var nextTime = time.AddMinutes(rule.IntervalMinutes);
+                        if (nextTime <= time)
+                        {
+                            break;
+                        }
+
+                        time = nextTime;
                         continue;
                     }
 
                     selectedSlots[key] = rule.Price;
 
-                    time = time.AddMinutes(rule.IntervalMinutes);
+                    var updatedTime = time.AddMinutes(rule.IntervalMinutes);
+                    if (updatedTime <= time)
+                    {
+                        break;
+                    }
+
+                    time = updatedTime;
                 }
             }
         }

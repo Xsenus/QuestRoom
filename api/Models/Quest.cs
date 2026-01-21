@@ -44,6 +44,9 @@ public class Quest
     [Column("duration")]
     public int Duration { get; set; }
 
+    [Column("difficulty")]
+    public int Difficulty { get; set; }
+
     [Column("is_new")]
     public bool IsNew { get; set; }
 

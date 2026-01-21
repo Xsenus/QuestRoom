@@ -11,6 +11,12 @@ export default function QuestCard({ quest }: QuestCardProps) {
   const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
   const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
+  const difficultyBadgeUrl =
+    quest.difficulty >= 3
+      ? '/images/difficulty/star3.png'
+      : quest.difficulty >= 2
+      ? '/images/difficulty/star2.png'
+      : null;
 
   while (additionalImages.length < 4) {
     additionalImages.push(mainImage);
@@ -29,6 +35,15 @@ export default function QuestCard({ quest }: QuestCardProps) {
           className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-2xl"
         />
       </div>
+      {difficultyBadgeUrl && (
+        <div className="absolute -top-2 md:-top-4 left-2 md:left-0 z-30">
+          <img
+            src={difficultyBadgeUrl}
+            alt={`Сложность ${quest.difficulty}`}
+            className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-2xl"
+          />
+        </div>
+      )}
 
       {quest.isNew && (
         <div className="absolute top-6 md:top-8 -right-1 md:-right-2 z-20 w-44 h-44 md:w-60 md:h-60 overflow-hidden pointer-events-none">

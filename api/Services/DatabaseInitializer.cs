@@ -133,10 +133,12 @@ public class DatabaseInitializer : IDatabaseInitializer
                 });
         }
 
+        var now = DateTime.UtcNow;
+        var questData = new List<Quest>();
+
         if (!await _context.Quests.AnyAsync())
         {
-            var now = DateTime.UtcNow;
-            var questData = new List<Quest>
+            questData = new List<Quest>
             {
                 new Quest
                 {
@@ -147,10 +149,11 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Phones = new[] { "8 (391) 294-59-50" },
                     ParticipantsMin = 2,
                     ParticipantsMax = 4,
-                    AgeRestriction = "с 8 лет с родителями или нашим аниматором с 14 лет самостоятельно",
+                    AgeRestriction = "с 8 лет с родителями или нашим аниматором; с 14 лет самостоятельно",
                     AgeRating = "12+",
-                    Price = 2500,
+                    Price = 4000,
                     Duration = 75,
+                    Difficulty = 2,
                     IsNew = true,
                     IsVisible = true,
                     MainImage = "/images/quest/sherlok/0.jpg",
@@ -169,15 +172,16 @@ public class DatabaseInitializer : IDatabaseInitializer
                 {
                     Id = Guid.NewGuid(),
                     Title = "Алиса в стране чудес",
-                    Description = "Алиса, спасая семью Шляпника, позаимствовала у Времени волшебные хронометры. Но она не успела вовремя вернуть их назад и теперь всему Зазеркалью угрожает большая опасность! Ход истории может полностью остановиться и разрушится ткань мироздания! Вы должны помочь Алисе вернуть хронометры во дворец Времени. Но для начала их нужно найти! Начните поиски с поляны у дома Шляпника, но помните, что у вас всего 75 минут!",
+                    Description = "Алиса, спасая семью Шляпника, позаимствовала у Времени волшебные хронометры. Но она не успела вовремя вернуть их назад и теперь всему Зазеркалью угрожает большая опасность! Ход истории может полностью остановиться и разрушится ткань мироздания!\n\nВы должны помочь Алисе вернуть хронометры во дворец Времени. Но для начала их нужно найти! Начните поиски с поляны у дома Шляпника, но помните, что у вас всего 75 минут!",
                     Addresses = new[] { "ул. Диксона, д.1, стр.4" },
                     Phones = new[] { "8 (391) 294-59-50" },
                     ParticipantsMin = 2,
                     ParticipantsMax = 4,
-                    AgeRestriction = "с 8 лет с родителями или нашим аниматором с 14 лет самостоятельно",
+                    AgeRestriction = "с 8 лет с родителями или нашим аниматором; с 14 лет самостоятельно",
                     AgeRating = "12+",
-                    Price = 2500,
+                    Price = 4000,
                     Duration = 75,
+                    Difficulty = 3,
                     IsNew = false,
                     IsVisible = true,
                     MainImage = "/images/quest/alice/0.JPG",
@@ -196,15 +200,16 @@ public class DatabaseInitializer : IDatabaseInitializer
                 {
                     Id = Guid.NewGuid(),
                     Title = "Школа магии Хогвартс",
-                    Description = "Вы ученики школы магии и волшебства «Хогвартс». Повторяя очередное заклинание, вы вдруг услышали неистовый крик в коридоре. Выбежав из класса, вы находите записку: «Я вернусь». Теперь в ваших руках судьба всего волшебного мира. Успеете ли вы найти все крестражи и избавиться от Того-Кого-Нельзя-Называть...",
+                    Description = "Вы ученики школы магии и волшебства «Хогвартс». Повторяя очередное заклинание, вы вдруг услышали неистовый крик в коридоре. Выбежав из класса, вы находите записку: «Я вернулся». Теперь в ваших руках судьба всего волшебного мира. Успеете ли вы найти все крестражи и избавиться от Того-Кого-Нельзя-Называть...",
                     Addresses = new[] { "ул. Диксона, д.1, стр.4" },
                     Phones = new[] { "8 (391) 294-59-50" },
                     ParticipantsMin = 2,
                     ParticipantsMax = 4,
-                    AgeRestriction = "с 8 лет с родителями или нашим аниматором с 14 лет самостоятельно",
+                    AgeRestriction = "с 8 лет с родителями или нашим аниматором; с 14 лет самостоятельно",
                     AgeRating = "12+",
-                    Price = 2500,
+                    Price = 4000,
                     Duration = 60,
+                    Difficulty = 2,
                     IsNew = false,
                     IsVisible = true,
                     MainImage = "/images/quest/hog/0.JPG",
@@ -223,15 +228,16 @@ public class DatabaseInitializer : IDatabaseInitializer
                 {
                     Id = Guid.NewGuid(),
                     Title = "Идеальное ограбление",
-                    Description = "Знаменитый коллекционер совершенно непростительным образом владеет редким и драгоценным кольцом. И, что совсем возмутительно, старый скряга не собирается делиться им! Он хитрым способом спрятал сокровище в одной из комнат своего роскошного особняка. К счастью, ваша доблестная шайка справлялась и не с такими мерзавцами. Вам предстоит найти кольцо и вернуть его в натруженные руки законных владельцев.",
+                    Description = "Знаменитый коллекционер совершенно непростительным образом владеет редким и драгоценным колье. И, что совсем возмутительно, старый скряга не собирается делиться! Он хитрым способом спрятал сокровище в одной из комнат своего роскошного особняка. К счастью, ваша доблестная шайка справлялась и не с такими мерзавцами. Вам предстоит найти колье и вернуть его в натруженные руки законных владельцев.",
                     Addresses = new[] { "ул. Кирова, д.43" },
                     Phones = new[] { "8 (391) 294-59-50" },
                     ParticipantsMin = 2,
                     ParticipantsMax = 5,
-                    AgeRestriction = "с 10 лет с родителями или нашим аниматором с 16 лет самостоятельно",
+                    AgeRestriction = "с 10 лет с родителями или нашим аниматором; с 16 лет самостоятельно",
                     AgeRating = "16+",
-                    Price = 3000,
+                    Price = 4500,
                     Duration = 90,
+                    Difficulty = 5,
                     IsNew = false,
                     IsVisible = true,
                     MainImage = "/images/quest/ograb/0.jpg",
@@ -255,10 +261,11 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Phones = new[] { "8 (391) 294-59-50" },
                     ParticipantsMin = 2,
                     ParticipantsMax = 4,
-                    AgeRestriction = "с 8 лет с родителями или нашим аниматором с 14 лет самостоятельно",
+                    AgeRestriction = "с 8 лет с родителями или нашим аниматором; с 14 лет самостоятельно",
                     AgeRating = "12+",
-                    Price = 2500,
+                    Price = 4000,
                     Duration = 75,
+                    Difficulty = 2,
                     IsNew = false,
                     IsVisible = true,
                     MainImage = "/images/quest/zvonok/0.jpg",
@@ -282,10 +289,11 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Phones = new[] { "8 (391) 294-59-50" },
                     ParticipantsMin = 2,
                     ParticipantsMax = 4,
-                    AgeRestriction = "с 8 лет с родителями или нашим аниматором с 14 лет самостоятельно",
+                    AgeRestriction = "с 8 лет с родителями или нашим аниматором; с 14 лет самостоятельно",
                     AgeRating = "12+",
-                    Price = 2500,
+                    Price = 4000,
                     Duration = 75,
+                    Difficulty = 2,
                     IsNew = false,
                     IsVisible = true,
                     MainImage = "/images/quest/key/0.jpg",
@@ -310,6 +318,15 @@ public class DatabaseInitializer : IDatabaseInitializer
             }
 
             _context.Quests.AddRange(questData);
+        }
+
+        if (!await _context.QuestPricingRules.AnyAsync())
+        {
+            var questsForRules = questData.Any()
+                ? questData
+                : await _context.Quests.ToListAsync();
+
+            AddPricingRules(questsForRules, now);
         }
 
         if (!await _context.Rules.AnyAsync())
@@ -658,6 +675,191 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.Settings.RemoveRange(await _context.Settings.ToListAsync());
 
         await _context.SaveChangesAsync();
+    }
+
+    private void AddPricingRules(IEnumerable<Quest> quests, DateTime now)
+    {
+        var questList = quests.ToList();
+        var weekDays = new[] { 1, 2, 3, 4, 5 };
+        var weekendDays = new[] { 0, 6 };
+        var rules = new List<QuestPricingRule>();
+
+        void AddRules(
+            string title,
+            string workdayPrice1Times,
+            string workdayPrice2Times,
+            string weekendPrice1Times,
+            string weekendPrice2Times,
+            int price1Workday,
+            int price2Workday,
+            int price1Weekend,
+            int price2Weekend)
+        {
+            var quest = questList.FirstOrDefault(q => string.Equals(q.Title, title, StringComparison.OrdinalIgnoreCase));
+            if (quest == null)
+            {
+                return;
+            }
+
+            var workdayPrice2 = ParseTimeList(workdayPrice2Times);
+            var weekendPrice2 = ParseTimeList(weekendPrice2Times);
+            var workdayIntervalFallback = GetIntervalMinutes(workdayPrice2, quest.Duration + 15);
+            var weekendIntervalFallback = GetIntervalMinutes(weekendPrice2, quest.Duration + 15);
+
+            rules.AddRange(
+                BuildRulesForTimes(quest, $"{title} - будни (пакет 1)", weekDays, workdayPrice1Times, price1Workday, workdayIntervalFallback, now));
+            rules.AddRange(
+                BuildRulesForTimes(quest, $"{title} - будни (пакет 2)", weekDays, workdayPrice2Times, price2Workday, workdayIntervalFallback, now));
+            rules.AddRange(
+                BuildRulesForTimes(quest, $"{title} - выходные (пакет 1)", weekendDays, weekendPrice1Times, price1Weekend, weekendIntervalFallback, now));
+            rules.AddRange(
+                BuildRulesForTimes(quest, $"{title} - выходные (пакет 2)", weekendDays, weekendPrice2Times, price2Weekend, weekendIntervalFallback, now));
+        }
+
+        AddRules(
+            "Шерлок",
+            "10:00;11:30;13:00;14:30;16:00",
+            "17:30;19:00;20:30;22:00",
+            "9:15",
+            "10:45;12:15;13:45;15:15;16:45;18:15;19:45;21:15;22:45",
+            4000,
+            4500,
+            4500,
+            5000);
+
+        AddRules(
+            "Алиса в стране чудес",
+            "10:15;11:45;13:15;14:45;16:15",
+            "17:45;19:15;20:45;22:15",
+            "9:00",
+            "10:30;12:00;13:30;15:00;16:30;18:00;19:30;21:00;22:30",
+            4000,
+            4500,
+            4500,
+            5000);
+
+        AddRules(
+            "Школа магии Хогвартс",
+            "10:00;11:15;12:30;13:45;15:00;16:15",
+            "17:30;18:45;20:00;21:15;22:30",
+            "9:30",
+            "10:45;12:00;13:15;14:30;15:45;17:00;18:15;19:30;20:45;22:00;23:15",
+            4000,
+            4500,
+            4500,
+            5000);
+
+        AddRules(
+            "Идеальное ограбление",
+            "10:45;12:45;14:45;16:45",
+            "18:45;20:45;22:45",
+            "9:45",
+            "11:45;13:45;15:45;17:45;19:45;21:45",
+            4500,
+            5000,
+            5000,
+            5500);
+
+        AddRules(
+            "Звонок",
+            "10:30;12:15;14:00;15:45",
+            "17:30;19:15;21:00;22:45",
+            "9:30",
+            "11:15;13:00;14:45;16:30;18:15;20:00;21:45",
+            4000,
+            4500,
+            4500,
+            5000);
+
+        AddRules(
+            "Ключ от всех дверей",
+            "11:00;12:30;14:00;15:30",
+            "17:00;18:30;20:00;21:30;23:00",
+            "10:00",
+            "11:30;13:00;14:30;16:00;17:30;19:00;20:30;22:00",
+            4000,
+            4500,
+            4500,
+            5000);
+
+        if (rules.Any())
+        {
+            _context.QuestPricingRules.AddRange(rules);
+        }
+    }
+
+    private static IEnumerable<QuestPricingRule> BuildRulesForTimes(
+        Quest quest,
+        string title,
+        int[] daysOfWeek,
+        string times,
+        int price,
+        int fallbackIntervalMinutes,
+        DateTime now)
+    {
+        var timeList = ParseTimeList(times);
+        if (timeList.Count == 0)
+        {
+            return Array.Empty<QuestPricingRule>();
+        }
+
+        var interval = GetIntervalMinutes(timeList, fallbackIntervalMinutes);
+        if (interval <= 0)
+        {
+            interval = fallbackIntervalMinutes;
+        }
+
+        var lastTime = timeList[^1];
+        var endTime = lastTime.AddMinutes(interval);
+        if (endTime <= lastTime)
+        {
+            endTime = new TimeOnly(23, 59);
+        }
+
+        return new[]
+        {
+            new QuestPricingRule
+            {
+                Id = Guid.NewGuid(),
+                QuestId = quest.Id,
+                QuestIds = new[] { quest.Id },
+                Title = title,
+                DaysOfWeek = daysOfWeek,
+                StartDate = null,
+                EndDate = null,
+                StartTime = timeList[0],
+                EndTime = endTime,
+                IntervalMinutes = interval,
+                Price = price,
+                IsBlocked = false,
+                Priority = 1,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            }
+        };
+    }
+
+    private static List<TimeOnly> ParseTimeList(string value)
+    {
+        return value
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(time => TimeOnly.Parse(time.Trim()))
+            .Order()
+            .ToList();
+    }
+
+    private static int GetIntervalMinutes(IReadOnlyList<TimeOnly> times, int fallback)
+    {
+        if (times.Count < 2)
+        {
+            return fallback;
+        }
+
+        var first = times[0].ToTimeSpan();
+        var second = times[1].ToTimeSpan();
+        var interval = (int)(second - first).TotalMinutes;
+        return interval > 0 ? interval : fallback;
     }
 
     private static string BuildUniqueSlug(string title, Guid questId, ISet<string> existingSlugs)
