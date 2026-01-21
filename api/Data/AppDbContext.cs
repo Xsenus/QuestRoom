@@ -27,13 +27,35 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Quest>()
+            .HasIndex(q => q.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<QuestSchedule>()
+            .HasOne(e => e.Quest)
+            .WithMany()
+            .HasForeignKey(e => e.QuestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<QuestSchedule>()
             .HasIndex(e => new { e.QuestId, e.Date, e.TimeSlot })
             .IsUnique();
 
+        modelBuilder.Entity<QuestPricingRule>()
+            .HasOne(e => e.Quest)
+            .WithMany()
+            .HasForeignKey(e => e.QuestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<User>()
             .HasIndex(e => e.Email)
             .IsUnique();
+
+        modelBuilder.Entity<Booking>()
+            .HasOne(b => b.Quest)
+            .WithMany()
+            .HasForeignKey(b => b.QuestId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Booking>()
             .HasOne(b => b.QuestSchedule)
