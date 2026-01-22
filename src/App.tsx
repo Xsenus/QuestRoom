@@ -61,7 +61,7 @@ function App() {
       <Route
         path="/*"
         element={
-          <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-pink-800">
+          <div className="min-h-screen bg-gradient-to-br from-[#0b0f2a] via-[#24124a] to-[#4a1362]">
             <Header currentPage={currentPage} setCurrentPage={handlePageChange} />
             <Routes>
               <Route path="/" element={<HomePage />} />

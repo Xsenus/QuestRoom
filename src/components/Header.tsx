@@ -23,9 +23,9 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
   };
 
   return (
-    <header className="bg-gradient-to-b from-slate-900/80 to-transparent backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
-        <div className="flex flex-col items-center space-y-4 md:space-y-6">
+    <header className="bg-gradient-to-b from-[#0b0f2a]/85 to-transparent backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 py-3 md:py-5">
+        <div className="flex flex-col items-center space-y-3 md:space-y-4">
           <Link
             to="/"
             className="flex flex-col items-center hover:scale-105 transition-transform cursor-pointer"
@@ -33,11 +33,11 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
             <img
               src="/images/logo.png"
               alt="Вловушке24"
-              className="h-16 md:h-32 w-auto object-contain"
+              className="h-14 md:h-28 w-auto object-contain"
             />
           </Link>
 
-          <nav className="w-full bg-slate-900/60 backdrop-blur-sm py-2 md:py-4">
+          <nav className="w-full bg-[#1c1438]/70 backdrop-blur-sm py-2 md:py-3">
             <div className="grid grid-cols-3 gap-2 md:flex md:flex-wrap md:justify-center md:gap-4 px-2 md:px-4">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -52,7 +52,7 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
                     }`}
                   >
                     <Icon className="w-5 h-5 md:w-7 md:h-7" />
-                    <span className="text-[11px] md:text-sm whitespace-nowrap text-center leading-tight">
+                    <span className="text-[11px] md:text-sm whitespace-nowrap text-center leading-tight font-display">
                       {item.label}
                     </span>
                   </Link>
