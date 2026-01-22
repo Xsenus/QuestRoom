@@ -28,18 +28,18 @@ export default function QuestCard({ quest }: QuestCardProps) {
   };
 
   return (
-    <div className="relative mb-6 md:mb-10 pt-6 md:pt-8">
-      <div className="absolute -top-2 md:-top-4 -right-2 md:-right-4 z-30">
+    <div className="relative mb-6 md:mb-10 pt-5 md:pt-8">
+      <div className="absolute -top-1 md:-top-4 -right-1 md:-right-4 z-30">
         <img
           src={durationBadgeUrl}
           alt={`${quest.duration} минут`}
-          className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-2xl"
+          className="w-16 h-16 md:w-28 md:h-28 object-contain drop-shadow-2xl"
         />
       </div>
       {quest.isNew && (
-        <div className="absolute top-6 md:top-8 -right-1 md:-right-2 z-20 w-44 h-44 md:w-60 md:h-60 overflow-hidden pointer-events-none">
-          <div className="absolute top-12 -right-10 md:top-16 md:-right-14 w-56 md:w-72 bg-red-600 text-white text-center py-2 md:py-3 transform rotate-45 shadow-2xl">
-            <span className="text-base md:text-xl font-bold tracking-wider">NEW</span>
+        <div className="absolute top-5 md:top-8 -right-1 md:-right-2 z-20 w-36 h-36 md:w-60 md:h-60 overflow-hidden pointer-events-none">
+          <div className="absolute top-10 -right-9 md:top-16 md:-right-14 w-44 md:w-72 bg-red-600 text-white text-center py-1.5 md:py-3 transform rotate-45 shadow-2xl">
+            <span className="text-sm md:text-xl font-bold tracking-wider">NEW</span>
           </div>
         </div>
       )}
@@ -48,21 +48,21 @@ export default function QuestCard({ quest }: QuestCardProps) {
 
         <div className="grid md:grid-cols-2 gap-0">
           <div
-            className="relative min-h-[300px] md:min-h-[450px] bg-cover bg-center cursor-pointer"
+            className="relative min-h-[220px] md:min-h-[450px] bg-cover bg-center cursor-pointer"
             style={{ backgroundImage: `url(${mainImage})` }}
             onClick={handleBookingClick}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/80 to-transparent"></div>
-            <div className="relative z-10 p-5 md:p-8 flex flex-col justify-start pt-7 md:pt-10">
-              <h2 className="text-3xl md:text-5xl font-black text-white mb-4 md:mb-6 tracking-tight uppercase leading-tight">
+            <div className="relative z-10 p-4 md:p-8 flex flex-col justify-start pt-6 md:pt-10">
+              <h2 className="text-2xl md:text-5xl font-black text-white mb-3 md:mb-6 tracking-tight uppercase leading-tight">
                 {quest.title}
               </h2>
-              <div className="flex flex-wrap items-center gap-2 mb-4 md:mb-6">
-                <span className="inline-flex items-center gap-2 bg-red-600/90 text-white text-sm md:text-base font-bold px-3 py-1 rounded-full">
+              <div className="flex flex-wrap items-center gap-2 mb-3 md:mb-6">
+                <span className="inline-flex items-center gap-2 bg-red-600/90 text-white text-xs md:text-base font-bold px-2.5 py-1 rounded-full">
                   <Star className="w-4 h-4 fill-white" />
                   {quest.ageRating}
                 </span>
-                <span className="inline-flex items-center gap-2 bg-white/20 text-white text-sm md:text-base font-semibold px-3 py-1 rounded-full">
+                <span className="inline-flex items-center gap-2 bg-white/20 text-white text-xs md:text-base font-semibold px-2.5 py-1 rounded-full">
                   {difficultyBadgeUrl ? (
                     <img
                       src={difficultyBadgeUrl}
@@ -78,12 +78,12 @@ export default function QuestCard({ quest }: QuestCardProps) {
               <div className="space-y-2 md:space-y-3">
                 <button
                   onClick={handleBookingClick}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-7 md:py-3.5 md:px-9 transition-all hover:scale-105 shadow-lg text-sm md:text-base tracking-wider uppercase"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 md:py-3.5 md:px-9 transition-all hover:scale-105 shadow-lg text-xs md:text-base tracking-wider uppercase"
                 >
                   ЗАПИСАТЬСЯ НА КВЕСТ
                 </button>
                 <div>
-                  <button className="text-white hover:text-white/80 font-semibold text-sm md:text-base tracking-wide transition-all underline">
+                  <button className="text-white hover:text-white/80 font-semibold text-xs md:text-base tracking-wide transition-all underline">
                     ПОДАРИТЬ ИГРУ
                   </button>
                 </div>
@@ -91,7 +91,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
                   <span className="w-7 h-7 md:w-9 md:h-9 bg-red-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm">▶</span>
                   </span>
-                  <span className="font-semibold text-sm md:text-base tracking-wide uppercase">ВИДЕО</span>
+                  <span className="font-semibold text-xs md:text-base tracking-wide uppercase">ВИДЕО</span>
                 </button>
               </div>
             </div>
@@ -102,7 +102,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
               <div
                 key={index}
                 onClick={handleBookingClick}
-                className="h-[150px] md:h-[225px] bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer"
+                className="h-[120px] md:h-[225px] bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer"
                 style={{ backgroundImage: `url(${img})` }}
               ></div>
             ))}
