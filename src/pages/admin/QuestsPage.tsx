@@ -589,7 +589,7 @@ export default function QuestsPage() {
         </button>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {quests.map((quest) => (
           <div
             key={quest.id}

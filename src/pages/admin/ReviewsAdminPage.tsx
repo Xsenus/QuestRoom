@@ -10,10 +10,23 @@ export default function ReviewsAdminPage() {
     (ReviewUpsert & { id?: string }) | null
   >(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    if (typeof window === 'undefined') {
+      return 'cards';
+    }
+    const saved = localStorage.getItem('admin_reviews_view');
+    return saved === 'table' ? 'table' : 'cards';
+  });
 
   useEffect(() => {
     loadReviews();
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('admin_reviews_view', viewMode);
+    }
+  }, [viewMode]);
 
   const loadReviews = async () => {
     try {
@@ -244,110 +257,249 @@ export default function ReviewsAdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Управление отзывами</h2>
-        <button
-          onClick={handleCreate}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Добавить отзыв
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                viewMode === 'cards'
+                  ? 'bg-white text-gray-900 shadow'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Карточки
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white text-gray-900 shadow'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Таблица
+            </button>
+          </div>
+          <button
+            onClick={handleCreate}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Добавить отзыв
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-6">
-        {reviews.map((review) => (
-          <div
-            key={review.id}
-            className={`bg-white rounded-lg shadow-lg p-6 ${
-              !review.isVisible ? 'opacity-60' : ''
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-xl font-bold text-gray-900">
+      {viewMode === 'table' ? (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 text-gray-700">
+              <tr>
+                <th className="text-left px-4 py-3 font-semibold">Клиент</th>
+                <th className="text-left px-4 py-3 font-semibold">Квест</th>
+                <th className="text-left px-4 py-3 font-semibold">Рейтинг</th>
+                <th className="text-left px-4 py-3 font-semibold">Отзыв</th>
+                <th className="text-left px-4 py-3 font-semibold">Статус</th>
+                <th className="text-right px-4 py-3 font-semibold">Действия</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {reviews.map((review) => (
+                <tr key={review.id} className={!review.isVisible ? 'opacity-60' : ''}>
+                  <td className="px-4 py-3 font-semibold text-gray-900">
                     {review.customerName}
-                  </h3>
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${
-                          i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{review.questTitle}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${
+                            i < review.rating
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <p className="line-clamp-2">{review.reviewText}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(review.reviewDate).toLocaleDateString('ru-RU')}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      {review.isFeatured && (
+                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-700">
+                          Избранный
+                        </span>
+                      )}
+                      {review.isVisible ? (
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                          На сайте
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                          Скрыт
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setEditingReview(review)}
+                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                        title="Редактировать"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleFeatured(review)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          review.isFeatured
+                            ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                         }`}
-                      />
-                    ))}
+                        title={
+                          review.isFeatured ? 'Убрать из избранных' : 'Добавить в избранные'
+                        }
+                      >
+                        <Star
+                          className="w-4 h-4"
+                          fill={review.isFeatured ? 'currentColor' : 'none'}
+                        />
+                      </button>
+                      <button
+                        onClick={() => handleToggleVisibility(review)}
+                        className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                        title={review.isVisible ? 'Скрыть' : 'Показать'}
+                      >
+                        {review.isVisible ? (
+                          <Eye className="w-4 h-4" />
+                        ) : (
+                          <EyeOff className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(review.id)}
+                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                        title="Удалить"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {reviews.map((review) => (
+            <div
+              key={review.id}
+              className={`bg-white rounded-lg shadow-lg p-6 ${
+                !review.isVisible ? 'opacity-60' : ''
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {review.customerName}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${
+                            i < review.rating
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    {review.isFeatured && (
+                      <span className="bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        ИЗБРАННЫЙ
+                      </span>
+                    )}
+                    {!review.isVisible && (
+                      <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        СКРЫТ
+                      </span>
+                    )}
                   </div>
-                  {review.isFeatured && (
-                    <span className="bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      ИЗБРАННЫЙ
-                    </span>
-                  )}
-                  {!review.isVisible && (
-                    <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      СКРЫТ
-                    </span>
-                  )}
+                  <p className="text-gray-600 text-sm mb-2">
+                    Квест: <span className="font-semibold">{review.questTitle}</span>
+                  </p>
+                  <p className="text-gray-700 mb-2">{review.reviewText}</p>
+                  <p className="text-gray-500 text-xs">
+                    {new Date(review.reviewDate).toLocaleDateString('ru-RU')}
+                  </p>
                 </div>
-                <p className="text-gray-600 text-sm mb-2">
-                  Квест: <span className="font-semibold">{review.questTitle}</span>
-                </p>
-                <p className="text-gray-700 mb-2">{review.reviewText}</p>
-                <p className="text-gray-500 text-xs">
-                  {new Date(review.reviewDate).toLocaleDateString('ru-RU')}
-                </p>
-              </div>
 
-              <div className="flex gap-2 ml-4">
-                <button
-                  onClick={() => setEditingReview(review)}
-                  className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                  title="Редактировать"
-                >
-                  <Edit className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleToggleFeatured(review)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    review.isFeatured
-                      ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                  }`}
-                  title={review.isFeatured ? 'Убрать из избранных' : 'Добавить в избранные'}
-                >
-                  <Star className="w-5 h-5" fill={review.isFeatured ? 'currentColor' : 'none'} />
-                </button>
-                <button
-                  onClick={() => handleToggleVisibility(review)}
-                  className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
-                  title={review.isVisible ? 'Скрыть' : 'Показать'}
-                >
-                  {review.isVisible ? (
-                    <Eye className="w-5 h-5" />
-                  ) : (
-                    <EyeOff className="w-5 h-5" />
-                  )}
-                </button>
-                <button
-                  onClick={() => handleDelete(review.id)}
-                  className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                  title="Удалить"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex gap-2 ml-4">
+                  <button
+                    onClick={() => setEditingReview(review)}
+                    className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                    title="Редактировать"
+                  >
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleToggleFeatured(review)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      review.isFeatured
+                        ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                    }`}
+                    title={review.isFeatured ? 'Убрать из избранных' : 'Добавить в избранные'}
+                  >
+                    <Star
+                      className="w-5 h-5"
+                      fill={review.isFeatured ? 'currentColor' : 'none'}
+                    />
+                  </button>
+                  <button
+                    onClick={() => handleToggleVisibility(review)}
+                    className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                    title={review.isVisible ? 'Скрыть' : 'Показать'}
+                  >
+                    {review.isVisible ? (
+                      <Eye className="w-5 h-5" />
+                    ) : (
+                      <EyeOff className="w-5 h-5" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(review.id)}
+                    className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                    title="Удалить"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+      )}
 
-        {reviews.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-600 text-lg">Отзывы не найдены</p>
-            <p className="text-gray-500 mt-2">Добавьте первый отзыв</p>
-          </div>
-        )}
-      </div>
+      {reviews.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <p className="text-gray-600 text-lg">Отзывы не найдены</p>
+          <p className="text-gray-500 mt-2">Добавьте первый отзыв</p>
+        </div>
+      )}
     </div>
   );
 }

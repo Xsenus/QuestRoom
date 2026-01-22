@@ -17,7 +17,7 @@ public class QuestsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<QuestDto>>> GetQuests([FromQuery] bool? visible = true)
+    public async Task<ActionResult<IEnumerable<QuestDto>>> GetQuests([FromQuery] bool? visible = null)
     {
         var quests = await _questService.GetQuestsAsync(visible);
         return Ok(quests);
