@@ -19,6 +19,13 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     paymentType: 'card',
   });
   const [submitting, setSubmitting] = useState(false);
+  const extraCharges = [
+    'Доплата за ночные сеансы начиная с 21:30 + 500 ₽',
+    'Доплата за 5-го игрока + 700 ₽ (кроме «Идеального ограбления»)',
+    'Доплата за услуги детского аниматора + 1000 ₽',
+    'Аренда зоны отдыха для ожидающих гостей + 500 ₽',
+    'Аренда зоны для чаепития + 500 ₽ за 45 минут',
+  ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -55,9 +62,9 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-red-600 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+      <div className="bg-red-600 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto modal-scrollbar">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-white">Забронировать игру</h2>
             <button
               onClick={onClose}
@@ -68,7 +75,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <input
                 type="text"
                 name="name"
@@ -76,11 +83,8 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 onChange={handleChange}
                 required
                 placeholder="ИМЯ"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
-            </div>
-
-            <div>
               <input
                 type="tel"
                 name="phone"
@@ -88,33 +92,37 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 onChange={handleChange}
                 required
                 placeholder="ТЕЛЕФОН *"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
-            </div>
-
-            <div>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="E-MAIL"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 sm:col-span-2"
               />
-            </div>
-
-            <div>
               <textarea
                 name="comments"
                 value={formData.comments}
                 onChange={handleChange}
-                rows={3}
+                rows={2}
                 placeholder="КОММЕНТАРИЙ (НЕОБЯЗАТЕЛЬНО)"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 resize-none"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 resize-none sm:col-span-2"
               />
             </div>
 
-            <div className="bg-white/10 rounded-lg p-4 space-y-2 text-white text-sm">
+            <div className="bg-white/10 rounded-lg p-3 space-y-1.5 text-white text-sm">
+              <div className="flex justify-between">
+                <span>Квест:</span>
+                <span className="font-bold text-right">{quest.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Игроков:</span>
+                <span className="font-bold">
+                  {quest.participantsMin}-{quest.participantsMax}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span>Дата:</span>
                 <span className="font-bold">
@@ -133,30 +141,61 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
 
             <div className="space-y-2">
               <p className="text-white font-semibold text-sm">Оплата:</p>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="flex flex-wrap gap-3">
+                <label className="cursor-pointer">
                   <input
                     type="radio"
                     name="paymentType"
                     value="card"
                     checked={formData.paymentType === 'card'}
                     onChange={handleChange}
-                    className="w-4 h-4"
+                    className="sr-only"
                   />
-                  <span className="text-white text-sm">НА МЕСТЕ</span>
+                  <span
+                    className={`px-3 py-1.5 border text-sm font-semibold transition-colors ${
+                      formData.paymentType === 'card'
+                        ? 'bg-white text-red-600 border-white'
+                        : 'border-white text-white hover:bg-white/20'
+                    }`}
+                  >
+                    НАЛИЧНЫЕ
+                  </span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="cursor-pointer">
                   <input
                     type="radio"
                     name="paymentType"
                     value="certificate"
                     checked={formData.paymentType === 'certificate'}
                     onChange={handleChange}
-                    className="w-4 h-4"
+                    className="sr-only"
                   />
-                  <span className="text-white text-sm">СЕРТИФИКАТ</span>
+                  <span
+                    className={`px-3 py-1.5 border text-sm font-semibold transition-colors ${
+                      formData.paymentType === 'certificate'
+                        ? 'bg-white text-red-600 border-white'
+                        : 'border-white text-white hover:bg-white/20'
+                    }`}
+                  >
+                    СЕРТИФИКАТ
+                  </span>
                 </label>
               </div>
+            </div>
+
+            <div className="space-y-2 text-white text-xs">
+              <p className="font-semibold text-sm">Дополнительные услуги и доплаты:</p>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {extraCharges.map((charge) => (
+                  <li
+                    key={charge}
+                    className="flex items-start gap-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-left text-white/90"
+                  >
+                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white/70" />
+                    <span>{charge}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <button
