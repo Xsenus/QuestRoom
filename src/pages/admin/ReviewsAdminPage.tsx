@@ -405,49 +405,55 @@ export default function ReviewsAdminPage() {
           {reviews.map((review) => (
             <div
               key={review.id}
-              className={`bg-white rounded-lg shadow-lg p-6 ${
+              className={`flex h-full flex-col rounded-lg bg-white p-6 shadow-lg ${
                 !review.isVisible ? 'opacity-60' : ''
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-gray-900">
-                      {review.customerName}
-                    </h3>
-                    <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < review.rating
-                              ? 'text-yellow-500 fill-yellow-500'
-                              : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    {review.isFeatured && (
-                      <span className="bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                        ИЗБРАННЫЙ
-                      </span>
-                    )}
-                    {!review.isVisible && (
-                      <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
-                        СКРЫТ
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-600 text-sm mb-2">
-                    Квест: <span className="font-semibold">{review.questTitle}</span>
-                  </p>
-                  <p className="text-gray-700 mb-2">{review.reviewText}</p>
-                  <p className="text-gray-500 text-xs">
-                    {new Date(review.reviewDate).toLocaleDateString('ru-RU')}
-                  </p>
+              <div className="flex justify-center">
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${
+                        i < review.rating
+                          ? 'text-yellow-500 fill-yellow-500'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
                 </div>
+              </div>
 
-                <div className="flex gap-2 ml-4">
+              <div className="mt-4 flex items-start justify-between gap-3">
+                <h3 className="text-lg font-bold text-gray-900">{review.customerName}</h3>
+                <div className="flex flex-col items-end gap-2 text-xs font-semibold">
+                  {review.isFeatured && (
+                    <span className="rounded-full bg-yellow-100 px-3 py-1 text-yellow-700">
+                      Избранный
+                    </span>
+                  )}
+                  <span
+                    className={`rounded-full px-3 py-1 ${
+                      review.isVisible
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {review.isVisible ? 'На сайте' : 'Скрыт'}
+                  </span>
+                </div>
+              </div>
+
+              <p className="mt-3 text-sm text-gray-600">
+                Квест: <span className="font-semibold text-gray-800">{review.questTitle}</span>
+              </p>
+              <p className="mt-2 text-sm text-gray-700">{review.reviewText}</p>
+
+              <div className="mt-auto flex items-center justify-between pt-4">
+                <span className="text-xs text-gray-500">
+                  {new Date(review.reviewDate).toLocaleDateString('ru-RU')}
+                </span>
+                <div className="flex gap-2">
                   <button
                     onClick={() => setEditingReview(review)}
                     className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"

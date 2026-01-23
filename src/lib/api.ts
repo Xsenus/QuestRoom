@@ -30,6 +30,8 @@ import type {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const tokenKeys = ['auth_token', 'token'];
+const tokenExpiryKey = 'auth_expires_at';
+const tokenTtlMs = 1000 * 60 * 60 * 24 * 7;
 
 const normalizeToken = (token: string | null) => {
   if (!token || token === 'null' || token === 'undefined') {
@@ -38,7 +40,33 @@ const normalizeToken = (token: string | null) => {
   return token;
 };
 
+const clearAuthStorage = () => {
+  for (const key of tokenKeys) {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  }
+  localStorage.removeItem('user_email');
+  localStorage.removeItem('user_role');
+  localStorage.removeItem(tokenExpiryKey);
+};
+
+const hasTokenExpired = () => {
+  const expiresAtRaw = localStorage.getItem(tokenExpiryKey);
+  if (!expiresAtRaw) {
+    return false;
+  }
+  const expiresAt = Number(expiresAtRaw);
+  if (!Number.isFinite(expiresAt)) {
+    return false;
+  }
+  return Date.now() > expiresAt;
+};
+
 const getAuthToken = () => {
+  if (hasTokenExpired()) {
+    clearAuthStorage();
+    return null;
+  }
   for (const key of tokenKeys) {
     const stored = normalizeToken(localStorage.getItem(key));
     if (stored) {
@@ -103,6 +131,7 @@ class ApiClient {
 
     if (token) {
       localStorage.setItem('auth_token', token);
+      localStorage.setItem(tokenExpiryKey, String(Date.now() + tokenTtlMs));
       if (userEmail) {
         localStorage.setItem('user_email', userEmail);
       }
@@ -120,9 +149,7 @@ class ApiClient {
   }
 
   logout() {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_email');
-    localStorage.removeItem('user_role');
+    clearAuthStorage();
   }
 
   isAuthenticated() {

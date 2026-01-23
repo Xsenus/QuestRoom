@@ -24,6 +24,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('auth_token');
     const email = localStorage.getItem('user_email');
     const role = localStorage.getItem('user_role');
+    const expiresAt = Number(localStorage.getItem('auth_expires_at'));
+
+    const isExpired = Number.isFinite(expiresAt) && Date.now() > expiresAt;
+
+    if (isExpired) {
+      api.logout();
+      setLoading(false);
+      return;
+    }
 
     if (token && email && role) {
       setUser({ email, role });

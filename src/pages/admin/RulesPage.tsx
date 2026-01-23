@@ -302,35 +302,30 @@ export default function RulesPage() {
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className={`group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-200 hover:shadow-lg ${
+              className={`group flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-200 hover:shadow-lg ${
                 !rule.isVisible ? 'opacity-60' : ''
               }`}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900">{rule.title}</h3>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        rule.isVisible
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {rule.isVisible ? 'На сайте' : 'Скрыт'}
-                    </span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-gray-600 whitespace-pre-wrap">
-                    {rule.content}
-                  </p>
-                </div>
+              <span
+                className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  rule.isVisible ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {rule.isVisible ? 'На сайте' : 'Скрыт'}
+              </span>
+
+              <div className="mt-4 flex-1 space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">{rule.title}</h3>
+                <p className="text-sm leading-relaxed text-gray-600 whitespace-pre-wrap">
+                  {rule.content}
+                </p>
               </div>
 
-              <div className="mt-5 flex items-center justify-between">
+              <div className="mt-5">
                 <div className="text-xs font-medium text-gray-400">
                   Порядок: <span className="text-gray-500">{rule.sortOrder}</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => setEditingRule(rule)}
                     className="rounded-lg border border-transparent bg-blue-50 p-2 text-blue-600 transition-colors hover:border-blue-100 hover:bg-blue-100"

@@ -101,11 +101,31 @@ public class BookingService : IBookingService
         }
 
         var wasCancelled = booking.Status == "cancelled";
-        booking.Status = dto.Status;
+        var nextStatus = string.IsNullOrWhiteSpace(dto.Status) ? booking.Status : dto.Status;
+
+        booking.Status = nextStatus;
         booking.Notes = dto.Notes;
+        if (dto.CustomerName != null)
+        {
+            booking.CustomerName = dto.CustomerName;
+        }
+        if (dto.CustomerPhone != null)
+        {
+            booking.CustomerPhone = dto.CustomerPhone;
+        }
+        if (dto.CustomerEmail != null)
+        {
+            booking.CustomerEmail = string.IsNullOrWhiteSpace(dto.CustomerEmail)
+                ? null
+                : dto.CustomerEmail;
+        }
+        if (dto.ParticipantsCount.HasValue)
+        {
+            booking.ParticipantsCount = dto.ParticipantsCount.Value;
+        }
         booking.UpdatedAt = DateTime.UtcNow;
 
-        if (dto.Status == "cancelled" && !wasCancelled && booking.QuestScheduleId.HasValue)
+        if (nextStatus == "cancelled" && !wasCancelled && booking.QuestScheduleId.HasValue)
         {
             var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
             if (schedule != null)

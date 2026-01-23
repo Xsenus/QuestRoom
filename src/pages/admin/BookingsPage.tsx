@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
 import { Booking, Quest, QuestSchedule } from '../../lib/types';
-import { Calendar, User, Phone, Mail, Users, FileText } from 'lucide-react';
+import { Calendar, User, Phone, Mail, Users, FileText, Edit, Save, X } from 'lucide-react';
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -31,6 +31,15 @@ export default function BookingsPage() {
   const [listDateFrom, setListDateFrom] = useState<string>('');
   const [listDateTo, setListDateTo] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [editingBooking, setEditingBooking] = useState<{
+    id: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    participantsCount: number;
+    notes: string;
+    status: Booking['status'];
+  } | null>(null);
 
   useEffect(() => {
     const today = new Date();
@@ -145,6 +154,47 @@ export default function BookingsPage() {
       }
     } catch (error) {
       alert('Ошибка при обновлении статуса: ' + (error as Error).message);
+    }
+  };
+
+  const handleEditBooking = (booking: Booking) => {
+    setEditingBooking({
+      id: booking.id,
+      customerName: booking.customerName,
+      customerPhone: booking.customerPhone,
+      customerEmail: booking.customerEmail || '',
+      participantsCount: booking.participantsCount,
+      notes: booking.notes || '',
+      status: booking.status,
+    });
+  };
+
+  const handleUpdateBooking = async () => {
+    if (!editingBooking) {
+      return;
+    }
+
+    if (!editingBooking.customerName || !editingBooking.customerPhone) {
+      alert('Укажите имя и телефон клиента.');
+      return;
+    }
+
+    try {
+      await api.updateBooking(editingBooking.id, {
+        customerName: editingBooking.customerName,
+        customerPhone: editingBooking.customerPhone,
+        customerEmail: editingBooking.customerEmail || null,
+        participantsCount: editingBooking.participantsCount,
+        notes: editingBooking.notes || null,
+        status: editingBooking.status,
+      });
+      setEditingBooking(null);
+      loadBookings();
+      if (selectedQuestId && dateFrom && dateTo) {
+        loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
+      }
+    } catch (error) {
+      alert('Ошибка при обновлении брони: ' + (error as Error).message);
     }
   };
 
@@ -454,6 +504,131 @@ export default function BookingsPage() {
             </div>
           </div>
 
+          {editingBooking && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Редактирование брони</h3>
+                  <p className="text-xs text-gray-500">ID: {editingBooking.id.slice(0, 8)}</p>
+                </div>
+                <span
+                  className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
+                    editingBooking.status
+                  )}`}
+                >
+                  {getStatusText(editingBooking.status)}
+                </span>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Имя клиента
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.customerName}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, customerName: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Телефон
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.customerPhone}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, customerPhone: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email (опционально)
+                  </label>
+                  <input
+                    type="email"
+                    value={editingBooking.customerEmail}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, customerEmail: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Участников
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingBooking.participantsCount}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        participantsCount: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Статус
+                  </label>
+                  <select
+                    value={editingBooking.status}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        status: e.target.value as Booking['status'],
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  >
+                    <option value="pending">Ожидает</option>
+                    <option value="confirmed">Подтверждено</option>
+                    <option value="completed">Завершено</option>
+                    <option value="cancelled">Отменено</option>
+                  </select>
+                </div>
+                <div className="lg:col-span-3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Примечания
+                  </label>
+                  <textarea
+                    value={editingBooking.notes}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, notes: e.target.value })
+                    }
+                    rows={2}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 mt-4">
+                <button
+                  onClick={handleUpdateBooking}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  Сохранить изменения
+                </button>
+                <button
+                  onClick={() => setEditingBooking(null)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow p-4">
             <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
               <div>
@@ -571,6 +746,13 @@ export default function BookingsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleEditBooking(booking)}
+                            className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                            title="Редактировать"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
                           {booking.status === 'pending' && (
                             <button
                               onClick={() => updateStatus(booking, 'confirmed')}
@@ -628,6 +810,13 @@ export default function BookingsPage() {
                     </div>
 
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditBooking(booking)}
+                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                        title="Редактировать"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
                       {booking.status === 'pending' && (
                         <button
                           onClick={() => updateStatus(booking, 'confirmed')}

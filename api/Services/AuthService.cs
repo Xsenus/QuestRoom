@@ -36,11 +36,12 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
+        var expiresDays = _configuration.GetValue<int?>("Jwt:ExpiresDays") ?? 7;
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(24),
+            expires: DateTime.UtcNow.AddDays(expiresDays),
             signingCredentials: credentials
         );
 
