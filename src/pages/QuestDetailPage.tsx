@@ -18,33 +18,49 @@ export default function QuestDetailPage() {
   useEffect(() => {
     if (id) {
       loadQuest();
-      loadSchedule();
     }
   }, [id]);
 
+  useEffect(() => {
+    if (quest?.id) {
+      loadSchedule(quest.id);
+    }
+  }, [quest?.id]);
+
   const loadQuest = async () => {
+    setLoading(true);
     try {
       const data = await api.getQuest(id!);
       if (data.isVisible) {
         setQuest(data);
       } else {
         setQuest(null);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error loading quest:', error);
+      setQuest(null);
+      setLoading(false);
     }
   };
 
-  const loadSchedule = async () => {
+  const formatDateForApi = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const loadSchedule = async (questId: string) => {
     const today = new Date();
-    const nextWeek = new Date();
-    nextWeek.setDate(today.getDate() + 14);
+    const twoWeeksLater = new Date();
+    twoWeeksLater.setDate(today.getDate() + 13);
 
     try {
       const data = await api.getQuestSchedule(
-        id!,
-        today.toISOString().split('T')[0],
-        nextWeek.toISOString().split('T')[0]
+        questId,
+        formatDateForApi(today),
+        formatDateForApi(twoWeeksLater)
       );
       setSchedule(data || []);
     } catch (error) {
@@ -78,7 +94,9 @@ export default function QuestDetailPage() {
 
   const handleBookingComplete = () => {
     setShowBookingModal(false);
-    loadSchedule();
+    if (quest?.id) {
+      loadSchedule(quest.id);
+    }
   };
 
   const groupScheduleByDate = () => {
