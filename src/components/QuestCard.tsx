@@ -29,6 +29,13 @@ export default function QuestCard({ quest }: QuestCardProps) {
 
   return (
     <div className="relative mb-4 md:mb-6 pt-3 md:pt-5">
+      <div className="absolute -top-1 md:-top-4 -right-1 md:-right-4 z-30 pointer-events-none">
+        <img
+          src={durationBadgeUrl}
+          alt={`${quest.duration} минут`}
+          className="w-14 h-14 md:w-24 md:h-24 object-contain drop-shadow-2xl"
+        />
+      </div>
       <div className="relative bg-white shadow-2xl overflow-hidden border-4 border-white">
         <div className="relative">
           <div className="grid grid-cols-[1.4fr_1fr] md:grid-cols-[1.6fr_1fr]">
@@ -96,17 +103,9 @@ export default function QuestCard({ quest }: QuestCardProps) {
             </div>
           </div>
 
-          <div className="absolute top-2 right-2 z-30">
-            <img
-              src={durationBadgeUrl}
-              alt={`${quest.duration} минут`}
-              className="w-12 h-12 md:w-24 md:h-24 object-contain drop-shadow-2xl"
-            />
-          </div>
-
           {quest.isNew && (
             <div className="absolute top-0 right-0 z-20 w-28 h-28 md:w-60 md:h-60 overflow-hidden pointer-events-none">
-              <div className="absolute top-8 right-[-34px] md:top-16 md:right-[-56px] w-36 md:w-72 bg-[#c51f2e] text-white text-center py-1.5 md:py-3 transform rotate-45 shadow-2xl">
+              <div className="absolute top-9 right-[-34px] md:top-16 md:right-[-56px] w-36 md:w-72 bg-[#c51f2e] text-white text-center py-1.5 md:py-3 transform rotate-45 shadow-2xl">
                 <span className="text-xs md:text-xl font-bold tracking-wider font-display">NEW</span>
               </div>
             </div>
@@ -178,7 +177,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
               )}
             </div>
 
-            <p className="text-[11px] md:text-xs text-gray-700 leading-snug max-h-24 md:max-h-32 overflow-hidden">
+            <p className="text-[11px] md:text-sm text-gray-700 leading-snug md:leading-relaxed line-clamp-5 md:line-clamp-6">
               {quest.description}
             </p>
           </div>
