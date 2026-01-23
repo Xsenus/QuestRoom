@@ -291,15 +291,20 @@ export default function QuestDetailPage() {
                       {slots.map((slot) => (
                         <button
                           key={slot.id}
-                          onClick={() => handleSlotClick(slot)}
-                          disabled={slot.isBooked}
+                          onClick={() => {
+                            if (!slot.isBooked) {
+                              handleSlotClick(slot);
+                            }
+                          }}
+                          aria-disabled={slot.isBooked}
+                          type="button"
                           className={`w-16 px-3 py-1.5 rounded-sm text-xs font-semibold uppercase tracking-wide transition-all ${
                             slot.isBooked
-                              ? 'bg-orange-500/90 text-white cursor-not-allowed'
+                              ? 'bg-orange-500/90 text-white cursor-not-allowed hover:bg-red-600'
                               : 'bg-green-600 hover:bg-green-700 text-white'
                           }`}
                         >
-                          <span className={slot.isBooked ? 'line-through' : undefined}>
+                          <span className={slot.isBooked ? 'block w-full text-center line-through' : undefined}>
                             {slot.timeSlot.substring(0, 5)}
                           </span>
                         </button>
@@ -313,8 +318,8 @@ export default function QuestDetailPage() {
                           style={{ width: `${group.slots.length * 64 + (group.slots.length - 1) * 8}px` }}
                         >
                           <div className="relative h-[1px] w-full bg-white/40">
-                            <span className="absolute left-0 top-1/2 h-2 w-[2px] -translate-y-1/2 bg-white/50" />
-                            <span className="absolute right-0 top-1/2 h-2 w-[2px] -translate-y-1/2 bg-white/50" />
+                            <span className="absolute left-0 top-0 h-2 w-[2px] -translate-y-full bg-white/50" />
+                            <span className="absolute right-0 top-0 h-2 w-[2px] -translate-y-full bg-white/50" />
                           </div>
                           <span>{group.price} ₽</span>
                         </div>
