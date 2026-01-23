@@ -44,8 +44,8 @@ export default function QuestCard({ quest }: QuestCardProps) {
         </div>
       )}
 
-      <div className="relative bg-white shadow-2xl overflow-hidden border-4 border-white grid grid-cols-[1.35fr_1fr] md:grid-cols-[2.2fr_1fr]">
-        <div className="grid grid-cols-2 gap-0">
+      <div className="relative bg-white shadow-2xl overflow-hidden border-4 border-white">
+        <div className="grid grid-cols-1 md:grid-cols-[1.6fr_1fr]">
           <div
             className="relative min-h-[200px] md:min-h-[320px] bg-cover bg-center cursor-pointer"
             style={{ backgroundImage: `url(${mainImage})` }}
@@ -108,71 +108,75 @@ export default function QuestCard({ quest }: QuestCardProps) {
           </div>
         </div>
 
-        <div className="bg-[#f4f4f8] md:bg-white/95 text-gray-900 p-3 md:p-4 border-l border-white/90 flex flex-col gap-3 md:gap-4">
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
-              <div className="text-[11px] md:text-xs">
-                <div className="font-bold text-gray-900 mb-0.5 uppercase tracking-wide font-display">
-                  Возраст
-                </div>
-                <div className="text-gray-700 leading-snug">{quest.ageRestriction}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <Timer className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
-              <div className="text-[11px] md:text-xs">
-                <div className="font-bold text-gray-900 mb-0.5 uppercase tracking-wide font-display">
-                  Время
-                </div>
-                <div className="text-gray-700">{quest.duration} минут</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <Users className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
-              <div className="text-[11px] md:text-xs">
-                <div className="font-bold text-gray-900 mb-0.5 uppercase tracking-wide font-display">
-                  Участники
-                </div>
-                <div className="text-gray-700">
-                  {quest.participantsMin}-{quest.participantsMax} чел.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {quest.addresses && quest.addresses.length > 0 && (
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
-              <div className="text-[11px] md:text-xs text-gray-700 leading-snug">
-                {quest.addresses.map((addr, idx) => (
-                  <div key={idx}>{addr}</div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {quest.phones && quest.phones.length > 0 && (
-            <div className="flex items-start gap-2">
-              <PhoneCall className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
-              <div className="text-[11px] md:text-xs space-y-1">
-                {quest.phones.map((phone, idx) => (
-                  <div key={idx}>
-                    <a
-                      href={`tel:${phone}`}
-                      className="text-gray-700 hover:text-[#c51f2e] transition-colors font-semibold"
-                    >
-                      {phone}
-                    </a>
+        <div className="bg-white/95 text-gray-900 p-3 md:p-4 border-t border-white/90">
+          <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1.1fr_2fr] gap-3 md:gap-6">
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
+                <div className="text-[11px] md:text-xs">
+                  <div className="font-bold text-gray-900 mb-0.5 uppercase tracking-wide font-display">
+                    Возраст
                   </div>
-                ))}
+                  <div className="text-gray-700 leading-snug">{quest.ageRestriction}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Timer className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
+                <div className="text-[11px] md:text-xs">
+                  <div className="font-bold text-gray-900 mb-0.5 uppercase tracking-wide font-display">
+                    Время
+                  </div>
+                  <div className="text-gray-700">{quest.duration} минут</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Users className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
+                <div className="text-[11px] md:text-xs">
+                  <div className="font-bold text-gray-900 mb-0.5 uppercase tracking-wide font-display">
+                    Участники
+                  </div>
+                  <div className="text-gray-700">
+                    {quest.participantsMin}-{quest.participantsMax} чел.
+                  </div>
+                </div>
               </div>
             </div>
-          )}
 
-          <p className="text-[11px] md:text-xs text-gray-700 leading-snug max-h-20 md:max-h-28 overflow-hidden">
-            {quest.description}
-          </p>
+            <div className="space-y-2">
+              {quest.addresses && quest.addresses.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
+                  <div className="text-[11px] md:text-xs text-gray-700 leading-snug">
+                    {quest.addresses.map((addr, idx) => (
+                      <div key={idx}>{addr}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {quest.phones && quest.phones.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <PhoneCall className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
+                  <div className="text-[11px] md:text-xs space-y-1">
+                    {quest.phones.map((phone, idx) => (
+                      <div key={idx}>
+                        <a
+                          href={`tel:${phone}`}
+                          className="text-gray-700 hover:text-[#c51f2e] transition-colors font-semibold"
+                        >
+                          {phone}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] md:text-xs text-gray-700 leading-snug max-h-24 md:max-h-32 overflow-hidden">
+              {quest.description}
+            </p>
+          </div>
         </div>
       </div>
     </div>
