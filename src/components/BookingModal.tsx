@@ -62,9 +62,9 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-red-600 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+      <div className="bg-red-600 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto modal-scrollbar">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-white">Забронировать игру</h2>
             <button
               onClick={onClose}
@@ -75,7 +75,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <input
                 type="text"
                 name="name"
@@ -83,11 +83,8 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 onChange={handleChange}
                 required
                 placeholder="ИМЯ"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
-            </div>
-
-            <div>
               <input
                 type="tel"
                 name="phone"
@@ -95,33 +92,27 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 onChange={handleChange}
                 required
                 placeholder="ТЕЛЕФОН *"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
-            </div>
-
-            <div>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="E-MAIL"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 sm:col-span-2"
               />
-            </div>
-
-            <div>
               <textarea
                 name="comments"
                 value={formData.comments}
                 onChange={handleChange}
-                rows={3}
+                rows={2}
                 placeholder="КОММЕНТАРИЙ (НЕОБЯЗАТЕЛЬНО)"
-                className="w-full px-4 py-3 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 resize-none"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 resize-none sm:col-span-2"
               />
             </div>
 
-            <div className="bg-white/10 rounded-lg p-4 space-y-2 text-white text-sm">
+            <div className="bg-white/10 rounded-lg p-3 space-y-1.5 text-white text-sm">
               <div className="flex justify-between">
                 <span>Квест:</span>
                 <span className="font-bold text-right">{quest.title}</span>
@@ -194,7 +185,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
 
             <div className="space-y-2 text-white text-xs">
               <p className="font-semibold text-sm">Дополнительные услуги и доплаты:</p>
-              <ul className="space-y-1">
+              <ul className="grid gap-1 sm:grid-cols-2">
                 {extraCharges.map((charge) => (
                   <li key={charge} className="text-white/90 text-center">
                     {charge}
