@@ -29,26 +29,53 @@ import type {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const getAuthToken = () => {
-  return localStorage.getItem('auth_token');
+const tokenKeys = ['auth_token', 'token'];
+
+const normalizeToken = (token: string | null) => {
+  if (!token || token === 'null' || token === 'undefined') {
+    return null;
+  }
+  return token;
 };
 
-const getAuthHeaders = () => {
+const getAuthToken = () => {
+  for (const key of tokenKeys) {
+    const stored = normalizeToken(localStorage.getItem(key));
+    if (stored) {
+      return stored;
+    }
+  }
+
+  for (const key of tokenKeys) {
+    const stored = normalizeToken(sessionStorage.getItem(key));
+    if (stored) {
+      return stored;
+    }
+  }
+
+  return null;
+};
+
+const buildAuthHeaders = (options: RequestInit) => {
+  const headers = new Headers(options.headers);
   const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
+
+  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  return headers;
 };
 
 class ApiClient {
   async request(endpoint: string, options: RequestInit = {}) {
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
-      headers: {
-        ...getAuthHeaders(),
-        ...options.headers,
-      },
+      headers: buildAuthHeaders(options),
     });
 
     if (!response.ok) {
