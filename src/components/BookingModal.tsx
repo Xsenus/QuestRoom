@@ -19,6 +19,13 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     paymentType: 'card',
   });
   const [submitting, setSubmitting] = useState(false);
+  const extraCharges = [
+    'Доплата за ночные сеансы начиная с 21:30 + 500 ₽',
+    'Доплата за 5-го игрока + 700 ₽ (кроме «Идеального ограбления»)',
+    'Доплата за услуги детского аниматора + 1000 ₽',
+    'Аренда зоны отдыха для ожидающих гостей + 500 ₽',
+    'Аренда зоны для чаепития + 500 ₽ за 45 минут',
+  ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -116,6 +123,16 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
 
             <div className="bg-white/10 rounded-lg p-4 space-y-2 text-white text-sm">
               <div className="flex justify-between">
+                <span>Квест:</span>
+                <span className="font-bold text-right">{quest.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Игроков:</span>
+                <span className="font-bold">
+                  {quest.participantsMin}-{quest.participantsMax}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span>Дата:</span>
                 <span className="font-bold">
                   {new Date(`${slot.date}T00:00:00`).toLocaleDateString('ru-RU')}
@@ -133,30 +150,57 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
 
             <div className="space-y-2">
               <p className="text-white font-semibold text-sm">Оплата:</p>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="flex flex-wrap gap-3">
+                <label className="cursor-pointer">
                   <input
                     type="radio"
                     name="paymentType"
                     value="card"
                     checked={formData.paymentType === 'card'}
                     onChange={handleChange}
-                    className="w-4 h-4"
+                    className="sr-only"
                   />
-                  <span className="text-white text-sm">НА МЕСТЕ</span>
+                  <span
+                    className={`px-3 py-1.5 border text-sm font-semibold transition-colors ${
+                      formData.paymentType === 'card'
+                        ? 'bg-white text-red-600 border-white'
+                        : 'border-white text-white hover:bg-white/20'
+                    }`}
+                  >
+                    НАЛИЧНЫЕ
+                  </span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="cursor-pointer">
                   <input
                     type="radio"
                     name="paymentType"
                     value="certificate"
                     checked={formData.paymentType === 'certificate'}
                     onChange={handleChange}
-                    className="w-4 h-4"
+                    className="sr-only"
                   />
-                  <span className="text-white text-sm">СЕРТИФИКАТ</span>
+                  <span
+                    className={`px-3 py-1.5 border text-sm font-semibold transition-colors ${
+                      formData.paymentType === 'certificate'
+                        ? 'bg-white text-red-600 border-white'
+                        : 'border-white text-white hover:bg-white/20'
+                    }`}
+                  >
+                    СЕРТИФИКАТ
+                  </span>
                 </label>
               </div>
+            </div>
+
+            <div className="space-y-2 text-white text-xs">
+              <p className="font-semibold text-sm">Дополнительные услуги и доплаты:</p>
+              <ul className="space-y-1">
+                {extraCharges.map((charge) => (
+                  <li key={charge} className="text-white/90 text-center">
+                    {charge}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <button
