@@ -31,7 +31,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
     <div className="relative mb-4 md:mb-6 pt-3 md:pt-5">
       <div className="relative bg-white shadow-2xl overflow-visible border-4 border-white">
         <div className="relative">
-          <div className="grid grid-cols-[1.4fr_1fr] md:grid-cols-[1.6fr_1fr]">
+          <div className="grid grid-cols-[1.4fr_1fr] md:grid-cols-[1.6fr_1fr] bg-black">
             <div
               className="relative min-h-[180px] md:min-h-[320px] bg-cover bg-center cursor-pointer"
               style={{ backgroundImage: `url(${mainImage})` }}
@@ -84,7 +84,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-0">
+            <div className="grid grid-cols-2 gap-0 bg-black">
               {additionalImages.map((img, index) => (
                 <div
                   key={index}
@@ -105,8 +105,8 @@ export default function QuestCard({ quest }: QuestCardProps) {
           </div>
 
           {quest.isNew && (
-            <div className="absolute top-0 right-0 z-20 w-28 h-28 md:w-60 md:h-60 overflow-hidden pointer-events-none">
-              <div className="absolute top-8 right-[-40px] md:top-16 md:right-[-96px] w-48 md:w-[420px] bg-[#c51f2e] text-white text-center py-1.5 md:py-3 transform rotate-45 shadow-2xl">
+            <div className="absolute top-0 right-0 z-20 w-32 h-32 md:w-60 md:h-60 overflow-hidden pointer-events-none">
+              <div className="absolute top-8 right-[-52px] md:top-16 md:right-[-96px] w-56 md:w-[420px] bg-[#c51f2e] text-white text-center py-1.5 md:py-3 transform rotate-45 shadow-2xl">
                 <span className="text-[10px] md:text-xl font-bold tracking-wider font-display">NEW</span>
               </div>
             </div>
@@ -115,7 +115,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
 
         <div className="bg-white/95 text-gray-900 p-3 md:p-4 border-t border-white/90">
           <div className="grid grid-cols-1 md:grid-cols-[1.3fr_1.2fr_2fr] gap-3 md:gap-6">
-            <div className="grid gap-2 rounded-lg border border-gray-200/80 bg-white px-3 py-2 shadow-sm">
+            <div className="grid gap-2 md:rounded-lg md:border md:border-gray-200/80 md:bg-white px-3 py-2 md:shadow-sm">
               <div className="flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] md:text-xs">
@@ -125,7 +125,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
                   <div className="text-gray-700 leading-snug">{quest.ageRestriction}</div>
                 </div>
               </div>
-              <div className="h-px bg-gray-200/70"></div>
+              <div className="hidden md:block h-px bg-gray-200/70"></div>
               <div className="flex items-start gap-2">
                 <Timer className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] md:text-xs">
@@ -135,7 +135,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
                   <div className="text-gray-700">{quest.duration} минут</div>
                 </div>
               </div>
-              <div className="h-px bg-gray-200/70"></div>
+              <div className="hidden md:block h-px bg-gray-200/70"></div>
               <div className="flex items-start gap-2">
                 <Users className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] md:text-xs">
@@ -149,7 +149,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
               </div>
             </div>
 
-            <div className="grid gap-2 rounded-lg border border-gray-200/80 bg-white px-3 py-2 shadow-sm">
+            <div className="grid gap-2 md:rounded-lg md:border md:border-gray-200/80 md:bg-white px-3 py-2 md:shadow-sm">
               {quest.addresses && quest.addresses.length > 0 && (
                 <>
                   <div className="flex items-start gap-2">
@@ -160,7 +160,9 @@ export default function QuestCard({ quest }: QuestCardProps) {
                       ))}
                     </div>
                   </div>
-                  {quest.phones && quest.phones.length > 0 && <div className="h-px bg-gray-200/70"></div>}
+                  {quest.phones && quest.phones.length > 0 && (
+                    <div className="hidden md:block h-px bg-gray-200/70"></div>
+                  )}
                 </>
               )}
 
@@ -183,8 +185,8 @@ export default function QuestCard({ quest }: QuestCardProps) {
               )}
             </div>
 
-            <div className="rounded-lg border border-gray-200/80 bg-white px-3 py-2 shadow-sm">
-              <p className="text-[11px] md:text-sm text-gray-700 leading-relaxed max-h-28 md:max-h-40 overflow-hidden">
+            <div className="md:rounded-lg md:border md:border-gray-200/80 md:bg-white px-3 py-2 md:shadow-sm">
+              <p className="text-[11px] md:text-sm text-gray-700 leading-relaxed max-h-none md:max-h-40 overflow-visible md:overflow-hidden">
                 {quest.description}
               </p>
             </div>
