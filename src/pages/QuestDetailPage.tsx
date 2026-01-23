@@ -132,9 +132,30 @@ export default function QuestDetailPage() {
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   };
 
-  const slotWidth = 68;
-  const slotGap = 8;
-  const priceLineInset = 10;
+  const [{ slotWidth, slotGap, priceLineInset }, setSlotMetrics] = useState({
+    slotWidth: 68,
+    slotGap: 8,
+    priceLineInset: 10,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 640px)');
+    const updateMetrics = () => {
+      if (mediaQuery.matches) {
+        setSlotMetrics({ slotWidth: 52, slotGap: 6, priceLineInset: 8 });
+      } else {
+        setSlotMetrics({ slotWidth: 68, slotGap: 8, priceLineInset: 10 });
+      }
+    };
+    updateMetrics();
+    if ('addEventListener' in mediaQuery) {
+      mediaQuery.addEventListener('change', updateMetrics);
+      return () => mediaQuery.removeEventListener('change', updateMetrics);
+    }
+    mediaQuery.addListener(updateMetrics);
+    return () => mediaQuery.removeListener(updateMetrics);
+  }, []);
 
   if (loading) {
     return (
@@ -159,7 +180,7 @@ export default function QuestDetailPage() {
   ].filter((img, index, arr): img is string => Boolean(img) && arr.indexOf(img) === index);
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-8 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           <div className="relative">
@@ -290,8 +311,8 @@ export default function QuestDetailPage() {
                     <div className="text-sm text-white/60">{getDayName(date)}</div>
                   </div>
 
-                  <div className="flex-1 space-y-2">
-                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 overflow-x-hidden sm:overflow-x-auto pb-1">
                       {slots.map((slot) => (
                         <button
                           key={slot.id}
@@ -302,7 +323,7 @@ export default function QuestDetailPage() {
                           }}
                           aria-disabled={slot.isBooked}
                           type="button"
-                          className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                          className={`w-[52px] sm:w-[68px] shrink-0 px-1.5 sm:px-2 py-1 rounded-sm text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.06em] sm:tracking-[0.08em] transition-colors ${
                             slot.isBooked
                               ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
                               : 'bg-green-600 text-white hover:bg-green-500'
@@ -318,23 +339,27 @@ export default function QuestDetailPage() {
                         </button>
                       ))}
                     </div>
-                    <div className="flex flex-nowrap gap-2 text-[11px] text-white/80">
-                      {groupSlotsByPrice(slots).map((group) => (
-                        <div
-                          key={`${date}-${group.price}-${group.slots[0].id}`}
-                          className="relative flex flex-col items-center gap-1"
-                          style={{
-                            width: `${group.slots.length * slotWidth + (group.slots.length - 1) * slotGap}px`,
-                            ['--price-line-inset' as string]: `${priceLineInset}px`,
-                          }}
-                        >
-                          <div className="relative h-[1px] w-[calc(100%-var(--price-line-inset))] bg-white/50">
-                            <span className="absolute left-0 top-0 h-2 w-[2px] -translate-y-full bg-white/60" />
-                            <span className="absolute right-0 top-0 h-2 w-[2px] -translate-y-full bg-white/60" />
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 text-[10px] sm:text-[11px] text-white/80">
+                      {groupSlotsByPrice(slots).map((group) => {
+                        const groupWidth = group.slots.length * slotWidth + (group.slots.length - 1) * slotGap;
+                        return (
+                          <div
+                            key={`${date}-${group.price}-${group.slots[0].id}`}
+                            className="relative flex flex-col items-center gap-1"
+                            style={{
+                              width: `min(100%, ${groupWidth}px)`,
+                              maxWidth: '100%',
+                              ['--price-line-inset' as string]: `${priceLineInset}px`,
+                            }}
+                          >
+                            <div className="relative h-[1px] w-[calc(100%-var(--price-line-inset))] bg-white/50">
+                              <span className="absolute left-0 top-0 h-2 w-[2px] -translate-y-full bg-white/60" />
+                              <span className="absolute right-0 top-0 h-2 w-[2px] -translate-y-full bg-white/60" />
+                            </div>
+                            <span>{group.price} ₽</span>
                           </div>
-                          <span>{group.price} ₽</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
