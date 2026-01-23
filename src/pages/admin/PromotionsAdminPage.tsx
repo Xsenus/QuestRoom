@@ -285,74 +285,72 @@ export default function PromotionsAdminPage() {
         </button>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
         {promotions.map((promo) => (
           <div
             key={promo.id}
-            className={`bg-white rounded-lg shadow-lg p-6 ${
+            className={`flex h-full flex-col rounded-lg bg-white p-6 shadow-lg ${
               !promo.isActive ? 'opacity-60' : ''
             }`}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                {promo.imageUrl && (
-                  <img
-                    src={promo.imageUrl}
-                    alt={promo.title}
-                    className="w-full max-w-md h-48 object-cover rounded-lg mb-4"
-                  />
-                )}
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-2xl font-bold text-gray-900">{promo.title}</h3>
-                  {promo.discountText && (
-                    <span className="bg-red-600 text-white text-lg font-bold px-4 py-1 rounded-full">
-                      {promo.discountText}
-                    </span>
-                  )}
-                  {!promo.isActive && (
-                    <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      НЕАКТИВНА
-                    </span>
-                  )}
-                </div>
-                <p className="text-gray-600 mb-4">{promo.description}</p>
-                <div className="text-sm text-gray-500">
-                  <p>
-                    Действует с: {new Date(promo.validFrom).toLocaleDateString('ru-RU')}
-                    {promo.validUntil && (
-                      <> до {new Date(promo.validUntil).toLocaleDateString('ru-RU')}</>
-                    )}
-                  </p>
-                </div>
-              </div>
+            <span
+              className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                promo.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {promo.isActive ? 'Активна' : 'Неактивна'}
+            </span>
 
-              <div className="flex gap-2 ml-4">
-                <button
-                  onClick={() => setEditingPromo(promo)}
-                  className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                  title="Редактировать"
-                >
-                  <Edit className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleToggleActive(promo)}
-                  className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
-                  title={promo.isActive ? 'Деактивировать' : 'Активировать'}
-                >
-                  {promo.isActive ? (
-                    <Eye className="w-5 h-5" />
-                  ) : (
-                    <EyeOff className="w-5 h-5" />
-                  )}
-                </button>
-                <button
-                  onClick={() => handleDelete(promo.id)}
-                  className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                  title="Удалить"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
+            {promo.imageUrl && (
+              <img
+                src={promo.imageUrl}
+                alt={promo.title}
+                className="mt-4 h-48 w-full object-cover rounded-lg"
+              />
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <h3 className="text-xl font-bold text-gray-900">{promo.title}</h3>
+              {promo.discountText && (
+                <span className="rounded-full bg-red-600 px-4 py-1 text-sm font-bold text-white">
+                  {promo.discountText}
+                </span>
+              )}
+            </div>
+
+            <p className="mt-3 text-sm text-gray-600">{promo.description}</p>
+
+            <div className="mt-4 text-sm text-gray-500">
+              <p>
+                Действует с: {new Date(promo.validFrom).toLocaleDateString('ru-RU')}
+                {promo.validUntil && (
+                  <> до {new Date(promo.validUntil).toLocaleDateString('ru-RU')}</>
+                )}
+              </p>
+            </div>
+
+            <div className="mt-auto pt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setEditingPromo(promo)}
+                className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                title="Редактировать"
+              >
+                <Edit className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => handleToggleActive(promo)}
+                className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                title={promo.isActive ? 'Деактивировать' : 'Активировать'}
+              >
+                {promo.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </button>
+              <button
+                onClick={() => handleDelete(promo.id)}
+                className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                title="Удалить"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
             </div>
           </div>
         ))}

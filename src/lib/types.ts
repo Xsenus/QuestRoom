@@ -66,7 +66,12 @@ export type BookingCreate = Omit<
   'id' | 'status' | 'createdAt' | 'updatedAt'
 >;
 
-export type BookingUpdate = Pick<Booking, 'status' | 'notes'>;
+export type BookingUpdate = Partial<
+  Pick<
+    Booking,
+    'status' | 'notes' | 'customerName' | 'customerPhone' | 'customerEmail' | 'participantsCount'
+  >
+>;
 
 export type Rule = {
   id: string;
