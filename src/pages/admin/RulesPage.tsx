@@ -302,48 +302,59 @@ export default function RulesPage() {
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className={`bg-white rounded-lg shadow-lg p-6 ${
+              className={`group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-200 hover:shadow-lg ${
                 !rule.isVisible ? 'opacity-60' : ''
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-gray-900">{rule.title}</h3>
-                    {!rule.isVisible && (
-                      <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full">
-                        СКРЫТ
-                      </span>
-                    )}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">{rule.title}</h3>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        rule.isVisible
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {rule.isVisible ? 'На сайте' : 'Скрыт'}
+                    </span>
                   </div>
-                  <p className="text-gray-600 whitespace-pre-wrap">{rule.content}</p>
+                  <p className="text-sm leading-relaxed text-gray-600 whitespace-pre-wrap">
+                    {rule.content}
+                  </p>
                 </div>
+              </div>
 
-                <div className="flex gap-2 ml-4">
+              <div className="mt-5 flex items-center justify-between">
+                <div className="text-xs font-medium text-gray-400">
+                  Порядок: <span className="text-gray-500">{rule.sortOrder}</span>
+                </div>
+                <div className="flex gap-2">
                   <button
                     onClick={() => setEditingRule(rule)}
-                    className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                    className="rounded-lg border border-transparent bg-blue-50 p-2 text-blue-600 transition-colors hover:border-blue-100 hover:bg-blue-100"
                     title="Редактировать"
                   >
-                    <Edit className="w-5 h-5" />
+                    <Edit className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleToggleVisibility(rule)}
-                    className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                    className="rounded-lg border border-transparent bg-amber-50 p-2 text-amber-600 transition-colors hover:border-amber-100 hover:bg-amber-100"
                     title={rule.isVisible ? 'Скрыть' : 'Показать'}
                   >
                     {rule.isVisible ? (
-                      <Eye className="w-5 h-5" />
+                      <Eye className="h-4 w-4" />
                     ) : (
-                      <EyeOff className="w-5 h-5" />
+                      <EyeOff className="h-4 w-4" />
                     )}
                   </button>
                   <button
                     onClick={() => handleDelete(rule.id)}
-                    className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                    className="rounded-lg border border-transparent bg-rose-50 p-2 text-rose-600 transition-colors hover:border-rose-100 hover:bg-rose-100"
                     title="Удалить"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
