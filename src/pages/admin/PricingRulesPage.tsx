@@ -53,6 +53,7 @@ export default function PricingRulesPage() {
   const [generateFrom, setGenerateFrom] = useState<string>('');
   const [generateTo, setGenerateTo] = useState<string>('');
   const [generateResult, setGenerateResult] = useState<string>('');
+  const [rulesView, setRulesView] = useState<'cards' | 'table'>('cards');
 
   useEffect(() => {
     loadQuests();
@@ -477,61 +478,6 @@ export default function PricingRulesPage() {
       )}
 
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h3 className="text-xl font-bold text-gray-800">Список правил</h3>
-        {rules.length === 0 ? (
-          <p className="text-gray-500">Правила пока не заданы.</p>
-        ) : (
-          <div className="space-y-3">
-            {rules.map((rule) => (
-              <div
-                key={rule.id}
-                className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-gray-200 rounded-lg p-4"
-              >
-                <div>
-                  <div className="font-semibold text-gray-800">{rule.title}</div>
-                  <div className="text-sm text-gray-500">
-                    {rule.isBlocked ? (
-                      <>Блокировка · Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
-                    ) : (
-                      <>
-                        Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·
-                        Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
-                      </>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    Даты: {rule.startDate || 'без начала'} – {rule.endDate || 'без конца'}
-                    · Дни: {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
-                    {rule.isActive ? '' : '(не активно)'}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    Квесты:{' '}
-                    {rule.questIds
-                      .map((id) => questMap.get(id) || id.slice(0, 6))
-                      .join(', ')}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(rule)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
-                  >
-                    Редактировать
-                  </button>
-                  <button
-                    onClick={() => handleDelete(rule.id)}
-                    className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
         <h3 className="text-xl font-bold text-gray-800">Генерация расписания</h3>
         <div className="grid md:grid-cols-4 gap-4 items-end">
           <div>
@@ -582,6 +528,150 @@ export default function PricingRulesPage() {
         </div>
         {generateResult && (
           <p className="text-sm text-gray-600">{generateResult}</p>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <h3 className="text-xl font-bold text-gray-800">Список правил</h3>
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span className="text-gray-500">Вид:</span>
+            <div className="inline-flex rounded-lg bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setRulesView('cards')}
+                className={`px-3 py-1.5 rounded-md transition-colors ${
+                  rulesView === 'cards'
+                    ? 'bg-white text-gray-900 shadow'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Карточки
+              </button>
+              <button
+                type="button"
+                onClick={() => setRulesView('table')}
+                className={`px-3 py-1.5 rounded-md transition-colors ${
+                  rulesView === 'table'
+                    ? 'bg-white text-gray-900 shadow'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Таблица
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {rules.length === 0 ? (
+          <p className="text-gray-500">Правила пока не заданы.</p>
+        ) : rulesView === 'cards' ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {rules.map((rule) => (
+              <div
+                key={rule.id}
+                className="flex flex-col justify-between gap-4 border border-gray-200 rounded-lg p-4 h-full"
+              >
+                <div className="space-y-2">
+                  <div className="font-semibold text-gray-800">{rule.title}</div>
+                  <div className="text-sm text-gray-500">
+                    {rule.isBlocked ? (
+                      <>Блокировка · Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
+                    ) : (
+                      <>
+                        Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·
+                        Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
+                      </>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Даты: {rule.startDate || 'без начала'} – {rule.endDate || 'без конца'}
+                    · Дни: {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
+                    {rule.isActive ? '' : '(не активно)'}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Квесты:{' '}
+                    {rule.questIds
+                      .map((id) => questMap.get(id) || id.slice(0, 6))
+                      .join(', ')}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(rule)}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                  >
+                    Редактировать
+                  </button>
+                  <button
+                    onClick={() => handleDelete(rule.id)}
+                    className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b">
+                  <th className="py-2 pr-4">Название</th>
+                  <th className="py-2 pr-4">Параметры</th>
+                  <th className="py-2 pr-4">Даты и дни</th>
+                  <th className="py-2 pr-4">Квесты</th>
+                  <th className="py-2">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((rule) => (
+                  <tr key={rule.id} className="border-b last:border-b-0">
+                    <td className="py-3 pr-4 font-semibold text-gray-800">{rule.title}</td>
+                    <td className="py-3 pr-4 text-gray-500">
+                      {rule.isBlocked ? (
+                        <>Блокировка · {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
+                      ) : (
+                        <>
+                          Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·{' '}
+                          {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
+                        </>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4 text-gray-400">
+                      {rule.startDate || 'без начала'} – {rule.endDate || 'без конца'}
+                      <div>
+                        {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
+                        {rule.isActive ? '' : '(не активно)'}
+                      </div>
+                    </td>
+                    <td className="py-3 pr-4 text-gray-400">
+                      {rule.questIds
+                        .map((id) => questMap.get(id) || id.slice(0, 6))
+                        .join(', ')}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(rule)}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                        >
+                          Редактировать
+                        </button>
+                        <button
+                          onClick={() => handleDelete(rule.id)}
+                          className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
