@@ -293,7 +293,7 @@ export default function QuestDetailPage() {
                           key={slot.id}
                           onClick={() => handleSlotClick(slot)}
                           disabled={slot.isBooked}
-                          className={`min-w-[64px] px-3 py-1.5 rounded-sm text-xs font-semibold uppercase tracking-wide transition-all ${
+                          className={`w-16 px-3 py-1.5 rounded-sm text-xs font-semibold uppercase tracking-wide transition-all ${
                             slot.isBooked
                               ? 'bg-orange-500/90 text-white cursor-not-allowed'
                               : 'bg-green-600 hover:bg-green-700 text-white'
@@ -309,10 +309,13 @@ export default function QuestDetailPage() {
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
-                          className="flex flex-col items-center gap-1"
-                          style={{ width: `${group.slots.length * 72 + (group.slots.length - 1) * 8}px` }}
+                          className="relative flex flex-col items-center gap-1 overflow-hidden"
+                          style={{ width: `${group.slots.length * 64 + (group.slots.length - 1) * 8}px` }}
                         >
-                          <div className="h-[1px] w-full bg-white/40" />
+                          <div className="relative h-[1px] w-full bg-white/40">
+                            <span className="absolute left-0 top-1/2 h-2 w-[2px] -translate-y-1/2 bg-white/50" />
+                            <span className="absolute right-0 top-1/2 h-2 w-[2px] -translate-y-1/2 bg-white/50" />
+                          </div>
                           <span>{group.price} ₽</span>
                         </div>
                       ))}
