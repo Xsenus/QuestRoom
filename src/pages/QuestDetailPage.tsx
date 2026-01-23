@@ -132,7 +132,7 @@ export default function QuestDetailPage() {
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   };
 
-  const slotWidth = 64;
+  const slotWidth = 68;
   const slotGap = 8;
   const priceLineInset = 10;
 
@@ -284,14 +284,14 @@ export default function QuestDetailPage() {
           {Object.keys(groupedSchedule).length > 0 ? (
             <div className="space-y-6">
               {Object.entries(groupedSchedule).map(([date, slots]) => (
-                <div key={date} className="flex gap-4 items-center">
-                  <div className="flex-shrink-0 w-40 text-white">
+                <div key={date} className="flex gap-6 items-start">
+                  <div className="flex-shrink-0 w-40 text-white pt-1">
                     <div className="text-lg font-bold">{getDisplayDate(date)}</div>
                     <div className="text-sm text-white/60">{getDayName(date)}</div>
                   </div>
 
-                  <div className="flex-1">
-                    <div className="flex flex-wrap gap-2">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
                       {slots.map((slot) => (
                         <button
                           key={slot.id}
@@ -302,31 +302,35 @@ export default function QuestDetailPage() {
                           }}
                           aria-disabled={slot.isBooked}
                           type="button"
-                          className={`w-16 px-3 py-1.5 rounded-sm text-xs font-semibold uppercase tracking-wide transition-all ${
+                          className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
                             slot.isBooked
-                              ? 'bg-orange-500/90 text-white cursor-not-allowed hover:bg-red-600'
-                              : 'bg-green-600 hover:bg-green-700 text-white'
+                              ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
+                              : 'bg-green-600 text-white hover:bg-green-500'
                           }`}
                         >
-                          <span className={slot.isBooked ? 'block w-full text-center line-through' : undefined}>
+                          <span
+                            className={`block w-full text-center ${
+                              slot.isBooked ? 'line-through decoration-2 decoration-slate-900/70' : ''
+                            }`}
+                          >
                             {slot.timeSlot.substring(0, 5)}
                           </span>
                         </button>
                       ))}
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-white/80">
+                    <div className="flex flex-nowrap gap-2 text-[11px] text-white/80">
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
-                          className="relative flex flex-col items-center gap-1 overflow-visible"
+                          className="relative flex flex-col items-center gap-1"
                           style={{
                             width: `${group.slots.length * slotWidth + (group.slots.length - 1) * slotGap}px`,
                             ['--price-line-inset' as string]: `${priceLineInset}px`,
                           }}
                         >
-                          <div className="relative h-[1px] w-[calc(100%-var(--price-line-inset))] bg-white/40 mx-auto">
-                            <span className="absolute left-0 top-0 h-2 w-[2px] -translate-y-full bg-white/50" />
-                            <span className="absolute right-0 top-0 h-2 w-[2px] -translate-y-full bg-white/50" />
+                          <div className="relative h-[1px] w-[calc(100%-var(--price-line-inset))] bg-white/50">
+                            <span className="absolute left-0 top-0 h-2 w-[2px] -translate-y-full bg-white/60" />
+                            <span className="absolute right-0 top-0 h-2 w-[2px] -translate-y-full bg-white/60" />
                           </div>
                           <span>{group.price} ₽</span>
                         </div>
