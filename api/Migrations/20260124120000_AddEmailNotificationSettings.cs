@@ -1,10 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using QuestRoomApi.Data;
 
 #nullable disable
 
 namespace QuestRoomApi.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260124120000_AddEmailNotificationSettings")]
     public partial class AddEmailNotificationSettings : Migration
     {
         /// <inheritdoc />
