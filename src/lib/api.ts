@@ -70,13 +70,26 @@ class ApiClient {
       body: JSON.stringify({ email, password }),
     });
 
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('user_email', data.email);
-      localStorage.setItem('user_role', data.role);
+    const token = data.token ?? data.Token;
+    const userEmail = data.email ?? data.Email;
+    const userRole = data.role ?? data.Role;
+
+    if (token) {
+      localStorage.setItem('auth_token', token);
+      if (userEmail) {
+        localStorage.setItem('user_email', userEmail);
+      }
+      if (userRole) {
+        localStorage.setItem('user_role', userRole);
+      }
     }
 
-    return data;
+    return {
+      ...data,
+      token,
+      email: userEmail,
+      role: userRole,
+    };
   }
 
   logout() {
