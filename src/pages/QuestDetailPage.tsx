@@ -132,6 +132,10 @@ export default function QuestDetailPage() {
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   };
 
+  const slotWidth = 64;
+  const slotGap = 8;
+  const priceLineInset = 10;
+
   if (loading) {
     return (
       <div className="min-h-screen py-12 flex items-center justify-center">
@@ -315,9 +319,12 @@ export default function QuestDetailPage() {
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
                           className="relative flex flex-col items-center gap-1 overflow-visible"
-                          style={{ width: `${group.slots.length * 64 + (group.slots.length - 1) * 8}px` }}
+                          style={{
+                            width: `${group.slots.length * slotWidth + (group.slots.length - 1) * slotGap}px`,
+                            ['--price-line-inset' as string]: `${priceLineInset}px`,
+                          }}
                         >
-                          <div className="relative h-[1px] w-full bg-white/40">
+                          <div className="relative h-[1px] w-[calc(100%-var(--price-line-inset))] bg-white/40 mx-auto">
                             <span className="absolute left-0 top-0 h-2 w-[2px] -translate-y-full bg-white/50" />
                             <span className="absolute right-0 top-0 h-2 w-[2px] -translate-y-full bg-white/50" />
                           </div>
