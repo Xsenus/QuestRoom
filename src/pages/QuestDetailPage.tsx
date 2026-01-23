@@ -314,7 +314,7 @@ export default function QuestDetailPage() {
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
-                          className="relative flex flex-col items-center gap-1 overflow-hidden"
+                          className="relative flex flex-col items-center gap-1 overflow-visible"
                           style={{ width: `${group.slots.length * 64 + (group.slots.length - 1) * 8}px` }}
                         >
                           <div className="relative h-[1px] w-full bg-white/40">
