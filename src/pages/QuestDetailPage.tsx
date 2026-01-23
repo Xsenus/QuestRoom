@@ -110,8 +110,16 @@ export default function QuestDetailPage() {
     return grouped;
   };
 
-  const getUniquePrices = (slots: QuestSchedule[]) => {
-    return Array.from(new Set(slots.map((slot) => slot.price))).sort((a, b) => a - b);
+  const groupSlotsByPrice = (slots: QuestSchedule[]) => {
+    return slots.reduce<{ price: number; slots: QuestSchedule[] }[]>((groups, slot) => {
+      const lastGroup = groups[groups.length - 1];
+      if (!lastGroup || lastGroup.price !== slot.price) {
+        groups.push({ price: slot.price, slots: [slot] });
+      } else {
+        lastGroup.slots.push(slot);
+      }
+      return groups;
+    }, []);
   };
 
   const getDayName = (dateString: string) => {
@@ -278,29 +286,37 @@ export default function QuestDetailPage() {
                     <div className="text-sm text-white/60">{getDayName(date)}</div>
                   </div>
 
-                  <div className="flex-1 flex flex-wrap gap-2">
-                    {slots.map((slot) => (
-                      <button
-                        key={slot.id}
-                        onClick={() => handleSlotClick(slot)}
-                        disabled={slot.isBooked}
-                        className={`min-w-[64px] px-3 py-1.5 rounded-sm text-xs font-semibold uppercase tracking-wide transition-all ${
-                          slot.isBooked
-                            ? 'bg-orange-500/90 text-white cursor-not-allowed'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
-                      >
-                        <span className={slot.isBooked ? 'line-through' : undefined}>
-                          {slot.timeSlot.substring(0, 5)}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex-shrink-0 text-white text-sm">
-                    {getUniquePrices(slots).map((price) => (
-                      <div key={price}>{price} ₽</div>
-                    ))}
+                  <div className="flex-1">
+                    <div className="flex flex-wrap gap-2">
+                      {slots.map((slot) => (
+                        <button
+                          key={slot.id}
+                          onClick={() => handleSlotClick(slot)}
+                          disabled={slot.isBooked}
+                          className={`min-w-[64px] px-3 py-1.5 rounded-sm text-xs font-semibold uppercase tracking-wide transition-all ${
+                            slot.isBooked
+                              ? 'bg-orange-500/90 text-white cursor-not-allowed'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        >
+                          <span className={slot.isBooked ? 'line-through' : undefined}>
+                            {slot.timeSlot.substring(0, 5)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-white/80">
+                      {groupSlotsByPrice(slots).map((group) => (
+                        <div
+                          key={`${date}-${group.price}-${group.slots[0].id}`}
+                          className="flex flex-col items-center gap-1"
+                          style={{ width: `${group.slots.length * 72 + (group.slots.length - 1) * 8}px` }}
+                        >
+                          <div className="h-[1px] w-full bg-white/40" />
+                          <span>{group.price} ₽</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
