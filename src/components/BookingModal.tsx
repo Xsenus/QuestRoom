@@ -185,10 +185,14 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
 
             <div className="space-y-2 text-white text-xs">
               <p className="font-semibold text-sm">Дополнительные услуги и доплаты:</p>
-              <ul className="grid gap-1 sm:grid-cols-2">
+              <ul className="grid gap-2 sm:grid-cols-2">
                 {extraCharges.map((charge) => (
-                  <li key={charge} className="text-white/90 text-center">
-                    {charge}
+                  <li
+                    key={charge}
+                    className="flex items-start gap-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-left text-white/90"
+                  >
+                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white/70" />
+                    <span>{charge}</span>
                   </li>
                 ))}
               </ul>
