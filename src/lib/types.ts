@@ -39,6 +39,18 @@ export type Settings = {
   telegramUrl: string | null;
   address: string | null;
   email: string | null;
+  notificationEmail: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUser: string | null;
+  smtpPassword: string | null;
+  smtpUseSsl: boolean;
+  smtpFromEmail: string | null;
+  smtpFromName: string | null;
+  notifyBookingAdmin: boolean;
+  notifyBookingCustomer: boolean;
+  notifyCertificateAdmin: boolean;
+  notifyCertificateCustomer: boolean;
   phone: string | null;
   logoUrl: string | null;
   updatedAt: string;

@@ -16,10 +16,12 @@ public interface IBookingService
 public class BookingService : IBookingService
 {
     private readonly AppDbContext _context;
+    private readonly IEmailNotificationService _emailNotificationService;
 
-    public BookingService(AppDbContext context)
+    public BookingService(AppDbContext context, IEmailNotificationService emailNotificationService)
     {
         _context = context;
+        _emailNotificationService = emailNotificationService;
     }
 
     public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync()
@@ -83,6 +85,7 @@ public class BookingService : IBookingService
             }
 
             await transaction.CommitAsync();
+            await _emailNotificationService.SendBookingNotificationsAsync(booking);
             return ToDto(booking);
         }
         catch

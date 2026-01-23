@@ -14,10 +14,12 @@ public interface ICertificateOrderService
 public class CertificateOrderService : ICertificateOrderService
 {
     private readonly AppDbContext _context;
+    private readonly IEmailNotificationService _emailNotificationService;
 
-    public CertificateOrderService(AppDbContext context)
+    public CertificateOrderService(AppDbContext context, IEmailNotificationService emailNotificationService)
     {
         _context = context;
+        _emailNotificationService = emailNotificationService;
     }
 
     public async Task<IReadOnlyList<CertificateOrderDto>> GetCertificateOrdersAsync()
@@ -54,6 +56,7 @@ public class CertificateOrderService : ICertificateOrderService
 
         _context.CertificateOrders.Add(order);
         await _context.SaveChangesAsync();
+        await _emailNotificationService.SendCertificateOrderNotificationsAsync(order);
 
         return ToDto(order);
     }

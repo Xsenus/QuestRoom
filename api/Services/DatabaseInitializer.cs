@@ -626,8 +626,20 @@ public class DatabaseInitializer : IDatabaseInitializer
                 TelegramUrl = null,
                 Address = "г. Красноярск, ул. Кирова, 43",
                 Email = "krsk@vlovushke24.ru",
+                NotificationEmail = "krsk@vlovushke24.ru",
                 Phone = "8 (391) 294-59-50",
                 LogoUrl = "/images/logo.png",
+                SmtpHost = null,
+                SmtpPort = null,
+                SmtpUser = null,
+                SmtpPassword = null,
+                SmtpUseSsl = true,
+                SmtpFromEmail = null,
+                SmtpFromName = null,
+                NotifyBookingAdmin = false,
+                NotifyBookingCustomer = false,
+                NotifyCertificateAdmin = false,
+                NotifyCertificateCustomer = false,
                 UpdatedAt = DateTime.UtcNow
             });
         }
