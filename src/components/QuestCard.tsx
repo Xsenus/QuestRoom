@@ -106,16 +106,16 @@ export default function QuestCard({ quest }: QuestCardProps) {
 
           {quest.isNew && (
             <div className="absolute top-0 right-0 z-20 w-28 h-28 md:w-60 md:h-60 overflow-hidden pointer-events-none">
-              <div className="absolute top-8 right-[-28px] md:top-16 md:right-[-52px] w-36 md:w-72 bg-[#c51f2e] text-white text-center py-1.5 md:py-3 transform rotate-45 shadow-2xl">
-                <span className="text-xs md:text-xl font-bold tracking-wider font-display">NEW</span>
+              <div className="absolute top-8 right-[-40px] md:top-16 md:right-[-96px] w-48 md:w-[420px] bg-[#c51f2e] text-white text-center py-1.5 md:py-3 transform rotate-45 shadow-2xl">
+                <span className="text-[10px] md:text-xl font-bold tracking-wider font-display">NEW</span>
               </div>
             </div>
           )}
         </div>
 
         <div className="bg-white/95 text-gray-900 p-3 md:p-4 border-t border-white/90">
-          <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1.1fr_2fr] gap-3 md:gap-6">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-[1.3fr_1.2fr_2fr] gap-3 md:gap-6">
+            <div className="grid gap-2 rounded-lg border border-gray-200/80 bg-white px-3 py-2 shadow-sm">
               <div className="flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] md:text-xs">
@@ -125,6 +125,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
                   <div className="text-gray-700 leading-snug">{quest.ageRestriction}</div>
                 </div>
               </div>
+              <div className="h-px bg-gray-200/70"></div>
               <div className="flex items-start gap-2">
                 <Timer className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] md:text-xs">
@@ -134,6 +135,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
                   <div className="text-gray-700">{quest.duration} минут</div>
                 </div>
               </div>
+              <div className="h-px bg-gray-200/70"></div>
               <div className="flex items-start gap-2">
                 <Users className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] md:text-xs">
@@ -147,16 +149,19 @@ export default function QuestCard({ quest }: QuestCardProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="grid gap-2 rounded-lg border border-gray-200/80 bg-white px-3 py-2 shadow-sm">
               {quest.addresses && quest.addresses.length > 0 && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
-                  <div className="text-[11px] md:text-xs text-gray-700 leading-snug">
-                    {quest.addresses.map((addr, idx) => (
-                      <div key={idx}>{addr}</div>
-                    ))}
+                <>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 md:w-5 md:h-5 text-[#c51f2e] flex-shrink-0 mt-0.5" />
+                    <div className="text-[11px] md:text-xs text-gray-700 leading-snug">
+                      {quest.addresses.map((addr, idx) => (
+                        <div key={idx}>{addr}</div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                  {quest.phones && quest.phones.length > 0 && <div className="h-px bg-gray-200/70"></div>}
+                </>
               )}
 
               {quest.phones && quest.phones.length > 0 && (
@@ -178,9 +183,11 @@ export default function QuestCard({ quest }: QuestCardProps) {
               )}
             </div>
 
-            <p className="text-[11px] md:text-sm text-gray-700 leading-relaxed max-h-28 md:max-h-40 overflow-hidden">
-              {quest.description}
-            </p>
+            <div className="rounded-lg border border-gray-200/80 bg-white px-3 py-2 shadow-sm">
+              <p className="text-[11px] md:text-sm text-gray-700 leading-relaxed max-h-28 md:max-h-40 overflow-hidden">
+                {quest.description}
+              </p>
+            </div>
           </div>
         </div>
       </div>
