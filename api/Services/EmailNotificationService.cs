@@ -32,13 +32,19 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         var subject = $"Новая бронь: {booking.CustomerName}";
+        var bookingDate = booking.BookingDate.ToString("dd.MM.yyyy");
+        var bookingTime = booking.QuestSchedule?.TimeSlot.ToString("HH:mm");
+        var bookingDateTime = string.IsNullOrWhiteSpace(bookingTime)
+            ? bookingDate
+            : $"{bookingDate} {bookingTime}";
+
         var body = $"""
                     <p>Поступила новая бронь.</p>
                     <ul>
                       <li><strong>Имя:</strong> {booking.CustomerName}</li>
                       <li><strong>Телефон:</strong> {booking.CustomerPhone}</li>
                       <li><strong>Email:</strong> {booking.CustomerEmail ?? "не указан"}</li>
-                      <li><strong>Дата:</strong> {booking.BookingDate:dd.MM.yyyy HH:mm}</li>
+                      <li><strong>Дата:</strong> {bookingDateTime}</li>
                       <li><strong>Участников:</strong> {booking.ParticipantsCount}</li>
                       <li><strong>Статус:</strong> {booking.Status}</li>
                       <li><strong>Комментарий:</strong> {booking.Notes ?? "нет"}</li>
