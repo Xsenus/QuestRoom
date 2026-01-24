@@ -140,6 +140,10 @@ export type CertificateOrderCreate = Omit<
   'id' | 'status' | 'createdAt' | 'updatedAt'
 >;
 
+export type CertificateOrderUpdate = Partial<
+  Pick<CertificateOrder, 'customerName' | 'customerPhone' | 'customerEmail' | 'notes' | 'status'>
+>;
+
 export type Review = {
   id: string;
   customerName: string;

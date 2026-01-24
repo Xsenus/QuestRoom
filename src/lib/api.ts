@@ -7,6 +7,7 @@ import type {
   Certificate,
   CertificateOrder,
   CertificateOrderCreate,
+  CertificateOrderUpdate,
   CertificateUpsert,
   DurationBadge,
   ImageAsset,
@@ -415,6 +416,13 @@ class ApiClient {
   async createCertificateOrder(order: CertificateOrderCreate): Promise<CertificateOrder> {
     return this.request('/certificateorders', {
       method: 'POST',
+      body: JSON.stringify(order),
+    });
+  }
+
+  async updateCertificateOrder(id: string, order: CertificateOrderUpdate) {
+    return this.request(`/certificateorders/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(order),
     });
   }

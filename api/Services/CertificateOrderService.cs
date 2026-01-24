@@ -9,6 +9,7 @@ public interface ICertificateOrderService
 {
     Task<IReadOnlyList<CertificateOrderDto>> GetCertificateOrdersAsync();
     Task<CertificateOrderDto> CreateCertificateOrderAsync(CertificateOrderCreateDto dto);
+    Task<bool> UpdateCertificateOrderAsync(Guid id, CertificateOrderUpdateDto dto);
 }
 
 public class CertificateOrderService : ICertificateOrderService
@@ -59,6 +60,42 @@ public class CertificateOrderService : ICertificateOrderService
         await _emailNotificationService.SendCertificateOrderNotificationsAsync(order);
 
         return ToDto(order);
+    }
+
+    public async Task<bool> UpdateCertificateOrderAsync(Guid id, CertificateOrderUpdateDto dto)
+    {
+        var order = await _context.CertificateOrders.FindAsync(id);
+        if (order == null)
+        {
+            return false;
+        }
+
+        if (dto.CustomerName != null)
+        {
+            order.CustomerName = dto.CustomerName;
+        }
+        if (dto.CustomerPhone != null)
+        {
+            order.CustomerPhone = dto.CustomerPhone;
+        }
+        if (dto.CustomerEmail != null)
+        {
+            order.CustomerEmail = string.IsNullOrWhiteSpace(dto.CustomerEmail)
+                ? null
+                : dto.CustomerEmail;
+        }
+        if (dto.Notes != null)
+        {
+            order.Notes = dto.Notes;
+        }
+        if (dto.Status != null)
+        {
+            order.Status = dto.Status;
+        }
+
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return true;
     }
 
     private static CertificateOrderDto ToDto(CertificateOrder order)
