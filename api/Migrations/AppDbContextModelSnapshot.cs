@@ -671,9 +671,57 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("logo_url");
 
+                    b.Property<bool>("NotifyBookingAdmin")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_booking_admin");
+
+                    b.Property<bool>("NotifyBookingCustomer")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_booking_customer");
+
+                    b.Property<bool>("NotifyCertificateAdmin")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_certificate_admin");
+
+                    b.Property<bool>("NotifyCertificateCustomer")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_certificate_customer");
+
+                    b.Property<string>("NotificationEmail")
+                        .HasColumnType("text")
+                        .HasColumnName("notification_email");
+
                     b.Property<string>("Phone")
                         .HasColumnType("text")
                         .HasColumnName("phone");
+
+                    b.Property<string>("SmtpFromEmail")
+                        .HasColumnType("text")
+                        .HasColumnName("smtp_from_email");
+
+                    b.Property<string>("SmtpFromName")
+                        .HasColumnType("text")
+                        .HasColumnName("smtp_from_name");
+
+                    b.Property<string>("SmtpHost")
+                        .HasColumnType("text")
+                        .HasColumnName("smtp_host");
+
+                    b.Property<string>("SmtpPassword")
+                        .HasColumnType("text")
+                        .HasColumnName("smtp_password");
+
+                    b.Property<int?>("SmtpPort")
+                        .HasColumnType("integer")
+                        .HasColumnName("smtp_port");
+
+                    b.Property<bool>("SmtpUseSsl")
+                        .HasColumnType("boolean")
+                        .HasColumnName("smtp_use_ssl");
+
+                    b.Property<string>("SmtpUser")
+                        .HasColumnType("text")
+                        .HasColumnName("smtp_user");
 
                     b.Property<string>("TelegramUrl")
                         .HasColumnType("text")

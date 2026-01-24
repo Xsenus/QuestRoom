@@ -28,6 +28,42 @@ public class Settings
     [Column("email")]
     public string? Email { get; set; }
 
+    [Column("notification_email")]
+    public string? NotificationEmail { get; set; }
+
+    [Column("smtp_host")]
+    public string? SmtpHost { get; set; }
+
+    [Column("smtp_port")]
+    public int? SmtpPort { get; set; }
+
+    [Column("smtp_user")]
+    public string? SmtpUser { get; set; }
+
+    [Column("smtp_password")]
+    public string? SmtpPassword { get; set; }
+
+    [Column("smtp_use_ssl")]
+    public bool SmtpUseSsl { get; set; }
+
+    [Column("smtp_from_email")]
+    public string? SmtpFromEmail { get; set; }
+
+    [Column("smtp_from_name")]
+    public string? SmtpFromName { get; set; }
+
+    [Column("notify_booking_admin")]
+    public bool NotifyBookingAdmin { get; set; }
+
+    [Column("notify_booking_customer")]
+    public bool NotifyBookingCustomer { get; set; }
+
+    [Column("notify_certificate_admin")]
+    public bool NotifyCertificateAdmin { get; set; }
+
+    [Column("notify_certificate_customer")]
+    public bool NotifyCertificateCustomer { get; set; }
+
     [Column("phone")]
     public string? Phone { get; set; }
 

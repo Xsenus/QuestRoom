@@ -26,6 +26,18 @@ export default function SettingsPage() {
         telegramUrl: null,
         address: null,
         email: null,
+        notificationEmail: null,
+        smtpHost: null,
+        smtpPort: null,
+        smtpUser: null,
+        smtpPassword: null,
+        smtpUseSsl: true,
+        smtpFromEmail: null,
+        smtpFromName: null,
+        notifyBookingAdmin: false,
+        notifyBookingCustomer: false,
+        notifyCertificateAdmin: false,
+        notifyCertificateCustomer: false,
         phone: null,
         logoUrl: null,
         updatedAt: new Date().toISOString(),
@@ -46,6 +58,18 @@ export default function SettingsPage() {
       telegramUrl: settings.telegramUrl,
       address: settings.address,
       email: settings.email,
+      notificationEmail: settings.notificationEmail,
+      smtpHost: settings.smtpHost,
+      smtpPort: settings.smtpPort,
+      smtpUser: settings.smtpUser,
+      smtpPassword: settings.smtpPassword,
+      smtpUseSsl: settings.smtpUseSsl,
+      smtpFromEmail: settings.smtpFromEmail,
+      smtpFromName: settings.smtpFromName,
+      notifyBookingAdmin: settings.notifyBookingAdmin,
+      notifyBookingCustomer: settings.notifyBookingCustomer,
+      notifyCertificateAdmin: settings.notifyCertificateAdmin,
+      notifyCertificateCustomer: settings.notifyCertificateCustomer,
       phone: settings.phone,
       logoUrl: settings.logoUrl,
     };
@@ -235,6 +259,202 @@ export default function SettingsPage() {
                 />
               </div>
             )}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-gray-200">
+            Email-уведомления
+          </h3>
+          <div className="grid gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email администратора
+                </label>
+                <input
+                  type="email"
+                  value={settings.notificationEmail || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, notificationEmail: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="admin@questroom.ru"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Можно указать несколько адресов через запятую.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  От кого (email)
+                </label>
+                <input
+                  type="email"
+                  value={settings.smtpFromEmail || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, smtpFromEmail: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="no-reply@questroom.ru"
+                />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  От кого (имя)
+                </label>
+                <input
+                  type="text"
+                  value={settings.smtpFromName || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, smtpFromName: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="Quest Room"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  SMTP host
+                </label>
+                <input
+                  type="text"
+                  value={settings.smtpHost || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, smtpHost: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="smtp.your-provider.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  SMTP порт
+                </label>
+                <input
+                  type="number"
+                  value={settings.smtpPort ?? ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      smtpPort: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="465"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-8">
+                <input
+                  id="smtp-ssl"
+                  type="checkbox"
+                  checked={settings.smtpUseSsl}
+                  onChange={(e) =>
+                    setSettings({ ...settings, smtpUseSsl: e.target.checked })
+                  }
+                  className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                />
+                <label htmlFor="smtp-ssl" className="text-sm text-gray-700">
+                  Использовать SSL
+                </label>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  SMTP пользователь
+                </label>
+                <input
+                  type="text"
+                  value={settings.smtpUser || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, smtpUser: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="login@questroom.ru"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  SMTP пароль
+                </label>
+                <input
+                  type="password"
+                  value={settings.smtpPassword || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, smtpPassword: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <p className="text-sm font-semibold text-gray-700">Кому отправлять</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="flex items-center gap-3 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={settings.notifyBookingAdmin}
+                    onChange={(e) =>
+                      setSettings({ ...settings, notifyBookingAdmin: e.target.checked })
+                    }
+                    className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                  />
+                  Бронь → администратор
+                </label>
+                <label className="flex items-center gap-3 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={settings.notifyBookingCustomer}
+                    onChange={(e) =>
+                      setSettings({ ...settings, notifyBookingCustomer: e.target.checked })
+                    }
+                    className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                  />
+                  Бронь → пользователь
+                </label>
+                <label className="flex items-center gap-3 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={settings.notifyCertificateAdmin}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        notifyCertificateAdmin: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                  />
+                  Сертификат → администратор
+                </label>
+                <label className="flex items-center gap-3 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={settings.notifyCertificateCustomer}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        notifyCertificateCustomer: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                  />
+                  Сертификат → пользователь
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 

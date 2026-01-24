@@ -64,6 +64,7 @@ builder.Services.AddScoped<ICertificateOrderService, CertificateOrderService>();
 builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<IPricingRuleService, PricingRuleService>();
 builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
+builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

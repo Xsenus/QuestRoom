@@ -17,6 +17,7 @@ import BookingsPage from './pages/admin/BookingsPage';
 import RulesAdminPage from './pages/admin/RulesPage';
 import AboutAdminPage from './pages/admin/AboutPage';
 import CertificatesAdminPage from './pages/admin/CertificatesPage';
+import CertificateOrdersAdminPage from './pages/admin/CertificateOrdersPage';
 import ReviewsAdminPage from './pages/admin/ReviewsAdminPage';
 import PromotionsAdminPage from './pages/admin/PromotionsAdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -49,6 +50,7 @@ function App() {
                 <Route path="rules" element={<RulesAdminPage />} />
                 <Route path="about" element={<AboutAdminPage />} />
                 <Route path="certificates" element={<CertificatesAdminPage />} />
+                <Route path="certificate-orders" element={<CertificateOrdersAdminPage />} />
                 <Route path="reviews" element={<ReviewsAdminPage />} />
                 <Route path="promotions" element={<PromotionsAdminPage />} />
                 <Route path="settings" element={<SettingsPage />} />

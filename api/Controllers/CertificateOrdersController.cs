@@ -31,4 +31,12 @@ public class CertificateOrdersController : ControllerBase
         var created = await _service.CreateCertificateOrderAsync(order);
         return CreatedAtAction(nameof(GetCertificateOrders), new { id = created.Id }, created);
     }
+
+    [Authorize(Roles = "admin")]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateCertificateOrder(Guid id, [FromBody] CertificateOrderUpdateDto order)
+    {
+        var updated = await _service.UpdateCertificateOrderAsync(id, order);
+        return updated ? NoContent() : NotFound();
+    }
 }

@@ -14,6 +14,7 @@ import {
   CalendarClock,
   Menu,
   X,
+  ClipboardList,
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -31,6 +32,12 @@ export default function AdminLayout() {
       isActive
         ? 'bg-red-600 text-white'
         : 'text-gray-700 hover:bg-gray-100'
+    }`;
+  const navSubLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-3 px-6 py-2 text-sm transition-all font-semibold ${
+      isActive
+        ? 'bg-red-50 text-red-600'
+        : 'text-gray-600 hover:bg-gray-50'
     }`;
 
   return (
@@ -103,6 +110,16 @@ export default function AdminLayout() {
               <Award className="w-5 h-5" />
               Сертификаты
             </NavLink>
+            <div className="ml-6 border-l border-gray-200">
+              <NavLink
+                to="/adm/certificate-orders"
+                className={navSubLinkClass}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <ClipboardList className="w-4 h-4 text-gray-500" />
+                Заявки
+              </NavLink>
+            </div>
             <NavLink to="/adm/reviews" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <MessageSquare className="w-5 h-5" />
               Отзывы

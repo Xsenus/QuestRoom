@@ -16,10 +16,12 @@ public interface IBookingService
 public class BookingService : IBookingService
 {
     private readonly AppDbContext _context;
+    private readonly IEmailNotificationService _emailNotificationService;
 
-    public BookingService(AppDbContext context)
+    public BookingService(AppDbContext context, IEmailNotificationService emailNotificationService)
     {
         _context = context;
+        _emailNotificationService = emailNotificationService;
     }
 
     public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync()
@@ -33,6 +35,8 @@ public class BookingService : IBookingService
     public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto)
     {
         using var transaction = await _context.Database.BeginTransactionAsync();
+        Booking? booking = null;
+        BookingDto result;
 
         try
         {
@@ -56,7 +60,7 @@ public class BookingService : IBookingService
                 throw new InvalidOperationException("Не указан квест для бронирования.");
             }
 
-            var booking = new Booking
+            booking = new Booking
             {
                 Id = Guid.NewGuid(),
                 QuestId = dto.QuestId ?? schedule?.QuestId,
@@ -83,13 +87,20 @@ public class BookingService : IBookingService
             }
 
             await transaction.CommitAsync();
-            return ToDto(booking);
+            result = ToDto(booking);
         }
         catch
         {
             await transaction.RollbackAsync();
             throw;
         }
+
+        if (booking != null)
+        {
+            await _emailNotificationService.SendBookingNotificationsAsync(booking);
+        }
+
+        return result;
     }
 
     public async Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto)
