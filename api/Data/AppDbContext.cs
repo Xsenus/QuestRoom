@@ -11,10 +11,12 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<Quest> Quests { get; set; }
+    public DbSet<QuestExtraService> QuestExtraServices { get; set; }
     public DbSet<DurationBadge> DurationBadges { get; set; }
     public DbSet<QuestSchedule> QuestSchedules { get; set; }
     public DbSet<QuestPricingRule> QuestPricingRules { get; set; }
     public DbSet<Booking> Bookings { get; set; }
+    public DbSet<BookingExtraService> BookingExtraServices { get; set; }
     public DbSet<ImageAsset> ImageAssets { get; set; }
     public DbSet<Rule> Rules { get; set; }
     public DbSet<Review> Reviews { get; set; }
@@ -35,6 +37,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<QuestSchedule>()
             .HasOne(e => e.Quest)
             .WithMany()
+            .HasForeignKey(e => e.QuestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QuestExtraService>()
+            .HasOne(e => e.Quest)
+            .WithMany(q => q.ExtraServices)
             .HasForeignKey(e => e.QuestId)
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -63,5 +71,11 @@ public class AppDbContext : DbContext
             .WithOne(s => s.Booking)
             .HasForeignKey<Booking>(b => b.QuestScheduleId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<BookingExtraService>()
+            .HasOne(e => e.Booking)
+            .WithMany(b => b.ExtraServices)
+            .HasForeignKey(e => e.BookingId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -33,6 +33,12 @@ public class Booking
     [Column("participants_count")]
     public int ParticipantsCount { get; set; }
 
+    [Column("extra_participants_count")]
+    public int ExtraParticipantsCount { get; set; }
+
+    [Column("total_price")]
+    public int TotalPrice { get; set; }
+
     [Column("status")]
     public string Status { get; set; } = "pending";
 
@@ -48,4 +54,6 @@ public class Booking
     public Quest? Quest { get; set; }
 
     public QuestSchedule? QuestSchedule { get; set; }
+
+    public ICollection<BookingExtraService> ExtraServices { get; set; } = new List<BookingExtraService>();
 }

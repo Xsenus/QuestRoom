@@ -19,19 +19,31 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     paymentType: 'card',
   });
   const [submitting, setSubmitting] = useState(false);
-  const extraCharges = [
-    'Доплата за ночные сеансы начиная с 21:30 + 500 ₽',
-    'Доплата за 5-го игрока + 700 ₽ (кроме «Идеального ограбления»)',
-    'Доплата за услуги детского аниматора + 1000 ₽',
-    'Аренда зоны отдыха для ожидающих гостей + 500 ₽',
-    'Аренда зоны для чаепития + 500 ₽ за 45 минут',
-  ];
+  const [participantsCount, setParticipantsCount] = useState(quest.participantsMin);
+  const [selectedExtraServices, setSelectedExtraServices] = useState<string[]>([]);
+
+  const questExtraServices = quest.extraServices || [];
+  const maxParticipants = quest.participantsMax + Math.max(0, quest.extraParticipantsMax || 0);
+  const extraParticipantsCount = Math.max(0, participantsCount - quest.participantsMax);
+  const extraParticipantsTotal = extraParticipantsCount * Math.max(0, quest.extraParticipantPrice || 0);
+  const extraServicesTotal = questExtraServices
+    .filter((service) => selectedExtraServices.includes(service.id))
+    .reduce((sum, service) => sum + service.price, 0);
+  const totalPrice = slot.price + extraParticipantsTotal + extraServicesTotal;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const toggleExtraService = (serviceId: string) => {
+    setSelectedExtraServices((prev) =>
+      prev.includes(serviceId)
+        ? prev.filter((id) => id !== serviceId)
+        : [...prev, serviceId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,8 +58,9 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
         customerPhone: formData.phone,
         customerEmail: formData.email || null,
         bookingDate: slot.date,
-        participantsCount: quest.participantsMin,
+        participantsCount,
         notes: formData.comments || null,
+        extraServiceIds: selectedExtraServices,
       });
 
       alert('Бронирование успешно создано! Наш менеджер свяжется с вами для подтверждения.');
@@ -120,7 +133,14 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
               <div className="flex justify-between">
                 <span>Игроков:</span>
                 <span className="font-bold">
+                  {participantsCount}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Диапазон:</span>
+                <span className="font-bold">
                   {quest.participantsMin}-{quest.participantsMax}
+                  {quest.extraParticipantsMax > 0 ? ` (+${quest.extraParticipantsMax})` : ''}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -135,8 +155,53 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
               </div>
               <div className="flex justify-between">
                 <span>Стоимость:</span>
-                <span className="font-bold">{slot.price} ₽</span>
+                <span className="font-bold">{totalPrice} ₽</span>
               </div>
+            </div>
+
+            <div className="space-y-3 text-white">
+              <p className="font-semibold text-sm">Количество игроков:</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setParticipantsCount((prev) => Math.max(quest.participantsMin, prev - 1))
+                  }
+                  className="h-10 w-10 rounded-full border border-white/60 text-lg font-semibold hover:bg-white/20"
+                >
+                  −
+                </button>
+                <div className="text-center flex-1">
+                  <div className="text-2xl font-bold">{participantsCount}</div>
+                  {quest.extraParticipantPrice > 0 && extraParticipantsCount > 0 && (
+                    <div className="text-xs text-white/80">
+                      Доплата за доп. участников: {extraParticipantsTotal} ₽
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setParticipantsCount((prev) => Math.min(maxParticipants, prev + 1))
+                  }
+                  className="h-10 w-10 rounded-full border border-white/60 text-lg font-semibold hover:bg-white/20"
+                >
+                  +
+                </button>
+              </div>
+              <input
+                type="range"
+                min={quest.participantsMin}
+                max={maxParticipants}
+                value={participantsCount}
+                onChange={(e) => setParticipantsCount(Number(e.target.value))}
+                className="w-full accent-white"
+              />
+              {quest.extraParticipantPrice > 0 && quest.extraParticipantsMax > 0 && (
+                <p className="text-xs text-white/80">
+                  Доплата за каждого доп. участника: {quest.extraParticipantPrice} ₽
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -183,20 +248,34 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
               </div>
             </div>
 
-            <div className="space-y-2 text-white text-xs">
-              <p className="font-semibold text-sm">Дополнительные услуги и доплаты:</p>
-              <ul className="grid gap-2 sm:grid-cols-2">
-                {extraCharges.map((charge) => (
-                  <li
-                    key={charge}
-                    className="flex items-start gap-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-left text-white/90"
-                  >
-                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white/70" />
-                    <span>{charge}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {questExtraServices.length > 0 && (
+              <div className="space-y-2 text-white text-xs">
+                <p className="font-semibold text-sm">Дополнительные услуги:</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {questExtraServices.map((service) => (
+                    <label
+                      key={service.id}
+                      className="flex items-start gap-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-left text-white/90 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedExtraServices.includes(service.id)}
+                        onChange={() => toggleExtraService(service.id)}
+                        className="mt-1 h-4 w-4 text-red-600 rounded border-white/40 bg-white/10"
+                      />
+                      <span>
+                        {service.title} — {service.price} ₽
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {extraServicesTotal > 0 && (
+                  <p className="text-xs text-white/80">
+                    Дополнительные услуги: {extraServicesTotal} ₽
+                  </p>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"

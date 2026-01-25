@@ -32,6 +32,12 @@ public class Quest
     [Column("participants_max")]
     public int ParticipantsMax { get; set; }
 
+    [Column("extra_participants_max")]
+    public int ExtraParticipantsMax { get; set; }
+
+    [Column("extra_participant_price")]
+    public int ExtraParticipantPrice { get; set; }
+
     [Column("age_restriction")]
     public string AgeRestriction { get; set; } = string.Empty;
 
@@ -67,4 +73,6 @@ public class Quest
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    public ICollection<QuestExtraService> ExtraServices { get; set; } = new List<QuestExtraService>();
 }

@@ -44,6 +44,8 @@ export default function QuestsPage() {
       phones: [],
       participantsMin: 2,
       participantsMax: 6,
+      extraParticipantsMax: 0,
+      extraParticipantPrice: 0,
       ageRestriction: '',
       ageRating: '18+',
       price: 0,
@@ -54,6 +56,7 @@ export default function QuestsPage() {
       mainImage: null,
       images: [],
       sortOrder: quests.length,
+      extraServices: [],
     });
     setIsCreating(true);
   };
@@ -93,6 +96,8 @@ export default function QuestsPage() {
         phones: quest.phones || [],
         participantsMin: quest.participantsMin,
         participantsMax: quest.participantsMax,
+        extraParticipantsMax: quest.extraParticipantsMax,
+        extraParticipantPrice: quest.extraParticipantPrice,
         ageRestriction: quest.ageRestriction,
         ageRating: quest.ageRating,
         price: quest.price,
@@ -103,6 +108,7 @@ export default function QuestsPage() {
         mainImage: quest.mainImage,
         images: quest.images || [],
         sortOrder: quest.sortOrder,
+        extraServices: quest.extraServices || [],
       };
       await api.updateQuest(quest.id, payload);
       loadQuests();
@@ -120,6 +126,32 @@ export default function QuestsPage() {
     } catch (error) {
       alert('Ошибка при удалении квеста: ' + (error as Error).message);
     }
+  };
+
+  const addExtraService = () => {
+    if (!editingQuest) return;
+    const extraServices = editingQuest.extraServices || [];
+    setEditingQuest({
+      ...editingQuest,
+      extraServices: [...extraServices, { title: '', price: 0 }],
+    });
+  };
+
+  const updateExtraService = (index: number, field: 'title' | 'price', value: string) => {
+    if (!editingQuest) return;
+    const extraServices = [...(editingQuest.extraServices || [])];
+    extraServices[index] = {
+      ...extraServices[index],
+      [field]: field === 'price' ? Number(value) : value,
+    };
+    setEditingQuest({ ...editingQuest, extraServices });
+  };
+
+  const removeExtraService = (index: number) => {
+    if (!editingQuest) return;
+    const extraServices = [...(editingQuest.extraServices || [])];
+    extraServices.splice(index, 1);
+    setEditingQuest({ ...editingQuest, extraServices });
   };
 
   if (loading) {
@@ -446,6 +478,88 @@ export default function QuestsPage() {
                   <option value={4}>4</option>
                   <option value={5}>5</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Доп. участников (максимум)
+                </label>
+                <input
+                  type="number"
+                  value={editingQuest.extraParticipantsMax || 0}
+                  onChange={(e) =>
+                    setEditingQuest({
+                      ...editingQuest,
+                      extraParticipantsMax: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  min="0"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Сколько игроков можно добавить сверх максимума.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Доплата за доп. участника (₽)
+                </label>
+                <input
+                  type="number"
+                  value={editingQuest.extraParticipantPrice || 0}
+                  onChange={(e) =>
+                    setEditingQuest({
+                      ...editingQuest,
+                      extraParticipantPrice: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Дополнительные услуги
+              </label>
+              <div className="space-y-3">
+                {(editingQuest.extraServices || []).map((service, index) => (
+                  <div key={service.id ?? index} className="grid md:grid-cols-[2fr_1fr_auto] gap-3">
+                    <input
+                      type="text"
+                      value={service.title || ''}
+                      onChange={(e) => updateExtraService(index, 'title', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      placeholder="Название услуги"
+                    />
+                    <input
+                      type="number"
+                      value={service.price || 0}
+                      onChange={(e) => updateExtraService(index, 'price', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      placeholder="Цена"
+                      min="0"
+                    />
+                    <button
+                      onClick={() => removeExtraService(index)}
+                      className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                      title="Удалить услугу"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={addExtraService}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Добавить услугу
+                </button>
               </div>
             </div>
 

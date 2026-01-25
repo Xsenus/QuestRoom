@@ -130,6 +130,7 @@ export default function BookingsPage() {
         bookingDate: slot.date,
         participantsCount,
         notes: notes || null,
+        extraServiceIds: [],
       });
       setCreateResult('Бронь создана.');
       setSelectedSlotId('');

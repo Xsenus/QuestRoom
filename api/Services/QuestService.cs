@@ -27,7 +27,9 @@ public class QuestService : IQuestService
 
     public async Task<IReadOnlyList<QuestDto>> GetQuestsAsync(bool? visible)
     {
-        var query = _context.Quests.AsQueryable();
+        var query = _context.Quests
+            .Include(q => q.ExtraServices)
+            .AsQueryable();
 
         if (visible.HasValue)
         {
@@ -45,12 +47,16 @@ public class QuestService : IQuestService
         Quest? quest;
         if (Guid.TryParse(idOrSlug, out var id))
         {
-            quest = await _context.Quests.FindAsync(id);
+            quest = await _context.Quests
+                .Include(q => q.ExtraServices)
+                .FirstOrDefaultAsync(q => q.Id == id);
         }
         else
         {
             var slug = idOrSlug.Trim().ToLowerInvariant();
-            quest = await _context.Quests.FirstOrDefaultAsync(q => q.Slug == slug);
+            quest = await _context.Quests
+                .Include(q => q.ExtraServices)
+                .FirstOrDefaultAsync(q => q.Slug == slug);
         }
 
         return quest == null ? null : ToDto(quest);
@@ -68,6 +74,8 @@ public class QuestService : IQuestService
             Phones = dto.Phones,
             ParticipantsMin = dto.ParticipantsMin,
             ParticipantsMax = dto.ParticipantsMax,
+            ExtraParticipantsMax = dto.ExtraParticipantsMax,
+            ExtraParticipantPrice = dto.ExtraParticipantPrice,
             AgeRestriction = dto.AgeRestriction,
             AgeRating = dto.AgeRating,
             Price = dto.Price,
@@ -83,6 +91,18 @@ public class QuestService : IQuestService
         };
 
         quest.Slug = await BuildUniqueSlugAsync(quest.Title, quest.Id);
+        quest.ExtraServices = dto.ExtraServices
+            .Where(service => !string.IsNullOrWhiteSpace(service.Title))
+            .Select(service => new QuestExtraService
+            {
+                Id = Guid.NewGuid(),
+                QuestId = quest.Id,
+                Title = service.Title.Trim(),
+                Price = service.Price,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            })
+            .ToList();
 
         _context.Quests.Add(quest);
         await _context.SaveChangesAsync();
@@ -92,7 +112,9 @@ public class QuestService : IQuestService
 
     public async Task<bool> UpdateQuestAsync(Guid id, QuestUpsertDto dto)
     {
-        var quest = await _context.Quests.FindAsync(id);
+        var quest = await _context.Quests
+            .Include(q => q.ExtraServices)
+            .FirstOrDefaultAsync(q => q.Id == id);
         if (quest == null)
         {
             return false;
@@ -105,6 +127,8 @@ public class QuestService : IQuestService
         quest.Phones = dto.Phones;
         quest.ParticipantsMin = dto.ParticipantsMin;
         quest.ParticipantsMax = dto.ParticipantsMax;
+        quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
+        quest.ExtraParticipantPrice = dto.ExtraParticipantPrice;
         quest.AgeRestriction = dto.AgeRestriction;
         quest.AgeRating = dto.AgeRating;
         quest.Price = dto.Price;
@@ -116,6 +140,8 @@ public class QuestService : IQuestService
         quest.Images = dto.Images;
         quest.SortOrder = dto.SortOrder;
         quest.UpdatedAt = DateTime.UtcNow;
+
+        UpdateExtraServices(quest, dto.ExtraServices);
 
         await _context.SaveChangesAsync();
         return true;
@@ -161,6 +187,8 @@ public class QuestService : IQuestService
             Phones = quest.Phones,
             ParticipantsMin = quest.ParticipantsMin,
             ParticipantsMax = quest.ParticipantsMax,
+            ExtraParticipantsMax = quest.ExtraParticipantsMax,
+            ExtraParticipantPrice = quest.ExtraParticipantPrice,
             AgeRestriction = quest.AgeRestriction,
             AgeRating = quest.AgeRating,
             Price = quest.Price,
@@ -171,9 +199,63 @@ public class QuestService : IQuestService
             MainImage = quest.MainImage,
             Images = quest.Images,
             SortOrder = quest.SortOrder,
+            ExtraServices = quest.ExtraServices
+                .OrderBy(service => service.CreatedAt)
+                .Select(service => new QuestExtraServiceDto
+                {
+                    Id = service.Id,
+                    Title = service.Title,
+                    Price = service.Price
+                })
+                .ToList(),
             CreatedAt = quest.CreatedAt,
             UpdatedAt = quest.UpdatedAt
         };
+    }
+
+    private static void UpdateExtraServices(Quest quest, List<QuestExtraServiceUpsertDto> services)
+    {
+        var existing = quest.ExtraServices.ToList();
+        var incomingIds = services
+            .Where(s => s.Id.HasValue)
+            .Select(s => s.Id!.Value)
+            .ToHashSet();
+
+        foreach (var service in existing.Where(service => !incomingIds.Contains(service.Id)))
+        {
+            quest.ExtraServices.Remove(service);
+        }
+
+        foreach (var dto in services)
+        {
+            var trimmedTitle = dto.Title.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedTitle))
+            {
+                continue;
+            }
+
+            if (dto.Id.HasValue)
+            {
+                var existingService = quest.ExtraServices.FirstOrDefault(s => s.Id == dto.Id.Value);
+                if (existingService != null)
+                {
+                    existingService.Title = trimmedTitle;
+                    existingService.Price = dto.Price;
+                    existingService.UpdatedAt = DateTime.UtcNow;
+                    continue;
+                }
+            }
+
+            quest.ExtraServices.Add(new QuestExtraService
+            {
+                Id = Guid.NewGuid(),
+                QuestId = quest.Id,
+                Title = trimmedTitle,
+                Price = dto.Price,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
     }
 
     private async Task<string> BuildUniqueSlugAsync(string title, Guid questId)

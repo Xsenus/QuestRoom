@@ -58,6 +58,12 @@ public class Settings
     [Column("notify_booking_customer")]
     public bool NotifyBookingCustomer { get; set; }
 
+    [Column("booking_email_template_admin")]
+    public string? BookingEmailTemplateAdmin { get; set; }
+
+    [Column("booking_email_template_customer")]
+    public string? BookingEmailTemplateCustomer { get; set; }
+
     [Column("notify_certificate_admin")]
     public bool NotifyCertificateAdmin { get; set; }
 

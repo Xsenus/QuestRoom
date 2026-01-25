@@ -87,6 +87,10 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("customer_phone");
 
+                    b.Property<int>("ExtraParticipantsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("extra_participants_count");
+
                     b.Property<string>("Notes")
                         .HasColumnType("text")
                         .HasColumnName("notes");
@@ -108,6 +112,10 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
+                    b.Property<int>("TotalPrice")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_price");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -120,6 +128,41 @@ namespace QuestRoomApi.Migrations
                         .IsUnique();
 
                     b.ToTable("bookings");
+                });
+
+            modelBuilder.Entity("QuestRoomApi.Models.BookingExtraService", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("booking_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("integer")
+                        .HasColumnName("price");
+
+                    b.Property<Guid?>("QuestExtraServiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("quest_extra_service_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.ToTable("booking_extra_services");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.Certificate", b =>
@@ -404,6 +447,14 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("participants_min");
 
+                    b.Property<int>("ExtraParticipantPrice")
+                        .HasColumnType("integer")
+                        .HasColumnName("extra_participant_price");
+
+                    b.Property<int>("ExtraParticipantsMax")
+                        .HasColumnType("integer")
+                        .HasColumnName("extra_participants_max");
+
                     b.PrimitiveCollection<string[]>("Phones")
                         .IsRequired()
                         .HasColumnType("text[]")
@@ -437,6 +488,41 @@ namespace QuestRoomApi.Migrations
                         .IsUnique();
 
                     b.ToTable("quests");
+                });
+
+            modelBuilder.Entity("QuestRoomApi.Models.QuestExtraService", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("integer")
+                        .HasColumnName("price");
+
+                    b.Property<Guid>("QuestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("quest_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestId");
+
+                    b.ToTable("quest_extra_services");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.QuestPricingRule", b =>
@@ -671,6 +757,14 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("logo_url");
 
+                    b.Property<string>("BookingEmailTemplateAdmin")
+                        .HasColumnType("text")
+                        .HasColumnName("booking_email_template_admin");
+
+                    b.Property<string>("BookingEmailTemplateCustomer")
+                        .HasColumnType("text")
+                        .HasColumnName("booking_email_template_customer");
+
                     b.Property<bool>("NotifyBookingAdmin")
                         .HasColumnType("boolean")
                         .HasColumnName("notify_booking_admin");
@@ -799,12 +893,36 @@ namespace QuestRoomApi.Migrations
                     b.Navigation("Quest");
 
                     b.Navigation("QuestSchedule");
+
+                    b.Navigation("ExtraServices");
+                });
+
+            modelBuilder.Entity("QuestRoomApi.Models.BookingExtraService", b =>
+                {
+                    b.HasOne("QuestRoomApi.Models.Booking", "Booking")
+                        .WithMany("ExtraServices")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.QuestPricingRule", b =>
                 {
                     b.HasOne("QuestRoomApi.Models.Quest", "Quest")
                         .WithMany()
+                        .HasForeignKey("QuestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Quest");
+                });
+
+            modelBuilder.Entity("QuestRoomApi.Models.QuestExtraService", b =>
+                {
+                    b.HasOne("QuestRoomApi.Models.Quest", "Quest")
+                        .WithMany("ExtraServices")
                         .HasForeignKey("QuestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -826,6 +944,11 @@ namespace QuestRoomApi.Migrations
             modelBuilder.Entity("QuestRoomApi.Models.QuestSchedule", b =>
                 {
                     b.Navigation("Booking");
+                });
+
+            modelBuilder.Entity("QuestRoomApi.Models.Quest", b =>
+                {
+                    b.Navigation("ExtraServices");
                 });
 #pragma warning restore 612, 618
         }
