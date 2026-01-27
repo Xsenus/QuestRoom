@@ -91,6 +91,7 @@ export default function CertificateOrdersAdminPage() {
       customerPhone: order.customerPhone,
       customerEmail: order.customerEmail,
       notes: order.notes,
+      deliveryType: order.deliveryType,
       status: order.status,
     });
   };
@@ -127,7 +128,7 @@ export default function CertificateOrdersAdminPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Заявки</h2>
-          <p className="text-gray-500">Заявки на сертификаты, оформленные через модальное окно.</p>
+          <p className="text-gray-500">Все заявки на сертификаты с сайта.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -193,6 +194,7 @@ export default function CertificateOrdersAdminPage() {
                 <th className="px-4 py-3 font-semibold">Сертификат</th>
                 <th className="px-4 py-3 font-semibold">Клиент</th>
                 <th className="px-4 py-3 font-semibold">Контакты</th>
+                <th className="px-4 py-3 font-semibold">Тип</th>
                 <th className="px-4 py-3 font-semibold">Статус</th>
                 <th className="px-4 py-3 font-semibold">Комментарий</th>
                 <th className="px-4 py-3 font-semibold text-right">Действия</th>
@@ -213,6 +215,13 @@ export default function CertificateOrdersAdminPage() {
                         {order.customerEmail}
                       </a>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {order.deliveryType === 'paper'
+                      ? 'Бумажный'
+                      : order.deliveryType === 'digital'
+                      ? 'Электронный'
+                      : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
@@ -274,6 +283,16 @@ export default function CertificateOrdersAdminPage() {
                     </a>
                   </div>
                 )}
+                <div className="flex items-center gap-2">
+                  <span className="h-4 w-4 text-gray-400">🎁</span>
+                  <span>
+                    {order.deliveryType === 'paper'
+                      ? 'Бумажный'
+                      : order.deliveryType === 'digital'
+                      ? 'Электронный'
+                      : 'Тип не указан'}
+                  </span>
+                </div>
               </div>
 
               {order.notes && (
@@ -338,6 +357,20 @@ export default function CertificateOrdersAdminPage() {
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-red-500 outline-none"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Тип сертификата</label>
+                <select
+                  value={editingOrder.deliveryType || ''}
+                  onChange={(event) =>
+                    setEditingOrder({ ...editingOrder, deliveryType: event.target.value })
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-red-500 outline-none"
+                >
+                  <option value="">Не указано</option>
+                  <option value="paper">Бумажный</option>
+                  <option value="digital">Электронный</option>
+                </select>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

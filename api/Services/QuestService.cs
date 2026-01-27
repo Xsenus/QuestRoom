@@ -81,6 +81,7 @@ public class QuestService : IQuestService
             Price = dto.Price,
             Duration = dto.Duration,
             Difficulty = dto.Difficulty,
+            DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5,
             IsNew = dto.IsNew,
             IsVisible = dto.IsVisible,
             MainImage = dto.MainImage,
@@ -134,6 +135,7 @@ public class QuestService : IQuestService
         quest.Price = dto.Price;
         quest.Duration = dto.Duration;
         quest.Difficulty = dto.Difficulty;
+        quest.DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5;
         quest.IsNew = dto.IsNew;
         quest.IsVisible = dto.IsVisible;
         quest.MainImage = dto.MainImage;
@@ -194,6 +196,7 @@ public class QuestService : IQuestService
             Price = quest.Price,
             Duration = quest.Duration,
             Difficulty = quest.Difficulty,
+            DifficultyMax = quest.DifficultyMax,
             IsNew = quest.IsNew,
             IsVisible = quest.IsVisible,
             MainImage = quest.MainImage,

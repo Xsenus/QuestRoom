@@ -27,10 +27,42 @@ export default function Footer({ setCurrentPage }: FooterProps) {
   const socials = useMemo(
     () =>
       [
-        { key: 'vk', url: settings?.vkUrl, label: 'VK', icon: Link2 },
-        { key: 'youtube', url: settings?.youtubeUrl, label: 'YouTube', icon: Youtube },
-        { key: 'instagram', url: settings?.instagramUrl, label: 'Instagram', icon: Instagram },
-        { key: 'telegram', url: settings?.telegramUrl, label: 'Telegram', icon: Send },
+        {
+          key: 'vk',
+          url: settings?.vkUrl,
+          label: 'VK',
+          icon: Link2,
+          iconUrl: settings?.vkIconUrl,
+          iconColor: settings?.vkIconColor,
+          background: settings?.vkIconBackground,
+        },
+        {
+          key: 'youtube',
+          url: settings?.youtubeUrl,
+          label: 'YouTube',
+          icon: Youtube,
+          iconUrl: settings?.youtubeIconUrl,
+          iconColor: settings?.youtubeIconColor,
+          background: settings?.youtubeIconBackground,
+        },
+        {
+          key: 'instagram',
+          url: settings?.instagramUrl,
+          label: 'Instagram',
+          icon: Instagram,
+          iconUrl: settings?.instagramIconUrl,
+          iconColor: settings?.instagramIconColor,
+          background: settings?.instagramIconBackground,
+        },
+        {
+          key: 'telegram',
+          url: settings?.telegramUrl,
+          label: 'Telegram',
+          icon: Send,
+          iconUrl: settings?.telegramIconUrl,
+          iconColor: settings?.telegramIconColor,
+          background: settings?.telegramIconBackground,
+        },
       ].filter((item) => item.url),
     [settings]
   );
@@ -51,7 +83,7 @@ export default function Footer({ setCurrentPage }: FooterProps) {
               Правила игры
             </Link>
             <Link to="/certificate" className="hover:text-white transition-colors">
-              Сертификаты
+              Подарочные сертификаты
             </Link>
             <Link to="/reviews" className="hover:text-white transition-colors">
               Отзывы
@@ -95,6 +127,8 @@ export default function Footer({ setCurrentPage }: FooterProps) {
             <div className="flex flex-wrap justify-center gap-3 md:gap-4">
               {socials.map((social) => {
                 const Icon = social.icon;
+                const backgroundStyle = social.background ? { backgroundColor: social.background } : undefined;
+                const iconColorStyle = social.iconColor ? { color: social.iconColor } : undefined;
                 return (
                   <a
                     key={social.key}
@@ -103,8 +137,17 @@ export default function Footer({ setCurrentPage }: FooterProps) {
                     rel="noopener noreferrer"
                     aria-label={social.label}
                     className="w-8 h-8 md:w-10 md:h-10 bg-red-600 hover:bg-red-700 rounded flex items-center justify-center transition-colors"
+                    style={backgroundStyle}
                   >
-                    <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    {social.iconUrl ? (
+                      <img
+                        src={social.iconUrl}
+                        alt={social.label}
+                        className="w-4 h-4 md:w-5 md:h-5 object-contain"
+                      />
+                    ) : (
+                      <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" style={iconColorStyle} />
+                    )}
                   </a>
                 );
               })}

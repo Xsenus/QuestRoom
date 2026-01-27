@@ -13,6 +13,10 @@ import type {
   ImageAsset,
   Promotion,
   PromotionUpsert,
+  PromoCode,
+  PromoCodeUpsert,
+  ProductionCalendarDay,
+  ProductionCalendarDayUpsert,
   Quest,
   QuestPricingRule,
   QuestPricingRuleUpsert,
@@ -424,6 +428,67 @@ class ApiClient {
     return this.request(`/certificateorders/${id}`, {
       method: 'PUT',
       body: JSON.stringify(order),
+    });
+  }
+
+  // Promo codes
+  async getPromoCodes(): Promise<PromoCode[]> {
+    return this.request('/promocodes');
+  }
+
+  async createPromoCode(data: PromoCodeUpsert): Promise<PromoCode> {
+    return this.request('/promocodes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePromoCode(id: string, data: PromoCodeUpsert) {
+    return this.request(`/promocodes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePromoCode(id: string) {
+    return this.request(`/promocodes/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Production calendar
+  async getProductionCalendar(from?: string, to?: string): Promise<ProductionCalendarDay[]> {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const query = params.toString();
+    return this.request(`/productioncalendar${query ? `?${query}` : ''}`);
+  }
+
+  async createProductionCalendarDay(data: ProductionCalendarDayUpsert) {
+    return this.request('/productioncalendar', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProductionCalendarDay(id: string, data: ProductionCalendarDayUpsert) {
+    return this.request(`/productioncalendar/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProductionCalendarDay(id: string) {
+    return this.request(`/productioncalendar/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async importProductionCalendar(sourceUrl: string) {
+    return this.request('/productioncalendar/import', {
+      method: 'POST',
+      body: JSON.stringify({ sourceUrl }),
     });
   }
 

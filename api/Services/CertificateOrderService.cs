@@ -50,6 +50,7 @@ public class CertificateOrderService : ICertificateOrderService
             CustomerPhone = dto.CustomerPhone,
             CustomerEmail = dto.CustomerEmail,
             Notes = dto.Notes,
+            DeliveryType = dto.DeliveryType,
             Status = "pending",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -88,6 +89,10 @@ public class CertificateOrderService : ICertificateOrderService
         {
             order.Notes = dto.Notes;
         }
+        if (dto.DeliveryType != null)
+        {
+            order.DeliveryType = dto.DeliveryType;
+        }
         if (dto.Status != null)
         {
             order.Status = dto.Status;
@@ -110,6 +115,7 @@ public class CertificateOrderService : ICertificateOrderService
             CustomerEmail = order.CustomerEmail,
             Notes = order.Notes,
             Status = order.Status,
+            DeliveryType = order.DeliveryType,
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt
         };

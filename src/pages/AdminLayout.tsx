@@ -15,6 +15,8 @@ import {
   Menu,
   X,
   ClipboardList,
+  TicketPercent,
+  CalendarDays,
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -98,6 +100,10 @@ export default function AdminLayout() {
               <CalendarClock className="w-5 h-5" />
               Календарь и цены
             </NavLink>
+            <NavLink to="/adm/production-calendar" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <CalendarDays className="w-5 h-5" />
+              Производственный календарь
+            </NavLink>
             <NavLink to="/adm/rules" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <FileText className="w-5 h-5" />
               Правила игры
@@ -127,6 +133,10 @@ export default function AdminLayout() {
             <NavLink to="/adm/promotions" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Tag className="w-5 h-5" />
               Акции
+            </NavLink>
+            <NavLink to="/adm/promo-codes" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <TicketPercent className="w-5 h-5" />
+              Промокоды
             </NavLink>
             <NavLink to="/adm/settings" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Settings className="w-5 h-5" />
