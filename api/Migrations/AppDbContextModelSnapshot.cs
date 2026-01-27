@@ -558,6 +558,18 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("images");
 
+                    b.Property<string>("GiftGameLabel")
+                        .HasColumnType("text")
+                        .HasColumnName("gift_game_label");
+
+                    b.Property<string>("GiftGameUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("gift_game_url");
+
+                    b.Property<string>("VideoUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("video_url");
+
                     b.Property<bool>("IsNew")
                         .HasColumnType("boolean")
                         .HasColumnName("is_new");

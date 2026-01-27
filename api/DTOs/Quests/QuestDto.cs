@@ -22,6 +22,9 @@ public class QuestDto
     public bool IsVisible { get; set; }
     public string? MainImage { get; set; }
     public string[] Images { get; set; } = Array.Empty<string>();
+    public string? GiftGameLabel { get; set; }
+    public string? GiftGameUrl { get; set; }
+    public string? VideoUrl { get; set; }
     public int SortOrder { get; set; }
     public List<QuestExtraServiceDto> ExtraServices { get; set; } = new();
     public DateTime CreatedAt { get; set; }
