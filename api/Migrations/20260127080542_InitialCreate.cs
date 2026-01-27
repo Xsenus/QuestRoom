@@ -38,6 +38,7 @@ namespace QuestRoomApi.Migrations
                     customer_phone = table.Column<string>(type: "text", nullable: false),
                     customer_email = table.Column<string>(type: "text", nullable: true),
                     notes = table.Column<string>(type: "text", nullable: true),
+                    delivery_type = table.Column<string>(type: "text", nullable: true),
                     status = table.Column<string>(type: "text", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -97,6 +98,44 @@ namespace QuestRoomApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "production_calendar_days",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    date = table.Column<DateOnly>(type: "date", nullable: false),
+                    title = table.Column<string>(type: "text", nullable: true),
+                    is_holiday = table.Column<bool>(type: "boolean", nullable: false),
+                    source = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_production_calendar_days", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "promo_codes",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    code = table.Column<string>(type: "text", nullable: false),
+                    name = table.Column<string>(type: "text", nullable: true),
+                    description = table.Column<string>(type: "text", nullable: true),
+                    discount_type = table.Column<string>(type: "text", nullable: false),
+                    discount_value = table.Column<int>(type: "integer", nullable: false),
+                    valid_from = table.Column<DateOnly>(type: "date", nullable: false),
+                    valid_until = table.Column<DateOnly>(type: "date", nullable: true),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_promo_codes", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "promotions",
                 columns: table => new
                 {
@@ -130,11 +169,14 @@ namespace QuestRoomApi.Migrations
                     phones = table.Column<string[]>(type: "text[]", nullable: false),
                     participants_min = table.Column<int>(type: "integer", nullable: false),
                     participants_max = table.Column<int>(type: "integer", nullable: false),
+                    extra_participants_max = table.Column<int>(type: "integer", nullable: false),
+                    extra_participant_price = table.Column<int>(type: "integer", nullable: false),
                     age_restriction = table.Column<string>(type: "text", nullable: false),
                     age_rating = table.Column<string>(type: "text", nullable: false),
                     price = table.Column<int>(type: "integer", nullable: false),
                     duration = table.Column<int>(type: "integer", nullable: false),
                     difficulty = table.Column<int>(type: "integer", nullable: false),
+                    difficulty_max = table.Column<int>(type: "integer", nullable: false),
                     is_new = table.Column<bool>(type: "boolean", nullable: false),
                     is_visible = table.Column<bool>(type: "boolean", nullable: false),
                     main_image = table.Column<string>(type: "text", nullable: true),
@@ -194,10 +236,44 @@ namespace QuestRoomApi.Migrations
                     youtube_url = table.Column<string>(type: "text", nullable: true),
                     instagram_url = table.Column<string>(type: "text", nullable: true),
                     telegram_url = table.Column<string>(type: "text", nullable: true),
+                    vk_icon_url = table.Column<string>(type: "text", nullable: true),
+                    vk_icon_color = table.Column<string>(type: "text", nullable: true),
+                    vk_icon_background = table.Column<string>(type: "text", nullable: true),
+                    youtube_icon_url = table.Column<string>(type: "text", nullable: true),
+                    youtube_icon_color = table.Column<string>(type: "text", nullable: true),
+                    youtube_icon_background = table.Column<string>(type: "text", nullable: true),
+                    instagram_icon_url = table.Column<string>(type: "text", nullable: true),
+                    instagram_icon_color = table.Column<string>(type: "text", nullable: true),
+                    instagram_icon_background = table.Column<string>(type: "text", nullable: true),
+                    telegram_icon_url = table.Column<string>(type: "text", nullable: true),
+                    telegram_icon_color = table.Column<string>(type: "text", nullable: true),
+                    telegram_icon_background = table.Column<string>(type: "text", nullable: true),
                     address = table.Column<string>(type: "text", nullable: true),
                     email = table.Column<string>(type: "text", nullable: true),
+                    notification_email = table.Column<string>(type: "text", nullable: true),
+                    smtp_host = table.Column<string>(type: "text", nullable: true),
+                    smtp_port = table.Column<int>(type: "integer", nullable: true),
+                    smtp_user = table.Column<string>(type: "text", nullable: true),
+                    smtp_password = table.Column<string>(type: "text", nullable: true),
+                    smtp_use_ssl = table.Column<bool>(type: "boolean", nullable: false),
+                    smtp_from_email = table.Column<string>(type: "text", nullable: true),
+                    smtp_from_name = table.Column<string>(type: "text", nullable: true),
+                    notify_booking_admin = table.Column<bool>(type: "boolean", nullable: false),
+                    notify_booking_customer = table.Column<bool>(type: "boolean", nullable: false),
+                    booking_email_template_admin = table.Column<string>(type: "text", nullable: true),
+                    booking_email_template_customer = table.Column<string>(type: "text", nullable: true),
+                    notify_certificate_admin = table.Column<bool>(type: "boolean", nullable: false),
+                    notify_certificate_customer = table.Column<bool>(type: "boolean", nullable: false),
                     phone = table.Column<string>(type: "text", nullable: true),
                     logo_url = table.Column<string>(type: "text", nullable: true),
+                    gift_game_label = table.Column<string>(type: "text", nullable: true),
+                    gift_game_url = table.Column<string>(type: "text", nullable: true),
+                    certificate_page_title = table.Column<string>(type: "text", nullable: true),
+                    certificate_page_description = table.Column<string>(type: "text", nullable: true),
+                    certificate_page_pricing = table.Column<string>(type: "text", nullable: true),
+                    reviews_mode = table.Column<string>(type: "text", nullable: true),
+                    reviews_flamp_embed = table.Column<string>(type: "text", nullable: true),
+                    booking_days_ahead = table.Column<int>(type: "integer", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -219,6 +295,28 @@ namespace QuestRoomApi.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_users", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "quest_extra_services",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    quest_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    title = table.Column<string>(type: "text", nullable: false),
+                    price = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_quest_extra_services", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_quest_extra_services_quests_quest_id",
+                        column: x => x.quest_id,
+                        principalTable: "quests",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -289,6 +387,14 @@ namespace QuestRoomApi.Migrations
                     customer_email = table.Column<string>(type: "text", nullable: true),
                     booking_date = table.Column<DateOnly>(type: "date", nullable: false),
                     participants_count = table.Column<int>(type: "integer", nullable: false),
+                    extra_participants_count = table.Column<int>(type: "integer", nullable: false),
+                    total_price = table.Column<int>(type: "integer", nullable: false),
+                    payment_type = table.Column<string>(type: "text", nullable: false),
+                    promo_code_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    promo_code = table.Column<string>(type: "text", nullable: true),
+                    promo_discount_type = table.Column<string>(type: "text", nullable: true),
+                    promo_discount_value = table.Column<int>(type: "integer", nullable: true),
+                    promo_discount_amount = table.Column<int>(type: "integer", nullable: true),
                     status = table.Column<string>(type: "text", nullable: false),
                     notes = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -311,6 +417,33 @@ namespace QuestRoomApi.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "booking_extra_services",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    booking_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    quest_extra_service_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    title = table.Column<string>(type: "text", nullable: false),
+                    price = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_booking_extra_services", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_booking_extra_services_bookings_booking_id",
+                        column: x => x.booking_id,
+                        principalTable: "bookings",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_booking_extra_services_booking_id",
+                table: "booking_extra_services",
+                column: "booking_id");
+
             migrationBuilder.CreateIndex(
                 name: "IX_bookings_quest_id",
                 table: "bookings",
@@ -321,6 +454,11 @@ namespace QuestRoomApi.Migrations
                 table: "bookings",
                 column: "quest_schedule_id",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_quest_extra_services_quest_id",
+                table: "quest_extra_services",
+                column: "quest_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_quest_pricing_rules_quest_id",
@@ -353,7 +491,7 @@ namespace QuestRoomApi.Migrations
                 name: "about_info");
 
             migrationBuilder.DropTable(
-                name: "bookings");
+                name: "booking_extra_services");
 
             migrationBuilder.DropTable(
                 name: "certificate_orders");
@@ -368,7 +506,16 @@ namespace QuestRoomApi.Migrations
                 name: "image_assets");
 
             migrationBuilder.DropTable(
+                name: "production_calendar_days");
+
+            migrationBuilder.DropTable(
+                name: "promo_codes");
+
+            migrationBuilder.DropTable(
                 name: "promotions");
+
+            migrationBuilder.DropTable(
+                name: "quest_extra_services");
 
             migrationBuilder.DropTable(
                 name: "quest_pricing_rules");
@@ -384,6 +531,9 @@ namespace QuestRoomApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "users");
+
+            migrationBuilder.DropTable(
+                name: "bookings");
 
             migrationBuilder.DropTable(
                 name: "quest_schedule");

@@ -95,22 +95,22 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("notes");
 
+                    b.Property<int>("ParticipantsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("participants_count");
+
                     b.Property<string>("PaymentType")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("payment_type");
 
-                    b.Property<int>("ParticipantsCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("participants_count");
+                    b.Property<string>("PromoCode")
+                        .HasColumnType("text")
+                        .HasColumnName("promo_code");
 
                     b.Property<Guid?>("PromoCodeId")
                         .HasColumnType("uuid")
                         .HasColumnName("promo_code_id");
-
-                    b.Property<string>("PromoCode")
-                        .HasColumnType("text")
-                        .HasColumnName("promo_code");
 
                     b.Property<int?>("PromoDiscountAmount")
                         .HasColumnType("integer")
@@ -352,6 +352,96 @@ namespace QuestRoomApi.Migrations
                     b.ToTable("image_assets");
                 });
 
+            modelBuilder.Entity("QuestRoomApi.Models.ProductionCalendarDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<bool>("IsHoliday")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_holiday");
+
+                    b.Property<string>("Source")
+                        .HasColumnType("text")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("production_calendar_days");
+                });
+
+            modelBuilder.Entity("QuestRoomApi.Models.PromoCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("discount_type");
+
+                    b.Property<int>("DiscountValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("discount_value");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateOnly?>("ValidUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_until");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("promo_codes");
+                });
+
             modelBuilder.Entity("QuestRoomApi.Models.Promotion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -412,96 +502,6 @@ namespace QuestRoomApi.Migrations
                     b.ToTable("promotions");
                 });
 
-            modelBuilder.Entity("QuestRoomApi.Models.PromoCode", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.Property<string>("DiscountType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("discount_type");
-
-                    b.Property<int>("DiscountValue")
-                        .HasColumnType("integer")
-                        .HasColumnName("discount_value");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<DateOnly>("ValidFrom")
-                        .HasColumnType("date")
-                        .HasColumnName("valid_from");
-
-                    b.Property<DateOnly?>("ValidUntil")
-                        .HasColumnType("date")
-                        .HasColumnName("valid_until");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("promo_codes");
-                });
-
-            modelBuilder.Entity("QuestRoomApi.Models.ProductionCalendarDay", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date")
-                        .HasColumnName("date");
-
-                    b.Property<bool>("IsHoliday")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_holiday");
-
-                    b.Property<string>("Source")
-                        .HasColumnType("text")
-                        .HasColumnName("source");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("text")
-                        .HasColumnName("title");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("production_calendar_days");
-                });
-
             modelBuilder.Entity("QuestRoomApi.Models.Quest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -533,10 +533,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
-                    b.Property<int>("Duration")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration");
-
                     b.Property<int>("Difficulty")
                         .HasColumnType("integer")
                         .HasColumnName("difficulty");
@@ -544,6 +540,18 @@ namespace QuestRoomApi.Migrations
                     b.Property<int>("DifficultyMax")
                         .HasColumnType("integer")
                         .HasColumnName("difficulty_max");
+
+                    b.Property<int>("Duration")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration");
+
+                    b.Property<int>("ExtraParticipantPrice")
+                        .HasColumnType("integer")
+                        .HasColumnName("extra_participant_price");
+
+                    b.Property<int>("ExtraParticipantsMax")
+                        .HasColumnType("integer")
+                        .HasColumnName("extra_participants_max");
 
                     b.PrimitiveCollection<string[]>("Images")
                         .IsRequired()
@@ -569,14 +577,6 @@ namespace QuestRoomApi.Migrations
                     b.Property<int>("ParticipantsMin")
                         .HasColumnType("integer")
                         .HasColumnName("participants_min");
-
-                    b.Property<int>("ExtraParticipantPrice")
-                        .HasColumnType("integer")
-                        .HasColumnName("extra_participant_price");
-
-                    b.Property<int>("ExtraParticipantsMax")
-                        .HasColumnType("integer")
-                        .HasColumnName("extra_participants_max");
 
                     b.PrimitiveCollection<string[]>("Phones")
                         .IsRequired()
@@ -868,13 +868,17 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("address");
 
-                    b.Property<string>("Email")
-                        .HasColumnType("text")
-                        .HasColumnName("email");
-
                     b.Property<int>("BookingDaysAhead")
                         .HasColumnType("integer")
                         .HasColumnName("booking_days_ahead");
+
+                    b.Property<string>("BookingEmailTemplateAdmin")
+                        .HasColumnType("text")
+                        .HasColumnName("booking_email_template_admin");
+
+                    b.Property<string>("BookingEmailTemplateCustomer")
+                        .HasColumnType("text")
+                        .HasColumnName("booking_email_template_customer");
 
                     b.Property<string>("CertificatePageDescription")
                         .HasColumnType("text")
@@ -888,6 +892,10 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("certificate_page_title");
 
+                    b.Property<string>("Email")
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
                     b.Property<string>("GiftGameLabel")
                         .HasColumnType("text")
                         .HasColumnName("gift_game_label");
@@ -895,10 +903,6 @@ namespace QuestRoomApi.Migrations
                     b.Property<string>("GiftGameUrl")
                         .HasColumnType("text")
                         .HasColumnName("gift_game_url");
-
-                    b.Property<string>("InstagramUrl")
-                        .HasColumnType("text")
-                        .HasColumnName("instagram_url");
 
                     b.Property<string>("InstagramIconBackground")
                         .HasColumnType("text")
@@ -912,25 +916,17 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("instagram_icon_url");
 
+                    b.Property<string>("InstagramUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("instagram_url");
+
                     b.Property<string>("LogoUrl")
                         .HasColumnType("text")
                         .HasColumnName("logo_url");
 
-                    b.Property<string>("ReviewsFlampEmbed")
+                    b.Property<string>("NotificationEmail")
                         .HasColumnType("text")
-                        .HasColumnName("reviews_flamp_embed");
-
-                    b.Property<string>("ReviewsMode")
-                        .HasColumnType("text")
-                        .HasColumnName("reviews_mode");
-
-                    b.Property<string>("BookingEmailTemplateAdmin")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_email_template_admin");
-
-                    b.Property<string>("BookingEmailTemplateCustomer")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_email_template_customer");
+                        .HasColumnName("notification_email");
 
                     b.Property<bool>("NotifyBookingAdmin")
                         .HasColumnType("boolean")
@@ -948,13 +944,17 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("notify_certificate_customer");
 
-                    b.Property<string>("NotificationEmail")
-                        .HasColumnType("text")
-                        .HasColumnName("notification_email");
-
                     b.Property<string>("Phone")
                         .HasColumnType("text")
                         .HasColumnName("phone");
+
+                    b.Property<string>("ReviewsFlampEmbed")
+                        .HasColumnType("text")
+                        .HasColumnName("reviews_flamp_embed");
+
+                    b.Property<string>("ReviewsMode")
+                        .HasColumnType("text")
+                        .HasColumnName("reviews_mode");
 
                     b.Property<string>("SmtpFromEmail")
                         .HasColumnType("text")
@@ -984,10 +984,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("smtp_user");
 
-                    b.Property<string>("TelegramUrl")
-                        .HasColumnType("text")
-                        .HasColumnName("telegram_url");
-
                     b.Property<string>("TelegramIconBackground")
                         .HasColumnType("text")
                         .HasColumnName("telegram_icon_background");
@@ -1000,13 +996,13 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("telegram_icon_url");
 
+                    b.Property<string>("TelegramUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("telegram_url");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
-
-                    b.Property<string>("VkUrl")
-                        .HasColumnType("text")
-                        .HasColumnName("vk_url");
 
                     b.Property<string>("VkIconBackground")
                         .HasColumnType("text")
@@ -1020,9 +1016,9 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("vk_icon_url");
 
-                    b.Property<string>("YoutubeUrl")
+                    b.Property<string>("VkUrl")
                         .HasColumnType("text")
-                        .HasColumnName("youtube_url");
+                        .HasColumnName("vk_url");
 
                     b.Property<string>("YoutubeIconBackground")
                         .HasColumnType("text")
@@ -1035,6 +1031,10 @@ namespace QuestRoomApi.Migrations
                     b.Property<string>("YoutubeIconUrl")
                         .HasColumnType("text")
                         .HasColumnName("youtube_icon_url");
+
+                    b.Property<string>("YoutubeUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("youtube_url");
 
                     b.HasKey("Id");
 
@@ -1108,9 +1108,16 @@ namespace QuestRoomApi.Migrations
 
                     b.Navigation("Booking");
                 });
-            modelBuilder.Entity("QuestRoomApi.Models.Booking", b =>
+
+            modelBuilder.Entity("QuestRoomApi.Models.QuestExtraService", b =>
                 {
-                    b.Navigation("ExtraServices");
+                    b.HasOne("QuestRoomApi.Models.Quest", "Quest")
+                        .WithMany("ExtraServices")
+                        .HasForeignKey("QuestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Quest");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.QuestPricingRule", b =>
@@ -1124,17 +1131,6 @@ namespace QuestRoomApi.Migrations
                     b.Navigation("Quest");
                 });
 
-            modelBuilder.Entity("QuestRoomApi.Models.QuestExtraService", b =>
-                {
-                    b.HasOne("QuestRoomApi.Models.Quest", "Quest")
-                        .WithMany("ExtraServices")
-                        .HasForeignKey("QuestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Quest");
-                });
-
             modelBuilder.Entity("QuestRoomApi.Models.QuestSchedule", b =>
                 {
                     b.HasOne("QuestRoomApi.Models.Quest", "Quest")
@@ -1146,14 +1142,19 @@ namespace QuestRoomApi.Migrations
                     b.Navigation("Quest");
                 });
 
-            modelBuilder.Entity("QuestRoomApi.Models.QuestSchedule", b =>
+            modelBuilder.Entity("QuestRoomApi.Models.Booking", b =>
                 {
-                    b.Navigation("Booking");
+                    b.Navigation("ExtraServices");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.Quest", b =>
                 {
                     b.Navigation("ExtraServices");
+                });
+
+            modelBuilder.Entity("QuestRoomApi.Models.QuestSchedule", b =>
+                {
+                    b.Navigation("Booking");
                 });
 #pragma warning restore 612, 618
         }
