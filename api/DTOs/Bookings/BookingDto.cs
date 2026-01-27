@@ -12,6 +12,11 @@ public class BookingDto
     public int ParticipantsCount { get; set; }
     public int ExtraParticipantsCount { get; set; }
     public int TotalPrice { get; set; }
+    public string PaymentType { get; set; } = string.Empty;
+    public string? PromoCode { get; set; }
+    public string? PromoDiscountType { get; set; }
+    public int? PromoDiscountValue { get; set; }
+    public int? PromoDiscountAmount { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? Notes { get; set; }
     public List<BookingExtraServiceDto> ExtraServices { get; set; } = new();

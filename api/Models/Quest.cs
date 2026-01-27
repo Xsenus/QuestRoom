@@ -53,6 +53,9 @@ public class Quest
     [Column("difficulty")]
     public int Difficulty { get; set; }
 
+    [Column("difficulty_max")]
+    public int DifficultyMax { get; set; }
+
     [Column("is_new")]
     public bool IsNew { get; set; }
 

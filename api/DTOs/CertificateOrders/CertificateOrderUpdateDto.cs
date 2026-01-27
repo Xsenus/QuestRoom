@@ -7,4 +7,5 @@ public class CertificateOrderUpdateDto
     public string? CustomerEmail { get; set; }
     public string? Notes { get; set; }
     public string? Status { get; set; }
+    public string? DeliveryType { get; set; }
 }

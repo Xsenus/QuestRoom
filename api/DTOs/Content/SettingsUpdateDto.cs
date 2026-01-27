@@ -6,6 +6,18 @@ public class SettingsUpdateDto
     public string? YoutubeUrl { get; set; }
     public string? InstagramUrl { get; set; }
     public string? TelegramUrl { get; set; }
+    public string? VkIconUrl { get; set; }
+    public string? VkIconColor { get; set; }
+    public string? VkIconBackground { get; set; }
+    public string? YoutubeIconUrl { get; set; }
+    public string? YoutubeIconColor { get; set; }
+    public string? YoutubeIconBackground { get; set; }
+    public string? InstagramIconUrl { get; set; }
+    public string? InstagramIconColor { get; set; }
+    public string? InstagramIconBackground { get; set; }
+    public string? TelegramIconUrl { get; set; }
+    public string? TelegramIconColor { get; set; }
+    public string? TelegramIconBackground { get; set; }
     public string? Address { get; set; }
     public string? Email { get; set; }
     public string? NotificationEmail { get; set; }
@@ -24,4 +36,12 @@ public class SettingsUpdateDto
     public bool? NotifyCertificateCustomer { get; set; }
     public string? Phone { get; set; }
     public string? LogoUrl { get; set; }
+    public string? GiftGameLabel { get; set; }
+    public string? GiftGameUrl { get; set; }
+    public string? CertificatePageTitle { get; set; }
+    public string? CertificatePageDescription { get; set; }
+    public string? CertificatePagePricing { get; set; }
+    public string? ReviewsMode { get; set; }
+    public string? ReviewsFlampEmbed { get; set; }
+    public int BookingDaysAhead { get; set; }
 }

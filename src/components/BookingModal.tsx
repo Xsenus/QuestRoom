@@ -17,6 +17,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     email: '',
     comments: '',
     paymentType: 'card',
+    promoCode: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(quest.participantsMin);
@@ -29,7 +30,10 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
   const extraServicesTotal = questExtraServices
     .filter((service) => selectedExtraServices.includes(service.id))
     .reduce((sum, service) => sum + service.price, 0);
-  const totalPrice = slot.price + extraParticipantsTotal + extraServicesTotal;
+  const totalPrice =
+    formData.paymentType === 'certificate'
+      ? extraServicesTotal
+      : slot.price + extraParticipantsTotal + extraServicesTotal;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -61,6 +65,8 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
         participantsCount,
         notes: formData.comments || null,
         extraServiceIds: selectedExtraServices,
+        paymentType: formData.paymentType,
+        promoCode: formData.promoCode || null,
       });
 
       alert('Бронирование успешно создано! Наш менеджер свяжется с вами для подтверждения.');
@@ -154,7 +160,11 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 <span className="font-bold">{slot.timeSlot.substring(0, 5)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Стоимость:</span>
+                <span>
+                  {formData.paymentType === 'certificate'
+                    ? 'Стоимость доп. услуг:'
+                    : 'Стоимость:'}
+                </span>
                 <span className="font-bold">{totalPrice} ₽</span>
               </div>
             </div>
@@ -246,6 +256,18 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                   </span>
                 </label>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-white font-semibold text-sm">Промокод (если есть):</p>
+              <input
+                type="text"
+                name="promoCode"
+                value={formData.promoCode}
+                onChange={handleChange}
+                placeholder="Введите промокод"
+                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+              />
             </div>
 
             {questExtraServices.length > 0 && (

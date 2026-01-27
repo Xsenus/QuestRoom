@@ -87,8 +87,32 @@ public class BookingService : IBookingService
             var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - quest.ParticipantsMax);
             var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, quest.ExtraParticipantPrice);
             var extrasTotal = selectedExtras.Sum(service => service.Price);
+            var paymentType = string.IsNullOrWhiteSpace(dto.PaymentType)
+                ? "card"
+                : dto.PaymentType!.ToLowerInvariant();
             var basePrice = schedule?.Price ?? quest.Price;
-            var totalPrice = basePrice + extraParticipantsTotal + extrasTotal;
+            var totalPrice = paymentType == "certificate"
+                ? extrasTotal
+                : basePrice + extraParticipantsTotal + extrasTotal;
+
+            PromoCode? promoCode = null;
+            int? promoDiscountAmount = null;
+            if (!string.IsNullOrWhiteSpace(dto.PromoCode))
+            {
+                promoCode = await _context.PromoCodes
+                    .FirstOrDefaultAsync(p =>
+                        p.Code.ToLower() == dto.PromoCode!.ToLower()
+                        && p.IsActive
+                        && p.ValidFrom <= DateOnly.FromDateTime(DateTime.UtcNow)
+                        && (p.ValidUntil == null || p.ValidUntil >= DateOnly.FromDateTime(DateTime.UtcNow)));
+                if (promoCode != null)
+                {
+                    promoDiscountAmount = promoCode.DiscountType == "amount"
+                        ? Math.Min(promoCode.DiscountValue, totalPrice)
+                        : (int)Math.Round(totalPrice * (promoCode.DiscountValue / 100.0));
+                    totalPrice = Math.Max(0, totalPrice - promoDiscountAmount.Value);
+                }
+            }
 
             booking = new Booking
             {
@@ -102,6 +126,12 @@ public class BookingService : IBookingService
                 ParticipantsCount = dto.ParticipantsCount,
                 ExtraParticipantsCount = extraParticipantsCount,
                 TotalPrice = totalPrice,
+                PaymentType = paymentType,
+                PromoCodeId = promoCode?.Id,
+                PromoCode = promoCode?.Code,
+                PromoDiscountType = promoCode?.DiscountType,
+                PromoDiscountValue = promoCode?.DiscountValue,
+                PromoDiscountAmount = promoDiscountAmount,
                 Status = "pending",
                 Notes = dto.Notes,
                 CreatedAt = DateTime.UtcNow,
@@ -248,6 +278,11 @@ public class BookingService : IBookingService
             ParticipantsCount = booking.ParticipantsCount,
             ExtraParticipantsCount = booking.ExtraParticipantsCount,
             TotalPrice = booking.TotalPrice,
+            PaymentType = booking.PaymentType,
+            PromoCode = booking.PromoCode,
+            PromoDiscountType = booking.PromoDiscountType,
+            PromoDiscountValue = booking.PromoDiscountValue,
+            PromoDiscountAmount = booking.PromoDiscountAmount,
             Status = booking.Status,
             Notes = booking.Notes,
             ExtraServices = booking.ExtraServices
@@ -287,6 +322,17 @@ public class BookingService : IBookingService
         var basePrice = schedule?.Price ?? quest.Price;
 
         booking.ExtraParticipantsCount = extraParticipantsCount;
-        booking.TotalPrice = basePrice + extraParticipantsTotal + extrasTotal;
+        var totalPrice = booking.PaymentType == "certificate"
+            ? extrasTotal
+            : basePrice + extraParticipantsTotal + extrasTotal;
+        if (!string.IsNullOrWhiteSpace(booking.PromoDiscountType) && booking.PromoDiscountValue.HasValue)
+        {
+            var discountAmount = booking.PromoDiscountType == "amount"
+                ? Math.Min(booking.PromoDiscountValue.Value, totalPrice)
+                : (int)Math.Round(totalPrice * (booking.PromoDiscountValue.Value / 100.0));
+            booking.PromoDiscountAmount = discountAmount;
+            totalPrice = Math.Max(0, totalPrice - discountAmount);
+        }
+        booking.TotalPrice = totalPrice;
     }
 }

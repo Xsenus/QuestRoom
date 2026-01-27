@@ -8,4 +8,5 @@ public class CertificateOrderCreateDto
     public string CustomerPhone { get; set; } = string.Empty;
     public string? CustomerEmail { get; set; }
     public string? Notes { get; set; }
+    public string? DeliveryType { get; set; }
 }

@@ -22,6 +22,42 @@ public class Settings
     [Column("telegram_url")]
     public string? TelegramUrl { get; set; }
 
+    [Column("vk_icon_url")]
+    public string? VkIconUrl { get; set; }
+
+    [Column("vk_icon_color")]
+    public string? VkIconColor { get; set; }
+
+    [Column("vk_icon_background")]
+    public string? VkIconBackground { get; set; }
+
+    [Column("youtube_icon_url")]
+    public string? YoutubeIconUrl { get; set; }
+
+    [Column("youtube_icon_color")]
+    public string? YoutubeIconColor { get; set; }
+
+    [Column("youtube_icon_background")]
+    public string? YoutubeIconBackground { get; set; }
+
+    [Column("instagram_icon_url")]
+    public string? InstagramIconUrl { get; set; }
+
+    [Column("instagram_icon_color")]
+    public string? InstagramIconColor { get; set; }
+
+    [Column("instagram_icon_background")]
+    public string? InstagramIconBackground { get; set; }
+
+    [Column("telegram_icon_url")]
+    public string? TelegramIconUrl { get; set; }
+
+    [Column("telegram_icon_color")]
+    public string? TelegramIconColor { get; set; }
+
+    [Column("telegram_icon_background")]
+    public string? TelegramIconBackground { get; set; }
+
     [Column("address")]
     public string? Address { get; set; }
 
@@ -75,6 +111,30 @@ public class Settings
 
     [Column("logo_url")]
     public string? LogoUrl { get; set; }
+
+    [Column("gift_game_label")]
+    public string? GiftGameLabel { get; set; }
+
+    [Column("gift_game_url")]
+    public string? GiftGameUrl { get; set; }
+
+    [Column("certificate_page_title")]
+    public string? CertificatePageTitle { get; set; }
+
+    [Column("certificate_page_description")]
+    public string? CertificatePageDescription { get; set; }
+
+    [Column("certificate_page_pricing")]
+    public string? CertificatePagePricing { get; set; }
+
+    [Column("reviews_mode")]
+    public string? ReviewsMode { get; set; }
+
+    [Column("reviews_flamp_embed")]
+    public string? ReviewsFlampEmbed { get; set; }
+
+    [Column("booking_days_ahead")]
+    public int BookingDaysAhead { get; set; }
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }

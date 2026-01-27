@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import { Quest } from '../lib/types';
+import { Quest, Settings } from '../lib/types';
 import Hero from '../components/Hero';
 import QuestCard from '../components/QuestCard';
 
 export default function HomePage() {
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadQuests();
+    loadSettings();
   }, []);
 
   const loadQuests = async () => {
@@ -20,6 +22,15 @@ export default function HomePage() {
       console.error('Error loading quests:', error);
     }
     setLoading(false);
+  };
+
+  const loadSettings = async () => {
+    try {
+      const data = await api.getSettings();
+      setSettings(data);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
   };
 
   return (
@@ -33,7 +44,12 @@ export default function HomePage() {
           </div>
         ) : quests.length > 0 ? (
           quests.map((quest) => (
-            <QuestCard key={quest.id} quest={quest} />
+            <QuestCard
+              key={quest.id}
+              quest={quest}
+              giftGameLabel={settings?.giftGameLabel}
+              giftGameUrl={settings?.giftGameUrl}
+            />
           ))
         ) : (
           <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-lg">
