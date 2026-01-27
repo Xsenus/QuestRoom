@@ -14,19 +14,21 @@ namespace QuestRoomApi.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "certificate_page_title",
-                table: "settings",
-                type: "text",
-                nullable: true);
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE settings
+                ADD COLUMN IF NOT EXISTS certificate_page_title text;
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "certificate_page_title",
-                table: "settings");
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE settings
+                DROP COLUMN IF EXISTS certificate_page_title;
+                """);
         }
     }
 }

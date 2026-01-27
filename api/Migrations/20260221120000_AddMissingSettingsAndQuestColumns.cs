@@ -14,30 +14,27 @@ namespace QuestRoomApi.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "certificate_page_description",
-                table: "settings",
-                type: "text",
-                nullable: true);
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE settings
+                ADD COLUMN IF NOT EXISTS certificate_page_description text;
 
-            migrationBuilder.AddColumn<int>(
-                name: "difficulty_max",
-                table: "quests",
-                type: "integer",
-                nullable: false,
-                defaultValue: 5);
+                ALTER TABLE quests
+                ADD COLUMN IF NOT EXISTS difficulty_max integer NOT NULL DEFAULT 5;
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "certificate_page_description",
-                table: "settings");
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE settings
+                DROP COLUMN IF EXISTS certificate_page_description;
 
-            migrationBuilder.DropColumn(
-                name: "difficulty_max",
-                table: "quests");
+                ALTER TABLE quests
+                DROP COLUMN IF EXISTS difficulty_max;
+                """);
         }
     }
 }
