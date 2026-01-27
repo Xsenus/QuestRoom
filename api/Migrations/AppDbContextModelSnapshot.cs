@@ -553,6 +553,14 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("extra_participants_max");
 
+                    b.Property<string>("GiftGameLabel")
+                        .HasColumnType("text")
+                        .HasColumnName("gift_game_label");
+
+                    b.Property<string>("GiftGameUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("gift_game_url");
+
                     b.PrimitiveCollection<string[]>("Images")
                         .IsRequired()
                         .HasColumnType("text[]")
@@ -604,6 +612,10 @@ namespace QuestRoomApi.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
+
+                    b.Property<string>("VideoUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("video_url");
 
                     b.HasKey("Id");
 

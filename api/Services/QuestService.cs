@@ -86,6 +86,9 @@ public class QuestService : IQuestService
             IsVisible = dto.IsVisible,
             MainImage = dto.MainImage,
             Images = dto.Images,
+            GiftGameLabel = string.IsNullOrWhiteSpace(dto.GiftGameLabel) ? "Подарить игру" : dto.GiftGameLabel.Trim(),
+            GiftGameUrl = string.IsNullOrWhiteSpace(dto.GiftGameUrl) ? "/certificate" : dto.GiftGameUrl.Trim(),
+            VideoUrl = string.IsNullOrWhiteSpace(dto.VideoUrl) ? null : dto.VideoUrl.Trim(),
             SortOrder = dto.SortOrder,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -140,6 +143,9 @@ public class QuestService : IQuestService
         quest.IsVisible = dto.IsVisible;
         quest.MainImage = dto.MainImage;
         quest.Images = dto.Images;
+        quest.GiftGameLabel = string.IsNullOrWhiteSpace(dto.GiftGameLabel) ? "Подарить игру" : dto.GiftGameLabel.Trim();
+        quest.GiftGameUrl = string.IsNullOrWhiteSpace(dto.GiftGameUrl) ? "/certificate" : dto.GiftGameUrl.Trim();
+        quest.VideoUrl = string.IsNullOrWhiteSpace(dto.VideoUrl) ? null : dto.VideoUrl.Trim();
         quest.SortOrder = dto.SortOrder;
         quest.UpdatedAt = DateTime.UtcNow;
 
@@ -201,6 +207,9 @@ public class QuestService : IQuestService
             IsVisible = quest.IsVisible,
             MainImage = quest.MainImage,
             Images = quest.Images,
+            GiftGameLabel = quest.GiftGameLabel,
+            GiftGameUrl = quest.GiftGameUrl,
+            VideoUrl = quest.VideoUrl,
             SortOrder = quest.SortOrder,
             ExtraServices = quest.ExtraServices
                 .OrderBy(service => service.CreatedAt)

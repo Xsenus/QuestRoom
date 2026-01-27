@@ -12,6 +12,18 @@ export default function QuestsPage() {
   );
   const [isCreating, setIsCreating] = useState(false);
 
+  const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
+    if (mainImage && !images.includes(mainImage)) {
+      return [mainImage, ...images];
+    }
+    return images;
+  };
+
+  const normalizeOptional = (value?: string | null) => {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
+  };
+
   useEffect(() => {
     loadQuests();
     loadDurationBadges();
@@ -56,6 +68,9 @@ export default function QuestsPage() {
       isVisible: true,
       mainImage: null,
       images: [],
+      giftGameLabel: 'Подарить игру',
+      giftGameUrl: '/certificate',
+      videoUrl: '',
       sortOrder: quests.length,
       extraServices: [],
     });
@@ -66,12 +81,18 @@ export default function QuestsPage() {
     if (!editingQuest) return;
 
     const { id, ...payload } = editingQuest;
+    const normalizedPayload: QuestUpsert = {
+      ...payload,
+      giftGameLabel: normalizeOptional(payload.giftGameLabel) || 'Подарить игру',
+      giftGameUrl: normalizeOptional(payload.giftGameUrl) || '/certificate',
+      videoUrl: normalizeOptional(payload.videoUrl),
+    };
 
     try {
       if (isCreating) {
-        await api.createQuest(payload);
+        await api.createQuest(normalizedPayload);
       } else if (id) {
-        await api.updateQuest(id, payload);
+        await api.updateQuest(id, normalizedPayload);
       }
     } catch (error) {
       alert('Ошибка при сохранении квеста: ' + (error as Error).message);
@@ -109,6 +130,9 @@ export default function QuestsPage() {
         isVisible: !quest.isVisible,
         mainImage: quest.mainImage,
         images: quest.images || [],
+        giftGameLabel: quest.giftGameLabel,
+        giftGameUrl: quest.giftGameUrl,
+        videoUrl: quest.videoUrl,
         sortOrder: quest.sortOrder,
         extraServices: quest.extraServices || [],
       };
@@ -231,6 +255,17 @@ export default function QuestsPage() {
     }
   };
 
+  const handleEditQuest = (quest: Quest) => {
+    setEditingQuest({
+      ...quest,
+      images: ensureMainImageInList(quest.images || [], quest.mainImage),
+      giftGameLabel: quest.giftGameLabel || 'Подарить игру',
+      giftGameUrl: quest.giftGameUrl || '/certificate',
+      videoUrl: quest.videoUrl || '',
+    });
+    setIsCreating(false);
+  };
+
   if (editingQuest) {
     return (
       <div className="max-w-5xl">
@@ -240,6 +275,9 @@ export default function QuestsPage() {
           </h2>
 
           <div className="space-y-6">
+            <div className="border-b border-gray-200 pb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Основная информация</h3>
+            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Название квеста
@@ -270,6 +308,9 @@ export default function QuestsPage() {
               />
             </div>
 
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800">Медиа и ссылки</h3>
+            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Изображения квеста
@@ -303,6 +344,11 @@ export default function QuestsPage() {
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                       placeholder="URL изображения"
                     />
+                    {editingQuest.mainImage === img && (
+                      <span className="text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                        Основное
+                      </span>
+                    )}
                     <button
                       onClick={() => setMainImage(img)}
                       className={`p-2 rounded-lg transition-colors ${
@@ -333,13 +379,56 @@ export default function QuestsPage() {
                   Добавить изображение
                 </button>
               </div>
-              {editingQuest.mainImage && (
-                <p className="text-sm text-gray-600 mt-2">
-                  Основное изображение: {editingQuest.mainImage}
-                </p>
-              )}
             </div>
 
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Текст кнопки «Подарить игру»
+                </label>
+                <input
+                  type="text"
+                  value={editingQuest.giftGameLabel || ''}
+                  onChange={(e) =>
+                    setEditingQuest({ ...editingQuest, giftGameLabel: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="Подарить игру"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ссылка для «Подарить игру»
+                </label>
+                <input
+                  type="text"
+                  value={editingQuest.giftGameUrl || ''}
+                  onChange={(e) =>
+                    setEditingQuest({ ...editingQuest, giftGameUrl: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="/certificate"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ссылка на видео (YouTube)
+                </label>
+                <input
+                  type="text"
+                  value={editingQuest.videoUrl || ''}
+                  onChange={(e) =>
+                    setEditingQuest({ ...editingQuest, videoUrl: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800">Контакты</h3>
+            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Адреса
@@ -404,6 +493,9 @@ export default function QuestsPage() {
               </div>
             </div>
 
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800">Параметры квеста</h3>
+            </div>
             <div className="grid md:grid-cols-4 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -497,6 +589,9 @@ export default function QuestsPage() {
           </div>
         </div>
 
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800">Доплаты и услуги</h3>
+            </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -579,6 +674,9 @@ export default function QuestsPage() {
               </div>
             </div>
 
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800">Возраст и стоимость</h3>
+            </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -654,6 +752,9 @@ export default function QuestsPage() {
               </div>
             </div>
 
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800">Отображение</h3>
+            </div>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -776,7 +877,7 @@ export default function QuestsPage() {
 
               <div className="flex gap-2 ml-4">
                 <button
-                  onClick={() => setEditingQuest(quest)}
+                  onClick={() => handleEditQuest(quest)}
                   className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
                   title="Редактировать"
                 >

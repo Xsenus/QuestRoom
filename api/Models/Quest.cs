@@ -68,6 +68,15 @@ public class Quest
     [Column("images", TypeName = "text[]")]
     public string[] Images { get; set; } = Array.Empty<string>();
 
+    [Column("gift_game_label")]
+    public string? GiftGameLabel { get; set; } = "Подарить игру";
+
+    [Column("gift_game_url")]
+    public string? GiftGameUrl { get; set; } = "/certificate";
+
+    [Column("video_url")]
+    public string? VideoUrl { get; set; }
+
     [Column("sort_order")]
     public int SortOrder { get; set; }
 
