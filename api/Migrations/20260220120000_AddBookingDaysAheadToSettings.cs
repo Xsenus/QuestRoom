@@ -14,15 +14,20 @@ namespace QuestRoomApi.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql(
-                "ALTER TABLE settings ADD COLUMN IF NOT EXISTS booking_days_ahead integer NOT NULL DEFAULT 10;");
+            migrationBuilder.AddColumn<int>(
+                name: "booking_days_ahead",
+                table: "settings",
+                type: "integer",
+                nullable: false,
+                defaultValue: 10);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql(
-                "ALTER TABLE settings DROP COLUMN IF EXISTS booking_days_ahead;");
+            migrationBuilder.DropColumn(
+                name: "booking_days_ahead",
+                table: "settings");
         }
     }
 }
