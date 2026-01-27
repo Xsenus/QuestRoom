@@ -87,10 +87,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("customer_phone");
 
-                    b.Property<string>("DeliveryType")
-                        .HasColumnType("text")
-                        .HasColumnName("delivery_type");
-
                     b.Property<int>("ExtraParticipantsCount")
                         .HasColumnType("integer")
                         .HasColumnName("extra_participants_count");
@@ -273,6 +269,10 @@ namespace QuestRoomApi.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("customer_phone");
+
+                    b.Property<string>("DeliveryType")
+                        .HasColumnType("text")
+                        .HasColumnName("delivery_type");
 
                     b.Property<string>("Notes")
                         .HasColumnType("text")
@@ -1096,8 +1096,6 @@ namespace QuestRoomApi.Migrations
                     b.Navigation("Quest");
 
                     b.Navigation("QuestSchedule");
-
-                    b.Navigation("ExtraServices");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.BookingExtraService", b =>
@@ -1109,6 +1107,10 @@ namespace QuestRoomApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Booking");
+                });
+            modelBuilder.Entity("QuestRoomApi.Models.Booking", b =>
+                {
+                    b.Navigation("ExtraServices");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.QuestPricingRule", b =>
