@@ -3,6 +3,18 @@ import { api } from '../../lib/api';
 import { Quest, QuestUpsert, DurationBadge } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 
+const normalizeQuestForEdit = (quest: QuestUpsert & { id?: string }) => {
+  const images = quest.images || [];
+  const mainImage = quest.mainImage;
+  const normalizedImages =
+    mainImage && !images.includes(mainImage) ? [mainImage, ...images] : images;
+
+  return {
+    ...quest,
+    images: normalizedImages,
+  };
+};
+
 export default function QuestsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [durationBadges, setDurationBadges] = useState<DurationBadge[]>([]);
@@ -37,7 +49,8 @@ export default function QuestsPage() {
   };
 
   const handleCreate = () => {
-    setEditingQuest({
+    setEditingQuest(
+      normalizeQuestForEdit({
       title: '',
       description: '',
       addresses: [],
@@ -56,9 +69,13 @@ export default function QuestsPage() {
       isVisible: true,
       mainImage: null,
       images: [],
+      giftGameLabel: 'Подарить игру',
+      giftGameUrl: '/certificate',
+      videoUrl: null,
       sortOrder: quests.length,
       extraServices: [],
-    });
+      })
+    );
     setIsCreating(true);
   };
 
@@ -90,6 +107,7 @@ export default function QuestsPage() {
 
   const handleToggleVisibility = async (quest: Quest) => {
     try {
+      const normalizedQuest = normalizeQuestForEdit(quest);
       const payload: QuestUpsert = {
         title: quest.title,
         description: quest.description,
@@ -108,7 +126,10 @@ export default function QuestsPage() {
         isNew: quest.isNew,
         isVisible: !quest.isVisible,
         mainImage: quest.mainImage,
-        images: quest.images || [],
+        images: normalizedQuest.images || [],
+        giftGameLabel: quest.giftGameLabel || 'Подарить игру',
+        giftGameUrl: quest.giftGameUrl || '/certificate',
+        videoUrl: quest.videoUrl || null,
         sortOrder: quest.sortOrder,
         extraServices: quest.extraServices || [],
       };
@@ -270,6 +291,51 @@ export default function QuestsPage() {
               />
             </div>
 
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Текст кнопки «Подарить игру»
+                </label>
+                <input
+                  type="text"
+                  value={editingQuest.giftGameLabel || ''}
+                  onChange={(e) =>
+                    setEditingQuest({ ...editingQuest, giftGameLabel: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="Подарить игру"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ссылка для «Подарить игру»
+                </label>
+                <input
+                  type="text"
+                  value={editingQuest.giftGameUrl || ''}
+                  onChange={(e) =>
+                    setEditingQuest({ ...editingQuest, giftGameUrl: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="/certificate"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ссылка на видео
+                </label>
+                <input
+                  type="url"
+                  value={editingQuest.videoUrl || ''}
+                  onChange={(e) =>
+                    setEditingQuest({ ...editingQuest, videoUrl: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Изображения квеста
@@ -333,11 +399,6 @@ export default function QuestsPage() {
                   Добавить изображение
                 </button>
               </div>
-              {editingQuest.mainImage && (
-                <p className="text-sm text-gray-600 mt-2">
-                  Основное изображение: {editingQuest.mainImage}
-                </p>
-              )}
             </div>
 
             <div>
@@ -769,14 +830,17 @@ export default function QuestsPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">Изображения:</span>{' '}
-                    {quest.images?.length || 0} шт.
+                    {
+                      new Set([...(quest.images || []), quest.mainImage].filter(Boolean)).size
+                    }{' '}
+                    шт.
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-2 ml-4">
                 <button
-                  onClick={() => setEditingQuest(quest)}
+                  onClick={() => setEditingQuest(normalizeQuestForEdit(quest))}
                   className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
                   title="Редактировать"
                 >

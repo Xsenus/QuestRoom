@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import { Quest, Settings } from '../lib/types';
+import { Quest } from '../lib/types';
 import Hero from '../components/Hero';
 import QuestCard from '../components/QuestCard';
 
 export default function HomePage() {
   const [quests, setQuests] = useState<Quest[]>([]);
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadQuests();
-    loadSettings();
   }, []);
 
   const loadQuests = async () => {
@@ -24,15 +22,6 @@ export default function HomePage() {
     setLoading(false);
   };
 
-  const loadSettings = async () => {
-    try {
-      const data = await api.getSettings();
-      setSettings(data);
-    } catch (error) {
-      console.error('Error loading settings:', error);
-    }
-  };
-
   return (
     <>
       <Hero />
@@ -43,14 +32,7 @@ export default function HomePage() {
             <p className="text-white font-semibold text-lg">Загрузка квестов...</p>
           </div>
         ) : quests.length > 0 ? (
-          quests.map((quest) => (
-            <QuestCard
-              key={quest.id}
-              quest={quest}
-              giftGameLabel={settings?.giftGameLabel}
-              giftGameUrl={settings?.giftGameUrl}
-            />
-          ))
+          quests.map((quest) => <QuestCard key={quest.id} quest={quest} />)
         ) : (
           <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-lg">
             <p className="text-white text-xl font-semibold">Квесты временно недоступны</p>

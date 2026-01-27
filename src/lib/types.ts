@@ -19,6 +19,9 @@ export type Quest = {
   isVisible: boolean;
   mainImage: string | null;
   images: string[];
+  giftGameLabel: string | null;
+  giftGameUrl: string | null;
+  videoUrl: string | null;
   createdAt: string;
   updatedAt: string;
   sortOrder: number;
@@ -76,8 +79,6 @@ export type Settings = {
   notifyCertificateCustomer: boolean;
   phone: string | null;
   logoUrl: string | null;
-  giftGameLabel: string | null;
-  giftGameUrl: string | null;
   certificatePageTitle: string | null;
   certificatePageDescription: string | null;
   certificatePagePricing: string | null;

@@ -1,14 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key } from 'lucide-react';
+import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key, Youtube } from 'lucide-react';
 import { Quest } from '../lib/types';
 
 interface QuestCardProps {
   quest: Quest;
-  giftGameLabel?: string | null;
-  giftGameUrl?: string | null;
 }
 
-export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCardProps) {
+export default function QuestCard({ quest }: QuestCardProps) {
   const navigate = useNavigate();
   const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
@@ -16,6 +14,9 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
   const difficultyValue = quest.difficulty || 1;
   const difficultyMax = Math.max(1, quest.difficultyMax || 5);
   const filledKeys = Math.min(difficultyValue, difficultyMax);
+  const giftGameLabel = quest.giftGameLabel || 'Подарить игру';
+  const giftGameUrl = quest.giftGameUrl || '/certificate';
+  const videoUrl = quest.videoUrl;
 
   while (additionalImages.length < 4) {
     additionalImages.push(mainImage);
@@ -23,6 +24,23 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
 
   const handleBookingClick = () => {
     navigate(`/quest/${quest.slug || quest.id}`);
+  };
+
+  const handleGiftClick = () => {
+    if (giftGameUrl.startsWith('http')) {
+      window.location.href = giftGameUrl;
+    } else {
+      navigate(giftGameUrl);
+    }
+  };
+
+  const handleVideoClick = () => {
+    if (!videoUrl) return;
+    if (videoUrl.startsWith('http')) {
+      window.open(videoUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(videoUrl);
+    }
   };
 
   return (
@@ -40,7 +58,7 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
                 <h2 className="text-lg md:text-3xl font-black text-white mb-2 md:mb-4 tracking-tight uppercase leading-tight font-display">
                   {quest.title}
                 </h2>
-                <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-4">
+                <div className="hidden md:flex flex-wrap items-center gap-2 mb-2 md:mb-4">
                   <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] md:text-sm font-bold px-2 py-1 rounded-full">
                     <Star className="w-3.5 h-3.5 fill-white" />
                     {quest.ageRating}
@@ -59,7 +77,7 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
                     {difficultyValue}/{difficultyMax}
                   </span>
                 </div>
-                <div className="space-y-1.5 md:space-y-2">
+                <div className="hidden md:block space-y-1.5 md:space-y-2">
                   <button
                     onClick={handleBookingClick}
                     className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 md:py-2.5 md:px-6 transition-all hover:scale-[1.02] shadow-lg text-[10px] md:text-sm tracking-wider uppercase font-display"
@@ -68,27 +86,25 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
                   </button>
                   <div>
                     <button
-                      className="text-white/90 hover:text-white font-semibold text-[10px] md:text-sm tracking-wide transition-all underline"
-                      onClick={() => {
-                        const targetUrl = giftGameUrl || '/certificate';
-                        if (targetUrl.startsWith('http')) {
-                          window.location.href = targetUrl;
-                        } else {
-                          navigate(targetUrl);
-                        }
-                      }}
+                      className="text-white/90 hover:text-white font-semibold text-[10px] md:text-sm tracking-wide transition-all underline decoration-dashed underline-offset-4"
+                      onClick={handleGiftClick}
                     >
-                      {giftGameLabel || 'Подарить игру'}
+                      {giftGameLabel}
                     </button>
                   </div>
-                  <button className="flex items-center gap-2 text-white/90 hover:text-white transition-all">
-                    <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
-                      <span className="text-white text-[10px]">▶</span>
-                    </span>
-                    <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
-                      Видео
-                    </span>
-                  </button>
+                  {videoUrl && (
+                    <button
+                      className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
+                      onClick={handleVideoClick}
+                    >
+                      <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                        <Youtube className="w-3.5 h-3.5 text-white" />
+                      </span>
+                      <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
+                        Видео
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -102,6 +118,55 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
                   style={{ backgroundImage: `url(${img})` }}
                 ></div>
               ))}
+            </div>
+          </div>
+
+          <div className="md:hidden bg-black px-3 pb-4 pt-3 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                <Star className="w-3.5 h-3.5 fill-white" />
+                {quest.ageRating}
+              </span>
+              <span className="inline-flex items-center gap-2 bg-white/20 text-white text-[10px] font-semibold px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1">
+                  {Array.from({ length: difficultyMax }).map((_, index) => (
+                    <Key
+                      key={index}
+                      className={`w-4 h-4 ${
+                        index < filledKeys ? 'text-yellow-300' : 'text-white/40'
+                      }`}
+                    />
+                  ))}
+                </span>
+                {difficultyValue}/{difficultyMax}
+              </span>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={handleBookingClick}
+                className="w-full bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 transition-all shadow-lg text-[11px] tracking-wider uppercase font-display"
+              >
+                Записаться на квест
+              </button>
+              <button
+                className="w-full text-white/90 hover:text-white font-semibold text-[11px] tracking-wide transition-all underline decoration-dashed underline-offset-4"
+                onClick={handleGiftClick}
+              >
+                {giftGameLabel}
+              </button>
+              {videoUrl && (
+                <button
+                  className="flex w-full items-center justify-center gap-2 text-white/90 hover:text-white transition-all"
+                  onClick={handleVideoClick}
+                >
+                  <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                    <Youtube className="w-3.5 h-3.5 text-white" />
+                  </span>
+                  <span className="font-semibold text-[11px] tracking-wide uppercase font-display">
+                    Видео
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
