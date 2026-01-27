@@ -39,6 +39,24 @@ public class Booking
     [Column("total_price")]
     public int TotalPrice { get; set; }
 
+    [Column("payment_type")]
+    public string PaymentType { get; set; } = "card";
+
+    [Column("promo_code_id")]
+    public Guid? PromoCodeId { get; set; }
+
+    [Column("promo_code")]
+    public string? PromoCode { get; set; }
+
+    [Column("promo_discount_type")]
+    public string? PromoDiscountType { get; set; }
+
+    [Column("promo_discount_value")]
+    public int? PromoDiscountValue { get; set; }
+
+    [Column("promo_discount_amount")]
+    public int? PromoDiscountAmount { get; set; }
+
     [Column("status")]
     public string Status { get; set; } = "pending";
 

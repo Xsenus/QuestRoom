@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Quest, QuestSchedule } from '../lib/types';
+import { Quest, QuestSchedule, Settings } from '../lib/types';
 import { Users, Clock, Star, BadgeDollarSign } from 'lucide-react';
 import BookingModal from '../components/BookingModal';
 
@@ -10,6 +10,7 @@ export default function QuestDetailPage() {
   const [quest, setQuest] = useState<Quest | null>(null);
   const [schedule, setSchedule] = useState<QuestSchedule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<QuestSchedule | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -22,10 +23,14 @@ export default function QuestDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    loadSettings();
+  }, []);
+
+  useEffect(() => {
     if (quest?.id) {
       loadSchedule(quest.id);
     }
-  }, [quest?.id]);
+  }, [quest?.id, settings?.bookingDaysAhead]);
 
   const loadQuest = async () => {
     setLoading(true);
@@ -44,6 +49,15 @@ export default function QuestDetailPage() {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const data = await api.getSettings();
+      setSettings(data);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
   const formatDateForApi = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -54,7 +68,8 @@ export default function QuestDetailPage() {
   const loadSchedule = async (questId: string) => {
     const today = new Date();
     const twoWeeksLater = new Date();
-    twoWeeksLater.setDate(today.getDate() + 13);
+    const daysAhead = settings?.bookingDaysAhead ?? 10;
+    twoWeeksLater.setDate(today.getDate() + Math.max(0, daysAhead - 1));
 
     try {
       const data = await api.getQuestSchedule(

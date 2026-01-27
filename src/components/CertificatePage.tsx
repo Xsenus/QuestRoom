@@ -1,23 +1,27 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api';
-import { Certificate } from '../lib/types';
+import { Certificate, Settings } from '../lib/types';
 
 export default function CertificatePage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
+  const [selectedCertificateId, setSelectedCertificateId] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     notes: '',
+    deliveryType: 'paper',
   });
   const [submitting, setSubmitting] = useState(false);
   const [showThanks, setShowThanks] = useState(false);
 
   useEffect(() => {
     loadCertificates();
+    loadSettings();
   }, []);
 
   const loadCertificates = async () => {
@@ -30,13 +34,49 @@ export default function CertificatePage() {
     setLoading(false);
   };
 
+  const loadSettings = async () => {
+    try {
+      const data = await api.getSettings();
+      setSettings(data);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const submitOrder = async (certificate: Certificate) => {
+    setSubmitting(true);
+
+    try {
+      await api.createCertificateOrder({
+        certificateId: certificate.id,
+        certificateTitle: certificate.title,
+        customerName: formData.name,
+        customerPhone: formData.phone,
+        customerEmail: formData.email || null,
+        notes: formData.notes || null,
+        deliveryType: formData.deliveryType,
+      });
+
+      setShowThanks(true);
+      setSelectedCertificate(null);
+      setSelectedCertificateId('');
+      setFormData({ name: '', phone: '', email: '', notes: '', deliveryType: 'paper' });
+      setTimeout(() => setShowThanks(false), 5000);
+    } catch (error) {
+      console.error('Error creating certificate order:', error);
+      alert('Ошибка при создании заказа. Попробуйте еще раз.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,28 +86,19 @@ export default function CertificatePage() {
       return;
     }
 
-    setSubmitting(true);
+    await submitOrder(selectedCertificate);
+  };
 
-    try {
-      await api.createCertificateOrder({
-        certificateId: selectedCertificate.id,
-        certificateTitle: selectedCertificate.title,
-        customerName: formData.name,
-        customerPhone: formData.phone,
-        customerEmail: formData.email || null,
-        notes: formData.notes || null,
-      });
+  const handleInlineSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-      setShowThanks(true);
-      setSelectedCertificate(null);
-      setFormData({ name: '', phone: '', email: '', notes: '' });
-      setTimeout(() => setShowThanks(false), 5000);
-    } catch (error) {
-      console.error('Error creating certificate order:', error);
-      alert('Ошибка при создании заказа. Попробуйте еще раз.');
-    } finally {
-      setSubmitting(false);
+    const certificate = certificates.find((item) => item.id === selectedCertificateId);
+    if (!certificate) {
+      alert('Выберите сертификат.');
+      return;
     }
+
+    await submitOrder(certificate);
   };
 
   const openOrderModal = (certificate: Certificate) => {
@@ -93,8 +124,85 @@ export default function CertificatePage() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-8 md:mb-12">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 md:mb-8">
-            Сертификаты и награды
+            Подарочные сертификаты
           </h1>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 md:p-8 mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-4 text-center">
+            Оформить подарочный сертификат
+          </h2>
+          <form onSubmit={handleInlineSubmit} className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <select
+                value={selectedCertificateId}
+                onChange={(e) => setSelectedCertificateId(e.target.value)}
+                required
+                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+              >
+                <option value="">Выберите сертификат</option>
+                {certificates.map((cert) => (
+                  <option key={cert.id} value={cert.id}>
+                    {cert.title}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="deliveryType"
+                value={formData.deliveryType}
+                onChange={handleChange}
+                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+              >
+                <option value="paper">Бумажный</option>
+                <option value="digital">Электронный</option>
+              </select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Имя"
+                required
+                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+              />
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="Телефон"
+                required
+                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+              />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="E-mail"
+                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+              />
+              <input
+                type="text"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                placeholder="Комментарий"
+                className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 text-sm md:text-base rounded-lg transition-all hover:scale-[1.01] shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Отправка...' : 'Заказать'}
+            </button>
+          </form>
         </div>
 
         {certificates.length > 0 && (
@@ -124,17 +232,19 @@ export default function CertificatePage() {
         )}
 
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">
-          Подарочные сертификаты
+          {settings?.certificatePageTitle || 'Подарочные сертификаты'}
         </h2>
 
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 md:p-8 mb-6 md:mb-8">
           <div className="text-white space-y-4 md:space-y-6">
             <p className="text-sm md:text-base lg:text-lg leading-relaxed">
-              Вы можете приобрести как Подарочный сертификат в бумажном виде в нашем фирменном конверте так и Электронный подарочный сертификат на участие в реалити-квестах "Вловушке24". Сертификат распространяется на команду от 2 до 4 человек. Использовать сертификат можно в любой локации на выбор участников соответствующий максимальной цене квеста на сайте компании, по предварительной записи. Срок действия подарочных сертификатов - 3 месяца с даты приобретения. Для приобретения Подарочного сертификата позвоните по телефону: 294-59-50 или отправьте заявку на электронную почту - krsk@vlovushke24.ru.
+              {settings?.certificatePageDescription ||
+                'Вы можете приобрести как Подарочный сертификат в бумажном виде в нашем фирменном конверте так и Электронный подарочный сертификат на участие в реалити-квестах "Вловушке24". Сертификат распространяется на команду от 2 до 4 человек. Использовать сертификат можно в любой локации на выбор участников соответствующий максимальной цене квеста на сайте компании, по предварительной записи. Срок действия подарочных сертификатов - 3 месяца с даты приобретения. Для приобретения Подарочного сертификата позвоните по телефону: 294-59-50 или отправьте заявку на электронную почту - krsk@vlovushke24.ru.'}
             </p>
 
             <p className="text-base md:text-lg lg:text-xl leading-relaxed font-semibold">
-              Стоимость подарочных сертификатов на квесты: "Ключ от всех дверей", "Звонок", "Школа магии Хогвартс", "Алиса в стране чудес" и "Шерлок" - <strong>3500</strong> руб. (60/75-минутные квесты) и "Идеальное ограбление" - <strong>4000</strong> руб. (90-минутный квест).
+              {settings?.certificatePagePricing ||
+                'Стоимость подарочных сертификатов на квесты: "Ключ от всех дверей", "Звонок", "Школа магии Хогвартс", "Алиса в стране чудес" и "Шерлок" - 3500 руб. (60/75-минутные квесты) и "Идеальное ограбление" - 4000 руб. (90-минутный квест).'}
             </p>
           </div>
         </div>
@@ -160,6 +270,18 @@ export default function CertificatePage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <select
+                    name="deliveryType"
+                    value={formData.deliveryType}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-600 transition-colors"
+                  >
+                    <option value="paper">Бумажный</option>
+                    <option value="digital">Электронный</option>
+                  </select>
+                </div>
+
                 <div>
                   <input
                     type="text"

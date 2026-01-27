@@ -368,6 +368,18 @@ public class ContentService : IContentService
                 YoutubeUrl = dto.YoutubeUrl,
                 InstagramUrl = dto.InstagramUrl,
                 TelegramUrl = dto.TelegramUrl,
+                VkIconUrl = dto.VkIconUrl,
+                VkIconColor = dto.VkIconColor,
+                VkIconBackground = dto.VkIconBackground,
+                YoutubeIconUrl = dto.YoutubeIconUrl,
+                YoutubeIconColor = dto.YoutubeIconColor,
+                YoutubeIconBackground = dto.YoutubeIconBackground,
+                InstagramIconUrl = dto.InstagramIconUrl,
+                InstagramIconColor = dto.InstagramIconColor,
+                InstagramIconBackground = dto.InstagramIconBackground,
+                TelegramIconUrl = dto.TelegramIconUrl,
+                TelegramIconColor = dto.TelegramIconColor,
+                TelegramIconBackground = dto.TelegramIconBackground,
                 Address = dto.Address,
                 Email = dto.Email,
                 NotificationEmail = dto.NotificationEmail,
@@ -386,6 +398,14 @@ public class ContentService : IContentService
                 NotifyCertificateCustomer = dto.NotifyCertificateCustomer ?? false,
                 Phone = dto.Phone,
                 LogoUrl = dto.LogoUrl,
+                GiftGameLabel = dto.GiftGameLabel,
+                GiftGameUrl = dto.GiftGameUrl,
+                CertificatePageTitle = dto.CertificatePageTitle,
+                CertificatePageDescription = dto.CertificatePageDescription,
+                CertificatePagePricing = dto.CertificatePagePricing,
+                ReviewsMode = dto.ReviewsMode,
+                ReviewsFlampEmbed = dto.ReviewsFlampEmbed,
+                BookingDaysAhead = dto.BookingDaysAhead > 0 ? dto.BookingDaysAhead : 10,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -397,6 +417,18 @@ public class ContentService : IContentService
             existing.YoutubeUrl = dto.YoutubeUrl;
             existing.InstagramUrl = dto.InstagramUrl;
             existing.TelegramUrl = dto.TelegramUrl;
+            existing.VkIconUrl = dto.VkIconUrl;
+            existing.VkIconColor = dto.VkIconColor;
+            existing.VkIconBackground = dto.VkIconBackground;
+            existing.YoutubeIconUrl = dto.YoutubeIconUrl;
+            existing.YoutubeIconColor = dto.YoutubeIconColor;
+            existing.YoutubeIconBackground = dto.YoutubeIconBackground;
+            existing.InstagramIconUrl = dto.InstagramIconUrl;
+            existing.InstagramIconColor = dto.InstagramIconColor;
+            existing.InstagramIconBackground = dto.InstagramIconBackground;
+            existing.TelegramIconUrl = dto.TelegramIconUrl;
+            existing.TelegramIconColor = dto.TelegramIconColor;
+            existing.TelegramIconBackground = dto.TelegramIconBackground;
             existing.Address = dto.Address;
             existing.Email = dto.Email;
             existing.NotificationEmail = dto.NotificationEmail;
@@ -419,6 +451,20 @@ public class ContentService : IContentService
                 dto.NotifyCertificateCustomer ?? existing.NotifyCertificateCustomer;
             existing.Phone = dto.Phone;
             existing.LogoUrl = dto.LogoUrl;
+            existing.GiftGameLabel = dto.GiftGameLabel ?? existing.GiftGameLabel;
+            existing.GiftGameUrl = dto.GiftGameUrl ?? existing.GiftGameUrl;
+            existing.CertificatePageTitle =
+                dto.CertificatePageTitle ?? existing.CertificatePageTitle;
+            existing.CertificatePageDescription =
+                dto.CertificatePageDescription ?? existing.CertificatePageDescription;
+            existing.CertificatePagePricing =
+                dto.CertificatePagePricing ?? existing.CertificatePagePricing;
+            existing.ReviewsMode = dto.ReviewsMode ?? existing.ReviewsMode;
+            existing.ReviewsFlampEmbed = dto.ReviewsFlampEmbed ?? existing.ReviewsFlampEmbed;
+            if (dto.BookingDaysAhead > 0)
+            {
+                existing.BookingDaysAhead = dto.BookingDaysAhead;
+            }
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -513,6 +559,18 @@ public class ContentService : IContentService
             YoutubeUrl = settings.YoutubeUrl,
             InstagramUrl = settings.InstagramUrl,
             TelegramUrl = settings.TelegramUrl,
+            VkIconUrl = settings.VkIconUrl,
+            VkIconColor = settings.VkIconColor,
+            VkIconBackground = settings.VkIconBackground,
+            YoutubeIconUrl = settings.YoutubeIconUrl,
+            YoutubeIconColor = settings.YoutubeIconColor,
+            YoutubeIconBackground = settings.YoutubeIconBackground,
+            InstagramIconUrl = settings.InstagramIconUrl,
+            InstagramIconColor = settings.InstagramIconColor,
+            InstagramIconBackground = settings.InstagramIconBackground,
+            TelegramIconUrl = settings.TelegramIconUrl,
+            TelegramIconColor = settings.TelegramIconColor,
+            TelegramIconBackground = settings.TelegramIconBackground,
             Address = settings.Address,
             Email = settings.Email,
             NotificationEmail = settings.NotificationEmail,
@@ -531,6 +589,14 @@ public class ContentService : IContentService
             NotifyCertificateCustomer = settings.NotifyCertificateCustomer,
             Phone = settings.Phone,
             LogoUrl = settings.LogoUrl,
+            GiftGameLabel = settings.GiftGameLabel,
+            GiftGameUrl = settings.GiftGameUrl,
+            CertificatePageTitle = settings.CertificatePageTitle,
+            CertificatePageDescription = settings.CertificatePageDescription,
+            CertificatePagePricing = settings.CertificatePagePricing,
+            ReviewsMode = settings.ReviewsMode,
+            ReviewsFlampEmbed = settings.ReviewsFlampEmbed,
+            BookingDaysAhead = settings.BookingDaysAhead,
             UpdatedAt = settings.UpdatedAt
         };
     }

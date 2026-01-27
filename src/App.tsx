@@ -20,9 +20,11 @@ import CertificatesAdminPage from './pages/admin/CertificatesPage';
 import CertificateOrdersAdminPage from './pages/admin/CertificateOrdersPage';
 import ReviewsAdminPage from './pages/admin/ReviewsAdminPage';
 import PromotionsAdminPage from './pages/admin/PromotionsAdminPage';
+import PromoCodesPage from './pages/admin/PromoCodesPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PricingRulesPage from './pages/admin/PricingRulesPage';
 import ScrollToTopButton from './components/ScrollToTopButton';
+import ProductionCalendarPage from './pages/admin/ProductionCalendarPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -47,12 +49,14 @@ function App() {
                 <Route path="quests" element={<QuestsPage />} />
                 <Route path="bookings" element={<BookingsPage />} />
                 <Route path="pricing" element={<PricingRulesPage />} />
+                <Route path="production-calendar" element={<ProductionCalendarPage />} />
                 <Route path="rules" element={<RulesAdminPage />} />
                 <Route path="about" element={<AboutAdminPage />} />
                 <Route path="certificates" element={<CertificatesAdminPage />} />
                 <Route path="certificate-orders" element={<CertificateOrdersAdminPage />} />
                 <Route path="reviews" element={<ReviewsAdminPage />} />
                 <Route path="promotions" element={<PromotionsAdminPage />} />
+                <Route path="promo-codes" element={<PromoCodesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Routes>

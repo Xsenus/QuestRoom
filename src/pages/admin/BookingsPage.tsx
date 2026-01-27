@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
 import { Booking, Quest, QuestSchedule } from '../../lib/types';
-import { Calendar, User, Phone, Mail, Users, FileText, Edit, Save, X } from 'lucide-react';
+import { Calendar, User, Phone, Mail, Users, FileText, Edit, Save, X, BadgeDollarSign } from 'lucide-react';
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -694,6 +694,8 @@ export default function BookingsPage() {
                     <th className="text-left px-4 py-3 font-semibold">Квест</th>
                     <th className="text-left px-4 py-3 font-semibold">Клиент</th>
                     <th className="text-left px-4 py-3 font-semibold">Участников</th>
+                    <th className="text-left px-4 py-3 font-semibold">Сумма</th>
+                    <th className="text-left px-4 py-3 font-semibold">Промокод</th>
                     <th className="text-left px-4 py-3 font-semibold">Примечания</th>
                     <th className="text-right px-4 py-3 font-semibold">Действия</th>
                   </tr>
@@ -742,6 +744,21 @@ export default function BookingsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-700">{booking.participantsCount}</td>
+                      <td className="px-4 py-3 text-gray-700">{booking.totalPrice} ₽</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {booking.promoCode ? (
+                          <div>
+                            <div className="font-semibold">{booking.promoCode}</div>
+                            {booking.promoDiscountAmount != null && (
+                              <div className="text-xs text-gray-500">
+                                −{booking.promoDiscountAmount} ₽
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-gray-600">
                         <p className="line-clamp-2">{booking.notes || '—'}</p>
                       </td>
@@ -889,6 +906,22 @@ export default function BookingsPage() {
                       <span className="font-semibold">Участников:</span>
                       <span>{booking.participantsCount}</span>
                     </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <BadgeDollarSign className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Сумма:</span>
+                      <span>{booking.totalPrice} ₽</span>
+                    </div>
+                    {booking.promoCode && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="font-semibold">Промокод:</span>
+                        <span>{booking.promoCode}</span>
+                        {booking.promoDiscountAmount != null && (
+                          <span className="text-xs text-gray-500">
+                            −{booking.promoDiscountAmount} ₽
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {booking.notes && (

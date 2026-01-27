@@ -14,6 +14,7 @@ export type Quest = {
   price: number;
   duration: number;
   difficulty: number;
+  difficultyMax: number;
   isNew: boolean;
   isVisible: boolean;
   mainImage: string | null;
@@ -45,6 +46,18 @@ export type Settings = {
   youtubeUrl: string | null;
   instagramUrl: string | null;
   telegramUrl: string | null;
+  vkIconUrl: string | null;
+  vkIconColor: string | null;
+  vkIconBackground: string | null;
+  youtubeIconUrl: string | null;
+  youtubeIconColor: string | null;
+  youtubeIconBackground: string | null;
+  instagramIconUrl: string | null;
+  instagramIconColor: string | null;
+  instagramIconBackground: string | null;
+  telegramIconUrl: string | null;
+  telegramIconColor: string | null;
+  telegramIconBackground: string | null;
   address: string | null;
   email: string | null;
   notificationEmail: string | null;
@@ -63,6 +76,14 @@ export type Settings = {
   notifyCertificateCustomer: boolean;
   phone: string | null;
   logoUrl: string | null;
+  giftGameLabel: string | null;
+  giftGameUrl: string | null;
+  certificatePageTitle: string | null;
+  certificatePageDescription: string | null;
+  certificatePagePricing: string | null;
+  reviewsMode: string | null;
+  reviewsFlampEmbed: string | null;
+  bookingDaysAhead: number;
   updatedAt: string;
 };
 
@@ -79,6 +100,11 @@ export type Booking = {
   participantsCount: number;
   extraParticipantsCount: number;
   totalPrice: number;
+  paymentType: string;
+  promoCode: string | null;
+  promoDiscountType: string | null;
+  promoDiscountValue: number | null;
+  promoDiscountAmount: number | null;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes: string | null;
   extraServices: BookingExtraService[];
@@ -96,6 +122,8 @@ export type BookingCreate = {
   participantsCount: number;
   notes: string | null;
   extraServiceIds: string[];
+  paymentType?: string | null;
+  promoCode?: string | null;
 };
 
 export type BookingUpdate = Partial<
@@ -169,6 +197,7 @@ export type CertificateOrder = {
   customerEmail: string | null;
   notes: string | null;
   status: string;
+  deliveryType: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -179,7 +208,41 @@ export type CertificateOrderCreate = Omit<
 >;
 
 export type CertificateOrderUpdate = Partial<
-  Pick<CertificateOrder, 'customerName' | 'customerPhone' | 'customerEmail' | 'notes' | 'status'>
+  Pick<
+    CertificateOrder,
+    'customerName' | 'customerPhone' | 'customerEmail' | 'notes' | 'status' | 'deliveryType'
+  >
+>;
+
+export type PromoCode = {
+  id: string;
+  code: string;
+  name: string | null;
+  description: string | null;
+  discountType: string;
+  discountValue: number;
+  validFrom: string;
+  validUntil: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PromoCodeUpsert = Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type ProductionCalendarDay = {
+  id: string;
+  date: string;
+  title: string | null;
+  isHoliday: boolean;
+  source: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProductionCalendarDayUpsert = Omit<
+  ProductionCalendarDay,
+  'id' | 'createdAt' | 'updatedAt'
 >;
 
 export type Review = {

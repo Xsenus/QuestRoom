@@ -17,6 +17,7 @@ public class QuestDto
     public int Price { get; set; }
     public int Duration { get; set; }
     public int Difficulty { get; set; }
+    public int DifficultyMax { get; set; }
     public bool IsNew { get; set; }
     public bool IsVisible { get; set; }
     public string? MainImage { get; set; }

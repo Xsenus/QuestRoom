@@ -1,23 +1,21 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star } from 'lucide-react';
+import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key } from 'lucide-react';
 import { Quest } from '../lib/types';
 
 interface QuestCardProps {
   quest: Quest;
+  giftGameLabel?: string | null;
+  giftGameUrl?: string | null;
 }
 
-export default function QuestCard({ quest }: QuestCardProps) {
+export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCardProps) {
   const navigate = useNavigate();
   const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
   const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
   const difficultyValue = quest.difficulty || 1;
-  const difficultyBadgeUrl =
-    difficultyValue >= 3
-      ? '/images/difficulty/star3.png'
-      : difficultyValue >= 2
-      ? '/images/difficulty/star2.png'
-      : null;
+  const difficultyMax = Math.max(1, quest.difficultyMax || 5);
+  const filledKeys = Math.min(difficultyValue, difficultyMax);
 
   while (additionalImages.length < 4) {
     additionalImages.push(mainImage);
@@ -48,16 +46,17 @@ export default function QuestCard({ quest }: QuestCardProps) {
                     {quest.ageRating}
                   </span>
                   <span className="inline-flex items-center gap-2 bg-white/20 text-white text-[10px] md:text-sm font-semibold px-2 py-1 rounded-full">
-                    {difficultyBadgeUrl ? (
-                      <img
-                        src={difficultyBadgeUrl}
-                        alt={`Сложность ${difficultyValue}`}
-                        className="w-4 h-4 object-contain"
-                      />
-                    ) : (
-                      <span className="text-yellow-200">★</span>
-                    )}
-                    Сложность {difficultyValue}
+                    <span className="flex items-center gap-1">
+                      {Array.from({ length: difficultyMax }).map((_, index) => (
+                        <Key
+                          key={index}
+                          className={`w-4 h-4 ${
+                            index < filledKeys ? 'text-yellow-300' : 'text-white/40'
+                          }`}
+                        />
+                      ))}
+                    </span>
+                    {difficultyValue}/{difficultyMax}
                   </span>
                 </div>
                 <div className="space-y-1.5 md:space-y-2">
@@ -68,8 +67,18 @@ export default function QuestCard({ quest }: QuestCardProps) {
                     Записаться на квест
                   </button>
                   <div>
-                    <button className="text-white/90 hover:text-white font-semibold text-[10px] md:text-sm tracking-wide transition-all underline">
-                      Подарить игру
+                    <button
+                      className="text-white/90 hover:text-white font-semibold text-[10px] md:text-sm tracking-wide transition-all underline"
+                      onClick={() => {
+                        const targetUrl = giftGameUrl || '/certificate';
+                        if (targetUrl.startsWith('http')) {
+                          window.location.href = targetUrl;
+                        } else {
+                          navigate(targetUrl);
+                        }
+                      }}
+                    >
+                      {giftGameLabel || 'Подарить игру'}
                     </button>
                   </div>
                   <button className="flex items-center gap-2 text-white/90 hover:text-white transition-all">

@@ -32,6 +32,9 @@ public class CertificateOrder
     [Column("notes")]
     public string? Notes { get; set; }
 
+    [Column("delivery_type")]
+    public string? DeliveryType { get; set; }
+
     [Column("status")]
     public string Status { get; set; } = "pending";
 

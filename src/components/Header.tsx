@@ -13,7 +13,7 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
     { id: 'home', label: 'Домашняя', icon: Home, path: '/' },
     { id: 'about', label: 'О проекте', icon: Info, path: '/about' },
     { id: 'rules', label: 'Правила игры', icon: ScrollText, path: '/rules' },
-    { id: 'certificate', label: 'Сертификаты', icon: Award, path: '/certificate' },
+    { id: 'certificate', label: 'Подарочные сертификаты', icon: Award, path: '/certificate' },
     { id: 'reviews', label: 'Отзывы', icon: MessageSquareText, path: '/reviews' },
     { id: 'promotions', label: 'Акции', icon: BadgePercent, path: '/promotions' },
   ];
