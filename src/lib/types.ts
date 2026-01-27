@@ -7,6 +7,8 @@ export type Quest = {
   phones: string[];
   participantsMin: number;
   participantsMax: number;
+  extraParticipantsMax: number;
+  extraParticipantPrice: number;
   ageRestriction: string;
   ageRating: string;
   price: number;
@@ -19,9 +21,15 @@ export type Quest = {
   createdAt: string;
   updatedAt: string;
   sortOrder: number;
+  extraServices: QuestExtraService[];
 };
 
-export type QuestUpsert = Omit<Quest, 'id' | 'createdAt' | 'updatedAt' | 'slug'>;
+export type QuestUpsert = Omit<
+  Quest,
+  'id' | 'createdAt' | 'updatedAt' | 'slug' | 'extraServices'
+> & {
+  extraServices: QuestExtraServiceUpsert[];
+};
 
 export type DurationBadge = {
   id: string;
@@ -49,6 +57,8 @@ export type Settings = {
   smtpFromName: string | null;
   notifyBookingAdmin: boolean;
   notifyBookingCustomer: boolean;
+  bookingEmailTemplateAdmin: string | null;
+  bookingEmailTemplateCustomer: string | null;
   notifyCertificateAdmin: boolean;
   notifyCertificateCustomer: boolean;
   phone: string | null;
@@ -67,16 +77,26 @@ export type Booking = {
   customerEmail: string | null;
   bookingDate: string;
   participantsCount: number;
+  extraParticipantsCount: number;
+  totalPrice: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes: string | null;
+  extraServices: BookingExtraService[];
   createdAt: string;
   updatedAt: string;
 };
 
-export type BookingCreate = Omit<
-  Booking,
-  'id' | 'status' | 'createdAt' | 'updatedAt'
->;
+export type BookingCreate = {
+  questId: string | null;
+  questScheduleId: string | null;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  bookingDate: string;
+  participantsCount: number;
+  notes: string | null;
+  extraServiceIds: string[];
+};
 
 export type BookingUpdate = Partial<
   Pick<
@@ -84,6 +104,24 @@ export type BookingUpdate = Partial<
     'status' | 'notes' | 'customerName' | 'customerPhone' | 'customerEmail' | 'participantsCount'
   >
 >;
+
+export type QuestExtraService = {
+  id: string;
+  title: string;
+  price: number;
+};
+
+export type QuestExtraServiceUpsert = {
+  id?: string;
+  title: string;
+  price: number;
+};
+
+export type BookingExtraService = {
+  id: string;
+  title: string;
+  price: number;
+};
 
 export type Rule = {
   id: string;

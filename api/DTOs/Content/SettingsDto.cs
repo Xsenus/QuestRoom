@@ -19,6 +19,8 @@ public class SettingsDto
     public string? SmtpFromName { get; set; }
     public bool NotifyBookingAdmin { get; set; }
     public bool NotifyBookingCustomer { get; set; }
+    public string? BookingEmailTemplateAdmin { get; set; }
+    public string? BookingEmailTemplateCustomer { get; set; }
     public bool NotifyCertificateAdmin { get; set; }
     public bool NotifyCertificateCustomer { get; set; }
     public string? Phone { get; set; }

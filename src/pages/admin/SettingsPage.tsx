@@ -36,6 +36,8 @@ export default function SettingsPage() {
         smtpFromName: null,
         notifyBookingAdmin: false,
         notifyBookingCustomer: false,
+        bookingEmailTemplateAdmin: null,
+        bookingEmailTemplateCustomer: null,
         notifyCertificateAdmin: false,
         notifyCertificateCustomer: false,
         phone: null,
@@ -68,6 +70,8 @@ export default function SettingsPage() {
       smtpFromName: settings.smtpFromName,
       notifyBookingAdmin: settings.notifyBookingAdmin,
       notifyBookingCustomer: settings.notifyBookingCustomer,
+      bookingEmailTemplateAdmin: settings.bookingEmailTemplateAdmin,
+      bookingEmailTemplateCustomer: settings.bookingEmailTemplateCustomer,
       notifyCertificateAdmin: settings.notifyCertificateAdmin,
       notifyCertificateCustomer: settings.notifyCertificateCustomer,
       phone: settings.phone,
@@ -453,6 +457,54 @@ export default function SettingsPage() {
                   />
                   Сертификат → пользователь
                 </label>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <p className="text-sm font-semibold text-gray-700">Шаблоны писем для брони</p>
+              <p className="text-xs text-gray-500">
+                Используйте плейсхолдеры: {'{'}{'{'}customerName{'}'}{'}'}, {'{'}{'{'}customerPhone{'}'}{'}'},
+                {'{'}{'{'}customerEmail{'}'}{'}'}, {'{'}{'{'}bookingDateTime{'}'}{'}'},
+                {'{'}{'{'}participantsCount{'}'}{'}'}, {'{'}{'{'}extraParticipantsCount{'}'}{'}'},
+                {'{'}{'{'}questTitle{'}'}{'}'}, {'{'}{'{'}extraServices{'}'}{'}'},
+                {'{'}{'{'}extraServicesText{'}'}{'}'}, {'{'}{'{'}totalPrice{'}'}{'}'},
+                {'{'}{'{'}status{'}'}{'}'}, {'{'}{'{'}notes{'}'}{'}'}.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Администратор
+                  </label>
+                  <textarea
+                    value={settings.bookingEmailTemplateAdmin || ''}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        bookingEmailTemplateAdmin: e.target.value,
+                      })
+                    }
+                    rows={6}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="HTML шаблон для администратора (если пусто — используется стандартный)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Пользователь
+                  </label>
+                  <textarea
+                    value={settings.bookingEmailTemplateCustomer || ''}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        bookingEmailTemplateCustomer: e.target.value,
+                      })
+                    }
+                    rows={6}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="HTML шаблон для пользователя (если пусто — используется стандартный)"
+                  />
+                </div>
               </div>
             </div>
           </div>

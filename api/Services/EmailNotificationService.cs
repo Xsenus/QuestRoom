@@ -31,33 +31,72 @@ public class EmailNotificationService : IEmailNotificationService
             return;
         }
 
-        var subject = $"Новая бронь: {booking.CustomerName}";
-        var bookingDate = booking.BookingDate.ToString("dd.MM.yyyy");
-        var bookingTime = booking.QuestSchedule?.TimeSlot.ToString("HH:mm");
+        var bookingDetails = await _context.Bookings
+            .Include(b => b.Quest)
+            .Include(b => b.QuestSchedule)
+            .Include(b => b.ExtraServices)
+            .FirstOrDefaultAsync(b => b.Id == booking.Id) ?? booking;
+
+        var subject = $"Новая бронь: {bookingDetails.CustomerName}";
+        var bookingDate = bookingDetails.BookingDate.ToString("dd.MM.yyyy");
+        var bookingTime = bookingDetails.QuestSchedule?.TimeSlot.ToString("HH:mm");
         var bookingDateTime = string.IsNullOrWhiteSpace(bookingTime)
             ? bookingDate
             : $"{bookingDate} {bookingTime}";
 
-        var body = $"""
-                    <p>Поступила новая бронь.</p>
-                    <ul>
-                      <li><strong>Имя:</strong> {booking.CustomerName}</li>
-                      <li><strong>Телефон:</strong> {booking.CustomerPhone}</li>
-                      <li><strong>Email:</strong> {booking.CustomerEmail ?? "не указан"}</li>
-                      <li><strong>Дата:</strong> {bookingDateTime}</li>
-                      <li><strong>Участников:</strong> {booking.ParticipantsCount}</li>
-                      <li><strong>Статус:</strong> {booking.Status}</li>
-                      <li><strong>Комментарий:</strong> {booking.Notes ?? "нет"}</li>
-                    </ul>
-                    """;
+        var extraServicesHtml = bookingDetails.ExtraServices.Count == 0
+            ? "нет"
+            : $"<ul>{string.Join("", bookingDetails.ExtraServices.Select(service => $"<li>{service.Title} — {service.Price} ₽</li>"))}</ul>";
+        var extraServicesText = bookingDetails.ExtraServices.Count == 0
+            ? "нет"
+            : string.Join(", ", bookingDetails.ExtraServices.Select(service => $"{service.Title} — {service.Price} ₽"));
+
+        var tokens = new Dictionary<string, string>
+        {
+            ["customerName"] = bookingDetails.CustomerName,
+            ["customerPhone"] = bookingDetails.CustomerPhone,
+            ["customerEmail"] = bookingDetails.CustomerEmail ?? "не указан",
+            ["bookingDate"] = bookingDate,
+            ["bookingTime"] = bookingTime ?? string.Empty,
+            ["bookingDateTime"] = bookingDateTime,
+            ["participantsCount"] = bookingDetails.ParticipantsCount.ToString(),
+            ["extraParticipantsCount"] = bookingDetails.ExtraParticipantsCount.ToString(),
+            ["questTitle"] = bookingDetails.Quest?.Title ?? "не указан",
+            ["totalPrice"] = bookingDetails.TotalPrice.ToString(),
+            ["status"] = bookingDetails.Status,
+            ["notes"] = bookingDetails.Notes ?? "нет",
+            ["extraServices"] = extraServicesHtml,
+            ["extraServicesText"] = extraServicesText
+        };
+
+        var defaultBody = $"""
+                          <p>Поступила новая бронь.</p>
+                          <ul>
+                            <li><strong>Квест:</strong> {tokens["questTitle"]}</li>
+                            <li><strong>Имя:</strong> {tokens["customerName"]}</li>
+                            <li><strong>Телефон:</strong> {tokens["customerPhone"]}</li>
+                            <li><strong>Email:</strong> {tokens["customerEmail"]}</li>
+                            <li><strong>Дата:</strong> {tokens["bookingDateTime"]}</li>
+                            <li><strong>Участников:</strong> {tokens["participantsCount"]}</li>
+                            <li><strong>Доп. участники:</strong> {tokens["extraParticipantsCount"]}</li>
+                            <li><strong>Доп. услуги:</strong> {tokens["extraServicesText"]}</li>
+                            <li><strong>Итого:</strong> {tokens["totalPrice"]} ₽</li>
+                            <li><strong>Статус:</strong> {tokens["status"]}</li>
+                            <li><strong>Комментарий:</strong> {tokens["notes"]}</li>
+                          </ul>
+                          """;
+
+        var adminBody = ApplyTemplate(settings.BookingEmailTemplateAdmin, tokens, defaultBody);
+        var customerBody = ApplyTemplate(settings.BookingEmailTemplateCustomer, tokens, defaultBody);
 
         await SendConfiguredEmailsAsync(
             settings,
             settings.NotifyBookingAdmin,
             settings.NotifyBookingCustomer,
-            booking.CustomerEmail,
+            bookingDetails.CustomerEmail,
             subject,
-            body);
+            adminBody,
+            customerBody);
     }
 
     public async Task SendCertificateOrderNotificationsAsync(CertificateOrder order)
@@ -87,6 +126,7 @@ public class EmailNotificationService : IEmailNotificationService
             settings.NotifyCertificateCustomer,
             order.CustomerEmail,
             subject,
+            body,
             body);
     }
 
@@ -101,7 +141,8 @@ public class EmailNotificationService : IEmailNotificationService
         bool notifyCustomer,
         string? customerEmail,
         string subject,
-        string body)
+        string adminBody,
+        string customerBody)
     {
         if (!HasSmtpConfiguration(settings))
         {
@@ -114,13 +155,13 @@ public class EmailNotificationService : IEmailNotificationService
             var adminRecipients = ParseRecipients(settings.NotificationEmail ?? settings.Email);
             foreach (var recipient in adminRecipients)
             {
-                await SendEmailAsync(settings, recipient, subject, body);
+                await SendEmailAsync(settings, recipient, subject, adminBody);
             }
         }
 
         if (notifyCustomer && !string.IsNullOrWhiteSpace(customerEmail))
         {
-            await SendEmailAsync(settings, customerEmail, subject, body);
+            await SendEmailAsync(settings, customerEmail, subject, customerBody);
         }
     }
 
@@ -187,5 +228,21 @@ public class EmailNotificationService : IEmailNotificationService
             .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(email => email.Trim())
             .Where(email => !string.IsNullOrWhiteSpace(email));
+    }
+
+    private static string ApplyTemplate(string? template, Dictionary<string, string> tokens, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(template))
+        {
+            return fallback;
+        }
+
+        var result = template;
+        foreach (var (key, value) in tokens)
+        {
+            result = result.Replace($"{{{{{key}}}}}", value, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return result;
     }
 }

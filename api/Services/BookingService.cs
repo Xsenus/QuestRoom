@@ -27,6 +27,7 @@ public class BookingService : IBookingService
     public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync()
     {
         return await _context.Bookings
+            .Include(b => b.ExtraServices)
             .OrderBy(b => b.BookingDate)
             .Select(b => ToDto(b))
             .ToListAsync();
@@ -40,6 +41,7 @@ public class BookingService : IBookingService
 
         try
         {
+            Quest? quest = null;
             QuestSchedule? schedule = null;
             if (dto.QuestScheduleId.HasValue)
             {
@@ -60,21 +62,64 @@ public class BookingService : IBookingService
                 throw new InvalidOperationException("Не указан квест для бронирования.");
             }
 
+            var questId = dto.QuestId ?? schedule?.QuestId;
+            if (questId.HasValue)
+            {
+                quest = await _context.Quests
+                    .Include(q => q.ExtraServices)
+                    .FirstOrDefaultAsync(q => q.Id == questId.Value);
+            }
+
+            if (quest == null)
+            {
+                throw new InvalidOperationException("Квест не найден.");
+            }
+
+            var maxParticipants = quest.ParticipantsMax + Math.Max(0, quest.ExtraParticipantsMax);
+            if (dto.ParticipantsCount < quest.ParticipantsMin || dto.ParticipantsCount > maxParticipants)
+            {
+                throw new InvalidOperationException("Количество участников выходит за допустимый диапазон.");
+            }
+
+            var selectedExtras = quest.ExtraServices
+                .Where(service => dto.ExtraServiceIds.Contains(service.Id))
+                .ToList();
+            var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - quest.ParticipantsMax);
+            var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, quest.ExtraParticipantPrice);
+            var extrasTotal = selectedExtras.Sum(service => service.Price);
+            var basePrice = schedule?.Price ?? quest.Price;
+            var totalPrice = basePrice + extraParticipantsTotal + extrasTotal;
+
             booking = new Booking
             {
                 Id = Guid.NewGuid(),
-                QuestId = dto.QuestId ?? schedule?.QuestId,
+                QuestId = questId,
                 QuestScheduleId = dto.QuestScheduleId,
                 CustomerName = dto.CustomerName,
                 CustomerPhone = dto.CustomerPhone,
                 CustomerEmail = dto.CustomerEmail,
                 BookingDate = schedule?.Date ?? dto.BookingDate,
                 ParticipantsCount = dto.ParticipantsCount,
+                ExtraParticipantsCount = extraParticipantsCount,
+                TotalPrice = totalPrice,
                 Status = "pending",
                 Notes = dto.Notes,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+
+            foreach (var service in selectedExtras)
+            {
+                booking.ExtraServices.Add(new BookingExtraService
+                {
+                    Id = Guid.NewGuid(),
+                    BookingId = booking.Id,
+                    QuestExtraServiceId = service.Id,
+                    Title = service.Title,
+                    Price = service.Price,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
 
             _context.Bookings.Add(booking);
             await _context.SaveChangesAsync();
@@ -136,6 +181,11 @@ public class BookingService : IBookingService
         }
         booking.UpdatedAt = DateTime.UtcNow;
 
+        if (dto.ParticipantsCount.HasValue)
+        {
+            await RecalculateTotalsAsync(booking);
+        }
+
         if (nextStatus == "cancelled" && !wasCancelled && booking.QuestScheduleId.HasValue)
         {
             var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
@@ -196,10 +246,47 @@ public class BookingService : IBookingService
             CustomerEmail = booking.CustomerEmail,
             BookingDate = booking.BookingDate,
             ParticipantsCount = booking.ParticipantsCount,
+            ExtraParticipantsCount = booking.ExtraParticipantsCount,
+            TotalPrice = booking.TotalPrice,
             Status = booking.Status,
             Notes = booking.Notes,
+            ExtraServices = booking.ExtraServices
+                .Select(service => new BookingExtraServiceDto
+                {
+                    Id = service.Id,
+                    Title = service.Title,
+                    Price = service.Price
+                })
+                .ToList(),
             CreatedAt = booking.CreatedAt,
             UpdatedAt = booking.UpdatedAt
         };
+    }
+
+    private async Task RecalculateTotalsAsync(Booking booking)
+    {
+        var quest = booking.QuestId.HasValue
+            ? await _context.Quests.FindAsync(booking.QuestId.Value)
+            : null;
+        if (quest == null)
+        {
+            return;
+        }
+
+        var schedule = booking.QuestScheduleId.HasValue
+            ? await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value)
+            : null;
+
+        var extraServices = await _context.BookingExtraServices
+            .Where(service => service.BookingId == booking.Id)
+            .ToListAsync();
+
+        var extraParticipantsCount = Math.Max(0, booking.ParticipantsCount - quest.ParticipantsMax);
+        var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, quest.ExtraParticipantPrice);
+        var extrasTotal = extraServices.Sum(service => service.Price);
+        var basePrice = schedule?.Price ?? quest.Price;
+
+        booking.ExtraParticipantsCount = extraParticipantsCount;
+        booking.TotalPrice = basePrice + extraParticipantsTotal + extrasTotal;
     }
 }

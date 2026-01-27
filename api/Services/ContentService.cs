@@ -380,6 +380,8 @@ public class ContentService : IContentService
                 SmtpFromName = dto.SmtpFromName,
                 NotifyBookingAdmin = dto.NotifyBookingAdmin ?? false,
                 NotifyBookingCustomer = dto.NotifyBookingCustomer ?? false,
+                BookingEmailTemplateAdmin = dto.BookingEmailTemplateAdmin,
+                BookingEmailTemplateCustomer = dto.BookingEmailTemplateCustomer,
                 NotifyCertificateAdmin = dto.NotifyCertificateAdmin ?? false,
                 NotifyCertificateCustomer = dto.NotifyCertificateCustomer ?? false,
                 Phone = dto.Phone,
@@ -407,6 +409,10 @@ public class ContentService : IContentService
             existing.SmtpFromName = dto.SmtpFromName;
             existing.NotifyBookingAdmin = dto.NotifyBookingAdmin ?? existing.NotifyBookingAdmin;
             existing.NotifyBookingCustomer = dto.NotifyBookingCustomer ?? existing.NotifyBookingCustomer;
+            existing.BookingEmailTemplateAdmin =
+                dto.BookingEmailTemplateAdmin ?? existing.BookingEmailTemplateAdmin;
+            existing.BookingEmailTemplateCustomer =
+                dto.BookingEmailTemplateCustomer ?? existing.BookingEmailTemplateCustomer;
             existing.NotifyCertificateAdmin =
                 dto.NotifyCertificateAdmin ?? existing.NotifyCertificateAdmin;
             existing.NotifyCertificateCustomer =
@@ -519,6 +525,8 @@ public class ContentService : IContentService
             SmtpFromName = settings.SmtpFromName,
             NotifyBookingAdmin = settings.NotifyBookingAdmin,
             NotifyBookingCustomer = settings.NotifyBookingCustomer,
+            BookingEmailTemplateAdmin = settings.BookingEmailTemplateAdmin,
+            BookingEmailTemplateCustomer = settings.BookingEmailTemplateCustomer,
             NotifyCertificateAdmin = settings.NotifyCertificateAdmin,
             NotifyCertificateCustomer = settings.NotifyCertificateCustomer,
             Phone = settings.Phone,

@@ -10,4 +10,5 @@ public class BookingCreateDto
     public DateOnly BookingDate { get; set; }
     public int ParticipantsCount { get; set; }
     public string? Notes { get; set; }
+    public Guid[] ExtraServiceIds { get; set; } = Array.Empty<Guid>();
 }

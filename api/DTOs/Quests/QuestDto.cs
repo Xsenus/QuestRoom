@@ -10,6 +10,8 @@ public class QuestDto
     public string[] Phones { get; set; } = Array.Empty<string>();
     public int ParticipantsMin { get; set; }
     public int ParticipantsMax { get; set; }
+    public int ExtraParticipantsMax { get; set; }
+    public int ExtraParticipantPrice { get; set; }
     public string AgeRestriction { get; set; } = string.Empty;
     public string AgeRating { get; set; } = string.Empty;
     public int Price { get; set; }
@@ -20,6 +22,7 @@ public class QuestDto
     public string? MainImage { get; set; }
     public string[] Images { get; set; } = Array.Empty<string>();
     public int SortOrder { get; set; }
+    public List<QuestExtraServiceDto> ExtraServices { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
