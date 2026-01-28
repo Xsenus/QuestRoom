@@ -1,0 +1,408 @@
+import { useMemo, useState, useEffect } from 'react';
+import { Check, Shield, Plus, Trash2, Pencil, RefreshCw } from 'lucide-react';
+import { api } from '../../lib/api';
+import type { PermissionGroup, RoleDefinition } from '../../lib/types';
+
+interface EditableRole {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  system?: boolean;
+}
+
+export default function RolesPage() {
+  const [roles, setRoles] = useState<RoleDefinition[]>([]);
+  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editor, setEditor] = useState<EditableRole | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const selectedRole = useMemo(
+    () => roles.find((role) => role.id === selectedId) || null,
+    [roles, selectedId]
+  );
+
+  const permissionIndex = useMemo(() => {
+    return permissionGroups.flatMap((group) =>
+      group.permissions.map((item) => ({ ...item, groupId: group.id, groupTitle: group.title }))
+    );
+  }, [permissionGroups]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [rolesData, permissionsData] = await Promise.all([
+        api.getRoles(),
+        api.getPermissionGroups(),
+      ]);
+      setRoles(rolesData);
+      setPermissionGroups(permissionsData);
+      setSelectedId(rolesData[0]?.id ?? null);
+      setError(null);
+    } catch (fetchError) {
+      setError((fetchError as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startCreate = () => {
+    setEditor({
+      id: `role-${Date.now()}`,
+      name: '',
+      description: '',
+      permissions: [],
+    });
+    setIsCreating(true);
+  };
+
+  const startEdit = (role: RoleDefinition) => {
+    setEditor({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      permissions: [...role.permissions],
+      system: role.isSystem,
+    });
+    setIsCreating(false);
+  };
+
+  const saveEditor = async () => {
+    if (!editor) return;
+    if (!editor.name.trim()) {
+      alert('Название роли обязательно.');
+      return;
+    }
+    try {
+      if (isCreating) {
+        const created = await api.createRole({
+          name: editor.name,
+          description: editor.description,
+          permissions: editor.permissions,
+        });
+        setRoles((prev) => [created, ...prev]);
+        setSelectedId(created.id);
+      } else {
+        const updated = await api.updateRole(editor.id, {
+          name: editor.name,
+          description: editor.description,
+          permissions: editor.permissions,
+        });
+        setRoles((prev) => prev.map((role) => (role.id === updated.id ? updated : role)));
+      }
+      setEditor(null);
+      setIsCreating(false);
+      setError(null);
+    } catch (saveError) {
+      alert(`Ошибка при сохранении роли: ${(saveError as Error).message}`);
+    }
+  };
+
+  const deleteRole = async (role: RoleDefinition) => {
+    if (role.isSystem) {
+      alert('Системные роли удалить нельзя.');
+      return;
+    }
+    if (!confirm(`Удалить роль ${role.name}?`)) return;
+    try {
+      await api.deleteRole(role.id);
+      const remaining = roles.filter((item) => item.id !== role.id);
+      setRoles(remaining);
+      if (selectedId === role.id) {
+        setSelectedId(remaining[0]?.id ?? null);
+      }
+    } catch (deleteError) {
+      alert(`Ошибка при удалении роли: ${(deleteError as Error).message}`);
+    }
+  };
+
+  const togglePermission = (permissionId: string) => {
+    if (!editor) return;
+    const hasPermission = editor.permissions.includes(permissionId);
+    const nextPermissions = hasPermission
+      ? editor.permissions.filter((id) => id !== permissionId)
+      : [...editor.permissions, permissionId];
+    setEditor({ ...editor, permissions: nextPermissions });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Роли и права</h2>
+          <p className="text-sm text-gray-500">
+            Настройте роли админ-панели и наборы правил для доступа к разделам.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={startCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-semibold shadow hover:bg-red-700"
+          >
+            <Plus className="h-4 w-4" />
+            Создать роль
+          </button>
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Обновить
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,_1fr)_380px]">
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <tr>
+                  <th className="px-4 py-3">Роль</th>
+                  <th className="px-4 py-3">Права</th>
+                  <th className="px-4 py-3">Обновлено</th>
+                  <th className="px-4 py-3 text-right">Действия</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-sm">
+                {loading && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">
+                      Загрузка ролей...
+                    </td>
+                  </tr>
+                )}
+                {!loading && roles.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">
+                      Роли не найдены.
+                    </td>
+                  </tr>
+                )}
+                {!loading &&
+                  roles.map((role) => (
+                  <tr
+                    key={role.id}
+                    className={`cursor-pointer transition hover:bg-gray-50 ${
+                      selectedId === role.id ? 'bg-red-50' : ''
+                    }`}
+                    onClick={() => setSelectedId(role.id)}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-gray-900">{role.name}</div>
+                      <div className="text-xs text-gray-500">{role.description}</div>
+                      {role.isSystem && (
+                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-500">
+                          <Shield className="h-3 w-3" />
+                          Системная
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {role.permissions.length} прав
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{role.updatedAt}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            startEdit(role);
+                          }}
+                          className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                          <Pencil className="inline h-3.5 w-3.5" />
+                          <span className="ml-1">Изменить</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteRole(role);
+                          }}
+                          className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="inline h-3.5 w-3.5" />
+                          <span className="ml-1">Удалить</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {editor && (
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="flex items-start justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {isCreating ? 'Новая роль' : 'Редактирование роли'}
+                </h3>
+                {editor.system && (
+                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                    Системная роль
+                  </span>
+                )}
+              </div>
+              <div className="mt-4 grid gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Название</label>
+                  <input
+                    type="text"
+                    value={editor.name}
+                    onChange={(event) => setEditor({ ...editor, name: event.target.value })}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    placeholder="Например: Старший менеджер"
+                    disabled={editor.system}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Описание</label>
+                  <textarea
+                    value={editor.description}
+                    onChange={(event) => setEditor({ ...editor, description: event.target.value })}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    rows={3}
+                    placeholder="Опишите, за что отвечает роль"
+                    disabled={editor.system}
+                  />
+                </div>
+              </div>
+              <div className="mt-6 space-y-4">
+                <h4 className="text-sm font-semibold text-gray-700">Права доступа</h4>
+                <div className="grid gap-4">
+                  {permissionGroups.map((group) => (
+                    <div key={group.id} className="rounded-lg border border-gray-200 p-4">
+                      <div className="mb-3">
+                        <div className="text-sm font-semibold text-gray-900">{group.title}</div>
+                        <div className="text-xs text-gray-500">{group.description}</div>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {group.permissions.map((permission) => (
+                          <label
+                            key={permission.id}
+                            className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={editor.permissions.includes(permission.id)}
+                              onChange={() => togglePermission(permission.id)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                              disabled={editor.system}
+                            />
+                            <span>
+                              <span className="font-semibold text-gray-800">{permission.title}</span>
+                              <span className="block text-xs text-gray-500">
+                                {permission.description}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={saveEditor}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Сохранить роль
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditor(null);
+                    setIsCreating(false);
+                  }}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <aside className="space-y-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900">Карточка роли</h3>
+            {selectedRole ? (
+              <div className="mt-4 space-y-4 text-sm">
+                <div>
+                  <div className="text-xs uppercase text-gray-400">Название</div>
+                  <div className="font-semibold text-gray-900">{selectedRole.name}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase text-gray-400">Описание</div>
+                  <div className="text-gray-700">{selectedRole.description}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase text-gray-400">Права</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedRole.permissions.map((permissionId) => {
+                      const permission = permissionIndex.find((item) => item.id === permissionId);
+                      return (
+                        <span
+                          key={permissionId}
+                          className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600"
+                        >
+                          {permission?.title || permissionId}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase text-gray-400">Обновлено</div>
+                  <div className="text-gray-700">{selectedRole.updatedAt}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-lg bg-gray-50 p-4 text-sm text-gray-500">
+                Выберите роль из списка, чтобы увидеть подробности.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm shadow-sm">
+            <h4 className="text-sm font-semibold text-gray-700">Обязательные правила</h4>
+            <div className="mt-3 space-y-2 text-gray-600">
+              <div className="flex items-start gap-2">
+                <Check className="mt-0.5 h-4 w-4 text-green-600" />
+                <span>Системные роли можно только дублировать, но не редактировать.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="mt-0.5 h-4 w-4 text-green-600" />
+                <span>Удаление роли доступно только для пользовательских наборов.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="mt-0.5 h-4 w-4 text-green-600" />
+                <span>Изменения прав сразу применяются к пользователям роли.</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

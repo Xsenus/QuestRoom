@@ -667,7 +667,36 @@ public class DatabaseInitializer : IDatabaseInitializer
             });
         }
 
-        if (!await _context.Users.AnyAsync(u => u.Role == "admin"))
+        var roleSeeds = PermissionCatalog.DefaultRoles;
+        var existingRoles = await _context.Roles.ToDictionaryAsync(role => role.Code);
+
+        foreach (var seed in roleSeeds)
+        {
+            if (existingRoles.ContainsKey(seed.Code))
+            {
+                continue;
+            }
+
+            var role = new Role
+            {
+                Id = Guid.NewGuid(),
+                Code = seed.Code,
+                Name = seed.Name,
+                Description = seed.Description,
+                Permissions = seed.Permissions.ToList(),
+                IsSystem = seed.IsSystem,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Roles.Add(role);
+            existingRoles[seed.Code] = role;
+        }
+
+        var adminRole = existingRoles.TryGetValue("admin", out var roleEntry)
+            ? roleEntry
+            : null;
+
+        if (adminRole != null && !await _context.Users.AnyAsync(u => u.RoleId == adminRole.Id))
         {
             var adminEmail = _configuration["AdminUser:Email"];
             var adminPassword = _configuration["AdminUser:Password"];
@@ -677,9 +706,11 @@ public class DatabaseInitializer : IDatabaseInitializer
                 _context.Users.Add(new User
                 {
                     Id = Guid.NewGuid(),
+                    Name = "Администратор",
                     Email = adminEmail,
                     PasswordHash = _authService.HashPassword(adminPassword),
-                    Role = "admin",
+                    Status = "active",
+                    RoleId = adminRole.Id,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 });
@@ -710,6 +741,8 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.ProductionCalendarDays.RemoveRange(await _context.ProductionCalendarDays.ToListAsync());
         _context.AboutInfos.RemoveRange(await _context.AboutInfos.ToListAsync());
         _context.Settings.RemoveRange(await _context.Settings.ToListAsync());
+        _context.Users.RemoveRange(await _context.Users.ToListAsync());
+        _context.Roles.RemoveRange(await _context.Roles.ToListAsync());
 
         await _context.SaveChangesAsync();
     }

@@ -17,6 +17,8 @@ import {
   ClipboardList,
   TicketPercent,
   CalendarDays,
+  Users,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -142,7 +144,7 @@ export default function AdminLayout() {
             )}
             <NavLink to="/adm/rules" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <FileText className="w-5 h-5" />
-              {!isMenuCollapsed && 'Парвила'}
+              {!isMenuCollapsed && 'Правила'}
             </NavLink>
             <NavLink to="/adm/about" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Info className="w-5 h-5" />
@@ -173,6 +175,14 @@ export default function AdminLayout() {
             <NavLink to="/adm/promo-codes" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <TicketPercent className="w-5 h-5" />
               {!isMenuCollapsed && 'Промокоды'}
+            </NavLink>
+            <NavLink to="/adm/users" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <Users className="w-5 h-5" />
+              {!isMenuCollapsed && 'Пользователи'}
+            </NavLink>
+            <NavLink to="/adm/roles" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <ShieldCheck className="w-5 h-5" />
+              {!isMenuCollapsed && 'Роли и права'}
             </NavLink>
             <NavLink to="/adm/settings" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Settings className="w-5 h-5" />

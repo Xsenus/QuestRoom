@@ -28,11 +28,13 @@ public class AuthService : IAuthService
             _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured")));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
+        var roleCode = user.Role?.Code ?? string.Empty;
+
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role),
+            new Claim(ClaimTypes.Role, roleCode),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
