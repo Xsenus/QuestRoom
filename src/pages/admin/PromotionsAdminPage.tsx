@@ -276,37 +276,46 @@ export default function PromotionsAdminPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Действует до
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={isUnlimited}
-                      onChange={(e) =>
-                        setEditingPromo({
-                          ...editingPromo,
-                          validUntil: e.target.checked
-                            ? null
-                            : editingPromo.validFrom || new Date().toISOString().split('T')[0],
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-700">Действует до</label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingPromo({
+                        ...editingPromo,
+                        validUntil: isUnlimited
+                          ? editingPromo.validFrom || new Date().toISOString().split('T')[0]
+                          : null,
+                      })
+                    }
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                      isUnlimited
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border-gray-200 bg-white text-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        isUnlimited ? 'bg-emerald-500' : 'bg-gray-300'
+                      }`}
+                    ></span>
                     Без ограничения
-                  </label>
-                  {!isUnlimited && (
-                    <input
-                      type="date"
-                      value={editingPromo.validUntil || ''}
-                      onChange={(e) =>
-                        setEditingPromo({ ...editingPromo, validUntil: e.target.value || null })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    />
-                  )}
+                  </button>
                 </div>
+                {isUnlimited ? (
+                  <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                    Акция действует без ограничений по дате окончания.
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    value={editingPromo.validUntil || ''}
+                    onChange={(e) =>
+                      setEditingPromo({ ...editingPromo, validUntil: e.target.value || null })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                )}
               </div>
 
               <div>

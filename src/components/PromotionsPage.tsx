@@ -70,7 +70,11 @@ export default function PromotionsPage() {
                       <img
                         src={promo.imageUrl}
                         alt={promo.title}
-                        className="w-full max-h-[420px] object-cover rounded-lg"
+                        className={`w-full rounded-lg bg-white/5 ${
+                          promotionsPerRow === 1
+                            ? 'max-h-[420px] object-contain'
+                            : 'max-h-[320px] object-cover'
+                        }`}
                       />
                     ) : (
                       <div className="h-56 rounded-lg border border-dashed border-white/40 flex items-center justify-center text-white/70">
