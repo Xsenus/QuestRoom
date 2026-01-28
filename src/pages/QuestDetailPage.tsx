@@ -254,13 +254,15 @@ export default function QuestDetailPage() {
 
           <div className="text-white">
             <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:gap-3">
-              <h1 className="text-3xl sm:text-4xl font-bold">{quest.title}</h1>
-              <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
-                <div className="bg-red-600 rounded-full px-4 py-2 flex items-center gap-2">
+              <h1 className="text-3xl sm:text-4xl font-bold text-center sm:text-left">
+                {quest.title}
+              </h1>
+              <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:justify-start sm:gap-3">
+                <div className="bg-red-600 rounded-full px-4 py-2 flex items-center justify-center gap-2">
                   <Star className="w-5 h-5 fill-white" />
                   <span className="font-bold">{formatAgeRating(quest.ageRating)}</span>
                 </div>
-                <div className="bg-white/20 rounded-full px-4 py-2 flex items-center gap-2">
+                <div className="bg-white/20 rounded-full px-4 py-2 flex items-center justify-center gap-2">
                   <span className="flex items-center gap-1">
                     {Array.from({ length: difficultyMax }).map((_, index) => (
                       <Key
