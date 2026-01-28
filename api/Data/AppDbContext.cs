@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<Role> Roles { get; set; }
     public DbSet<Quest> Quests { get; set; }
     public DbSet<QuestExtraService> QuestExtraServices { get; set; }
     public DbSet<DurationBadge> DurationBadges { get; set; }
@@ -61,6 +62,23 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(e => e.Email)
             .IsUnique();
+
+        modelBuilder.Entity<Role>()
+            .HasIndex(e => e.Code)
+            .IsUnique();
+
+        modelBuilder.Entity<Role>()
+            .Property(e => e.Permissions)
+            .HasConversion(
+                permissions => System.Text.Json.JsonSerializer.Serialize(permissions, (System.Text.Json.JsonSerializerOptions?)null),
+                json => System.Text.Json.JsonSerializer.Deserialize<List<string>>(json, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>())
+            .HasColumnType("jsonb");
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.Role)
+            .WithMany()
+            .HasForeignKey(u => u.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Booking>()
             .HasOne(b => b.Quest)

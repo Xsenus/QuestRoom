@@ -24,6 +24,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
         var user = await _context.Users
+            .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null || !_authService.VerifyPassword(request.Password, user.PasswordHash))
@@ -31,13 +32,22 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Неверный email или пароль" });
         }
 
+        if (!string.Equals(user.Status, "active", StringComparison.OrdinalIgnoreCase))
+        {
+            return Unauthorized(new { message = "Доступ к аккаунту ограничен. Обратитесь к администратору." });
+        }
+
+        user.LastLoginAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
         var token = _authService.GenerateJwtToken(user);
 
         return Ok(new LoginResponse
         {
             Token = token,
             Email = user.Email,
-            Role = user.Role
+            Role = user.Role?.Code ?? string.Empty
         });
     }
 
@@ -45,7 +55,13 @@ public class AuthController : ControllerBase
     public async Task<ActionResult> RegisterAdmin([FromBody] LoginRequest request)
     {
         // Check if admin already exists
-        var existingAdmin = await _context.Users.FirstOrDefaultAsync(u => u.Role == "admin");
+        var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.Code == "admin");
+        if (adminRole == null)
+        {
+            return BadRequest(new { message = "Admin role not found" });
+        }
+
+        var existingAdmin = await _context.Users.FirstOrDefaultAsync(u => u.RoleId == adminRole.Id);
         if (existingAdmin != null)
         {
             return BadRequest(new { message = "Admin user already exists" });
@@ -53,9 +69,11 @@ public class AuthController : ControllerBase
 
         var user = new User
         {
+            Name = "Администратор",
             Email = request.Email,
             PasswordHash = _authService.HashPassword(request.Password),
-            Role = "admin",
+            Status = "active",
+            RoleId = adminRole.Id,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
