@@ -15,6 +15,11 @@ export default function QuestDetailPage() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const thumbnailsRef = useRef<HTMLDivElement | null>(null);
+  const formatAgeRating = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    const match = trimmed.match(/^(\d+)\s*\+$/);
+    return match ? `${match[1]} +` : trimmed;
+  };
 
   useEffect(() => {
     if (id) {
@@ -233,7 +238,7 @@ export default function QuestDetailPage() {
               <h1 className="text-4xl font-bold">{quest.title}</h1>
               <div className="bg-red-600 rounded-full px-4 py-2 flex items-center gap-2">
                 <Star className="w-5 h-5 fill-white" />
-                <span className="font-bold">{quest.ageRating}</span>
+                <span className="font-bold">{formatAgeRating(quest.ageRating)}</span>
               </div>
             </div>
 

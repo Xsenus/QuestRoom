@@ -23,6 +23,11 @@ export default function QuestsPage() {
     const trimmed = value?.trim();
     return trimmed ? trimmed : null;
   };
+  const formatAgeRating = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    const match = trimmed.match(/^(\d+)\s*\+$/);
+    return match ? `${match[1]} +` : trimmed;
+  };
 
   useEffect(() => {
     loadQuests();
@@ -59,7 +64,7 @@ export default function QuestsPage() {
       extraParticipantsMax: 0,
       extraParticipantPrice: 0,
       ageRestriction: '',
-      ageRating: '18+',
+      ageRating: '18 +',
       price: 0,
       duration: 60,
       difficulty: 2,
@@ -701,16 +706,17 @@ export default function QuestsPage() {
                   Возрастной рейтинг
                 </label>
                 <select
-                  value={editingQuest.ageRating || '18+'}
+                  value={formatAgeRating(editingQuest.ageRating) || '18 +'}
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, ageRating: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 >
-                  <option value="6+">6+</option>
-                  <option value="12+">12+</option>
-                  <option value="16+">16+</option>
-                  <option value="18+">18+</option>
+                  <option value="0 +">0 +</option>
+                  <option value="6 +">6 +</option>
+                  <option value="12 +">12 +</option>
+                  <option value="16 +">16 +</option>
+                  <option value="18 +">18 +</option>
                 </select>
               </div>
             </div>

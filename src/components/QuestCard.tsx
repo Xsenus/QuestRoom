@@ -17,6 +17,11 @@ export default function QuestCard({ quest }: QuestCardProps) {
   const filledKeys = Math.min(difficultyValue, difficultyMax);
   const giftLabel = quest.giftGameLabel || 'Подарить игру';
   const giftUrl = quest.giftGameUrl || '/certificate';
+  const formatAgeRating = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    const match = trimmed.match(/^(\d+)\s*\+$/);
+    return match ? `${match[1]} +` : trimmed;
+  };
 
   while (additionalImages.length < 4) {
     additionalImages.push(mainImage);
@@ -56,10 +61,10 @@ export default function QuestCard({ quest }: QuestCardProps) {
                   <h2 className="text-lg md:text-3xl font-black text-white mb-2 md:mb-4 tracking-tight uppercase leading-tight font-display">
                     {quest.title}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-4 justify-center md:justify-start">
+                  <div className="hidden md:flex flex-wrap items-center gap-2 mb-2 md:mb-4 justify-start">
                     <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] md:text-sm font-bold px-2 py-1 rounded-full">
                       <Star className="w-3.5 h-3.5 fill-white" />
-                      {quest.ageRating}
+                      {formatAgeRating(quest.ageRating)}
                     </span>
                     <span className="inline-flex items-center gap-2 bg-white/20 text-white text-[10px] md:text-sm font-semibold px-2 py-1 rounded-full">
                       <span className="flex items-center gap-1">
@@ -75,10 +80,10 @@ export default function QuestCard({ quest }: QuestCardProps) {
                       {difficultyValue}/{difficultyMax}
                     </span>
                   </div>
-                  <div className="hidden md:flex md:flex-col space-y-1.5 md:space-y-2">
+                  <div className="hidden md:flex md:flex-col md:items-start space-y-1.5 md:space-y-2">
                     <button
                       onClick={handleBookingClick}
-                      className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 md:py-2.5 md:px-6 transition-all hover:scale-[1.02] shadow-lg text-[10px] md:text-sm tracking-wider uppercase font-display"
+                      className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 md:py-2.5 md:px-6 transition-all hover:scale-[1.02] shadow-lg text-[10px] md:text-sm tracking-wider uppercase font-display md:w-auto"
                     >
                       Записаться на квест
                     </button>
@@ -106,33 +111,6 @@ export default function QuestCard({ quest }: QuestCardProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 bg-black p-3 md:hidden">
-                <button
-                  onClick={handleBookingClick}
-                  className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 transition-all shadow-lg text-[10px] tracking-wider uppercase font-display"
-                >
-                  Записаться на квест
-                </button>
-                <button
-                  className="text-white/90 hover:text-white font-semibold text-[10px] tracking-wide transition-all underline decoration-dashed underline-offset-4 text-left"
-                  onClick={(event) => handleActionClick(event, giftUrl)}
-                >
-                  {giftLabel}
-                </button>
-                {quest.videoUrl && (
-                  <button
-                    className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
-                    onClick={(event) => handleActionClick(event, quest.videoUrl)}
-                  >
-                    <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
-                      <Youtube className="w-4 h-4 text-white" />
-                    </span>
-                    <span className="font-semibold text-[10px] tracking-wide uppercase font-display">
-                      Видео
-                    </span>
-                  </button>
-                )}
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-0 bg-black">
@@ -145,6 +123,52 @@ export default function QuestCard({ quest }: QuestCardProps) {
                 ></div>
               ))}
             </div>
+          </div>
+          <div className="flex flex-col gap-3 bg-black p-3 md:hidden">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                <Star className="w-3.5 h-3.5 fill-white" />
+                {formatAgeRating(quest.ageRating)}
+              </span>
+              <span className="inline-flex items-center gap-2 bg-white/20 text-white text-[10px] font-semibold px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1">
+                  {Array.from({ length: difficultyMax }).map((_, index) => (
+                    <Key
+                      key={index}
+                      className={`w-4 h-4 ${
+                        index < filledKeys ? 'text-yellow-300' : 'text-white/40'
+                      }`}
+                    />
+                  ))}
+                </span>
+                {difficultyValue}/{difficultyMax}
+              </span>
+            </div>
+            <button
+              onClick={handleBookingClick}
+              className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 transition-all shadow-lg text-[10px] tracking-wider uppercase font-display w-full"
+            >
+              Записаться на квест
+            </button>
+            <button
+              className="text-white/90 hover:text-white font-semibold text-[10px] tracking-wide transition-all underline decoration-dashed underline-offset-4 text-left"
+              onClick={(event) => handleActionClick(event, giftUrl)}
+            >
+              {giftLabel}
+            </button>
+            {quest.videoUrl && (
+              <button
+                className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
+                onClick={(event) => handleActionClick(event, quest.videoUrl)}
+              >
+                <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                  <Youtube className="w-4 h-4 text-white" />
+                </span>
+                <span className="font-semibold text-[10px] tracking-wide uppercase font-display">
+                  Видео
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="absolute -top-3 -right-3 md:-top-6 md:-right-6 z-30">
