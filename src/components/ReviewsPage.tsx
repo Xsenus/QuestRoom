@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Star, User } from 'lucide-react';
 import { api } from '../lib/api';
 import { Review, Settings } from '../lib/types';
@@ -7,10 +7,36 @@ export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
+  const flampContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (
+      settings?.reviewsMode !== 'flamp' ||
+      !settings.reviewsFlampEmbed ||
+      !flampContainerRef.current
+    ) {
+      return;
+    }
+
+    const container = flampContainerRef.current;
+    container.innerHTML = settings.reviewsFlampEmbed;
+
+    const scripts = Array.from(container.querySelectorAll('script'));
+    scripts.forEach((oldScript) => {
+      const newScript = document.createElement('script');
+      Array.from(oldScript.attributes).forEach((attribute) => {
+        newScript.setAttribute(attribute.name, attribute.value);
+      });
+      if (oldScript.text) {
+        newScript.text = oldScript.text;
+      }
+      oldScript.parentNode?.replaceChild(newScript, oldScript);
+    });
+  }, [settings?.reviewsMode, settings?.reviewsFlampEmbed]);
 
   const loadData = async () => {
     try {
@@ -70,8 +96,8 @@ export default function ReviewsPage() {
         {settings?.reviewsMode === 'flamp' ? (
           settings.reviewsFlampEmbed ? (
             <div
+              ref={flampContainerRef}
               className="bg-white/10 backdrop-blur-sm rounded-lg p-6 md:p-10 text-white/90"
-              dangerouslySetInnerHTML={{ __html: settings.reviewsFlampEmbed }}
             />
           ) : (
             <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-lg">
