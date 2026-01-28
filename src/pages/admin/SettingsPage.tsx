@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Settings, SettingsUpdate } from '../../lib/types';
 import { ExternalLink, Save } from 'lucide-react';
+import NotificationModal from '../../components/NotificationModal';
 
 const tabs = [
   { id: 'general', label: 'Общие' },
@@ -45,6 +46,17 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
+  });
 
   useEffect(() => {
     loadSettings();
@@ -154,9 +166,19 @@ export default function SettingsPage() {
 
     try {
       await api.updateSettings(payload);
-      alert('Настройки успешно сохранены!');
+      setNotification({
+        isOpen: true,
+        title: 'Настройки сохранены',
+        message: 'Изменения успешно применены и сохранены.',
+        tone: 'success',
+      });
     } catch (error) {
-      alert('Ошибка при сохранении настроек: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось сохранить настройки',
+        message: `Ошибка: ${(error as Error).message}`,
+        tone: 'error',
+      });
     }
 
     setSaving(false);
@@ -172,6 +194,18 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-5xl space-y-6">
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() =>
+          setNotification((prev) => ({
+            ...prev,
+            isOpen: false,
+          }))
+        }
+      />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-3xl font-bold text-gray-900">Настройки сайта</h2>
         <button
