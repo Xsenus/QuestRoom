@@ -45,6 +45,10 @@ export default function QuestCard({ quest }: QuestCardProps) {
     handleNavigate(targetUrl);
   };
 
+  const handleLinkClick = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
+
   return (
     <div className="relative mb-4 md:mb-6 pt-3 md:pt-5">
       <div className="relative bg-white shadow-2xl overflow-visible border-4 border-white">
@@ -96,9 +100,12 @@ export default function QuestCard({ quest }: QuestCardProps) {
                       </button>
                     </div>
                     {quest.videoUrl && (
-                      <button
+                      <a
                         className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
-                        onClick={(event) => handleActionClick(event, quest.videoUrl)}
+                        href={quest.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={handleLinkClick}
                       >
                         <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
                           <Youtube className="w-4 h-4 md:w-5 md:h-5 text-white" />
@@ -106,7 +113,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
                         <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
                           Видео
                         </span>
-                      </button>
+                      </a>
                     )}
                   </div>
                 </div>
@@ -157,9 +164,12 @@ export default function QuestCard({ quest }: QuestCardProps) {
               {giftLabel}
             </button>
             {quest.videoUrl && (
-              <button
+              <a
                 className="flex items-center justify-center gap-2 text-white/90 hover:text-white transition-all"
-                onClick={(event) => handleActionClick(event, quest.videoUrl)}
+                href={quest.videoUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={handleLinkClick}
               >
                 <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
                   <Youtube className="w-4 h-4 text-white" />
@@ -167,7 +177,7 @@ export default function QuestCard({ quest }: QuestCardProps) {
                 <span className="font-semibold text-[10px] tracking-wide uppercase font-display">
                   Видео
                 </span>
-              </button>
+              </a>
             )}
           </div>
 
