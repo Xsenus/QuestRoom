@@ -58,6 +58,7 @@ export default function ProductionCalendarPage() {
   const [importUrl, setImportUrl] = useState(defaultCalendarUrl);
   const [importJson, setImportJson] = useState('');
   const [importing, setImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDay, setEditingDay] = useState<ProductionCalendarDay | null>(null);
@@ -245,13 +246,16 @@ export default function ProductionCalendarPage() {
       return;
     }
     setImporting(true);
+    setImportStatus('Импортируем JSON...');
     setImportError(null);
     try {
       const entries = parseImportedJson(importJson, 'manual-json');
       await applyImportedEntries(entries, 'manual-json');
       setImportJson('');
+      setImportStatus('Импорт JSON завершён.');
     } catch (error) {
       setImportError((error as Error).message);
+      setImportStatus('');
     } finally {
       setImporting(false);
     }
@@ -264,17 +268,15 @@ export default function ProductionCalendarPage() {
       return;
     }
     setImporting(true);
+    setImportStatus('Скачиваем календарь...');
     setImportError(null);
     try {
-      const response = await fetch(urlToFetch);
-      if (!response.ok) {
-        throw new Error(`Не удалось скачать файл (статус ${response.status}).`);
-      }
-      const text = await response.text();
-      const entries = parseImportedJson(text, urlToFetch);
-      await applyImportedEntries(entries, urlToFetch);
+      await api.importProductionCalendar(urlToFetch);
+      await loadDays();
+      setImportStatus('Импорт из URL завершён.');
     } catch (error) {
       setImportError((error as Error).message);
+      setImportStatus('');
     } finally {
       setImporting(false);
     }
@@ -282,6 +284,7 @@ export default function ProductionCalendarPage() {
 
   const handleAutoImport = async () => {
     setImportUrl(defaultCalendarUrl);
+    setImportStatus('Запускаем автозагрузку календаря...');
     await handleImportFromUrl(defaultCalendarUrl);
   };
 
@@ -452,6 +455,9 @@ export default function ProductionCalendarPage() {
                   </button>
                 </div>
               </div>
+              {importStatus && !importError && (
+                <p className="text-sm text-gray-500">{importStatus}</p>
+              )}
               {importError && <p className="text-sm text-red-600">{importError}</p>}
             </div>
             <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
