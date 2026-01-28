@@ -1,4 +1,4 @@
-import { Home, Info, ScrollText, Award, BadgePercent, MessageSquareText } from 'lucide-react';
+import { Home, Info, FileText, Gift, KeyRound, Flag } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
@@ -12,10 +12,10 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
   const navItems = [
     { id: 'home', label: 'Домашняя', icon: Home, path: '/' },
     { id: 'about', label: 'О проекте', icon: Info, path: '/about' },
-    { id: 'rules', label: 'Правила игры', icon: ScrollText, path: '/rules' },
-    { id: 'certificate', label: 'Подарочные сертификаты', icon: Award, path: '/certificate' },
-    { id: 'reviews', label: 'Отзывы', icon: MessageSquareText, path: '/reviews' },
-    { id: 'promotions', label: 'Акции', icon: BadgePercent, path: '/promotions' },
+    { id: 'rules', label: 'Правила игры', icon: FileText, path: '/rules' },
+    { id: 'certificate', label: 'Подарочные сертификаты', icon: Gift, path: '/certificate' },
+    { id: 'reviews', label: 'Отзывы', icon: KeyRound, path: '/reviews' },
+    { id: 'promotions', label: 'Акции', icon: Flag, path: '/promotions' },
   ];
 
   const isActive = (path: string) => {
