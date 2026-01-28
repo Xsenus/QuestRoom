@@ -325,10 +325,6 @@ export default function PricingRulesPage() {
               })}
             </div>
           </div>
-          <div className="text-sm text-gray-500 md:col-span-2">
-            Настраивайте периоды, дни недели и интервалы времени. Эти правила
-            используются для генерации расписания.
-          </div>
         </div>
       </div>
 
