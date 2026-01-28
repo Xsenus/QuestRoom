@@ -124,8 +124,8 @@ export default function QuestCard({ quest }: QuestCardProps) {
               ))}
             </div>
           </div>
-          <div className="flex flex-col gap-3 bg-black p-3 md:hidden">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col items-center gap-3 bg-black p-3 md:hidden text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] font-bold px-2 py-1 rounded-full">
                 <Star className="w-3.5 h-3.5 fill-white" />
                 {formatAgeRating(quest.ageRating)}
@@ -151,14 +151,14 @@ export default function QuestCard({ quest }: QuestCardProps) {
               Записаться на квест
             </button>
             <button
-              className="text-white/90 hover:text-white font-semibold text-[10px] tracking-wide transition-all underline decoration-dashed underline-offset-4 text-left"
+              className="text-white/90 hover:text-white font-semibold text-[10px] tracking-wide transition-all underline decoration-dashed underline-offset-4 text-center"
               onClick={(event) => handleActionClick(event, giftUrl)}
             >
               {giftLabel}
             </button>
             {quest.videoUrl && (
               <button
-                className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
+                className="flex items-center justify-center gap-2 text-white/90 hover:text-white transition-all"
                 onClick={(event) => handleActionClick(event, quest.videoUrl)}
               >
                 <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
