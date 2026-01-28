@@ -33,14 +33,6 @@ export default function QuestsPage() {
     const match = trimmed.match(/^(\d+)/);
     return match ? match[1] : '';
   };
-  const getAgeRatingOptions = (currentValue?: string | null) => {
-    const baseOptions = ['8', '10', '14', '16', '18'];
-    const currentNumber = extractAgeRatingNumber(currentValue);
-    return currentNumber && !baseOptions.includes(currentNumber)
-      ? [currentNumber, ...baseOptions]
-      : baseOptions;
-  };
-
   useEffect(() => {
     loadQuests();
     loadDurationBadges();
@@ -717,8 +709,11 @@ export default function QuestsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Возрастной рейтинг
                 </label>
-                <select
-                  value={extractAgeRatingNumber(editingQuest.ageRating) || '18'}
+                <input
+                  type="number"
+                  min="0"
+                  max="18"
+                  value={extractAgeRatingNumber(editingQuest.ageRating)}
                   onChange={(e) =>
                     setEditingQuest({
                       ...editingQuest,
@@ -726,13 +721,8 @@ export default function QuestsPage() {
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                >
-                  {getAgeRatingOptions(editingQuest.ageRating).map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="12"
+                />
               </div>
             </div>
 
