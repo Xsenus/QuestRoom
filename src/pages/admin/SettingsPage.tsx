@@ -15,6 +15,31 @@ const tabs = [
 
 type SettingsTab = (typeof tabs)[number]['id'];
 
+const socialIconGallery = {
+  vk: [
+    { label: 'VK (тёмная)', url: '/images/social/vk-light.svg' },
+    { label: 'VK (светлая)', url: '/images/social/vk-dark.svg' },
+  ],
+  youtube: [
+    { label: 'YouTube (тёмная)', url: '/images/social/youtube-light.svg' },
+    { label: 'YouTube (светлая)', url: '/images/social/youtube-dark.svg' },
+  ],
+  instagram: [
+    { label: 'Instagram (тёмная)', url: '/images/social/instagram-light.svg' },
+    { label: 'Instagram (светлая)', url: '/images/social/instagram-dark.svg' },
+  ],
+  telegram: [
+    { label: 'Telegram (тёмная)', url: '/images/social/telegram-light.svg' },
+    { label: 'Telegram (светлая)', url: '/images/social/telegram-dark.svg' },
+  ],
+};
+
+const isValidHexColor = (value?: string | null) =>
+  Boolean(value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value));
+
+const getColorValue = (value: string | null, fallback: string) =>
+  isValidHexColor(value) ? (value as string) : fallback;
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -334,37 +359,104 @@ export default function SettingsPage() {
               const iconUrlKey = item.iconUrl as keyof Settings;
               const iconColorKey = item.iconColor as keyof Settings;
               const iconBackgroundKey = item.iconBackground as keyof Settings;
+              const iconColorValue = getColorValue(settings[iconColorKey] as string | null, '#ffffff');
+              const iconBackgroundValue = getColorValue(
+                settings[iconBackgroundKey] as string | null,
+                '#c51f2e',
+              );
+              const galleryItems = socialIconGallery[item.key];
               return (
               <div key={item.key} className="rounded-lg border border-gray-200 p-4 space-y-3">
                 <div className="text-sm font-semibold text-gray-700">{item.label}</div>
-                <div className="grid md:grid-cols-3 gap-3">
-                  <input
-                    type="url"
-                    value={(settings[iconUrlKey] as string | null) || ''}
-                    onChange={(e) =>
-                      setSettings({ ...settings, [iconUrlKey]: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    placeholder="Ссылка на иконку"
-                  />
-                  <input
-                    type="text"
-                    value={(settings[iconColorKey] as string | null) || ''}
-                    onChange={(e) =>
-                      setSettings({ ...settings, [iconColorKey]: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    placeholder="Цвет иконки (#fff)"
-                  />
-                  <input
-                    type="text"
-                    value={(settings[iconBackgroundKey] as string | null) || ''}
-                    onChange={(e) =>
-                      setSettings({ ...settings, [iconBackgroundKey]: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    placeholder="Цвет фона (#c51f2e)"
-                  />
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Ссылка на иконку
+                    </span>
+                    <input
+                      type="url"
+                      value={(settings[iconUrlKey] as string | null) || ''}
+                      onChange={(e) =>
+                        setSettings({ ...settings, [iconUrlKey]: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      placeholder="Ссылка на иконку"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {galleryItems.map((option) => (
+                        <button
+                          key={option.url}
+                          type="button"
+                          onClick={() =>
+                            setSettings({ ...settings, [iconUrlKey]: option.url })
+                          }
+                          className="group flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 transition hover:border-red-300 hover:text-red-600"
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-50">
+                            <img
+                              src={option.url}
+                              alt={option.label}
+                              className="h-6 w-6"
+                            />
+                          </span>
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Цвет иконки
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={iconColorValue}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [iconColorKey]: e.target.value })
+                          }
+                          className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
+                        />
+                        <input
+                          type="text"
+                          value={(settings[iconColorKey] as string | null) || ''}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [iconColorKey]: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          placeholder="Цвет иконки (#fff)"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Цвет фона
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={iconBackgroundValue}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              [iconBackgroundKey]: e.target.value,
+                            })
+                          }
+                          className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
+                        />
+                        <input
+                          type="text"
+                          value={(settings[iconBackgroundKey] as string | null) || ''}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [iconBackgroundKey]: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          placeholder="Цвет фона (#c51f2e)"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               );
