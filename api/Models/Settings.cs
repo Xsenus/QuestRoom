@@ -136,6 +136,9 @@ public class Settings
     [Column("booking_days_ahead")]
     public int BookingDaysAhead { get; set; }
 
+    [Column("promotions_per_row")]
+    public int PromotionsPerRow { get; set; } = 1;
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }

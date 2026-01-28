@@ -85,6 +85,7 @@ export type Settings = {
   reviewsMode: string | null;
   reviewsFlampEmbed: string | null;
   bookingDaysAhead: number;
+  promotionsPerRow: number | null;
   updatedAt: string;
 };
 
@@ -268,6 +269,11 @@ export type Promotion = {
   discountText: string;
   imageUrl: string | null;
   displayMode: 'image' | 'text' | 'text_description';
+  showTitle: boolean;
+  showDescription: boolean;
+  showDiscountText: boolean;
+  showPeriod: boolean;
+  showImage: boolean;
   validFrom: string;
   validUntil: string | null;
   isActive: boolean;

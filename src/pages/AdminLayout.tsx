@@ -128,7 +128,7 @@ export default function AdminLayout() {
               <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
                 <NavLink to="/adm/pricing" className={navSubLinkClass} onClick={() => setIsMenuOpen(false)}>
                   <CalendarClock className="w-4 h-4 text-gray-500" />
-                  {!isMenuCollapsed && 'Правила'}
+                  {!isMenuCollapsed && 'Ценовые правила'}
                 </NavLink>
                 <NavLink
                   to="/adm/production-calendar"

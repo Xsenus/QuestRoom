@@ -199,6 +199,11 @@ public class ContentService : IContentService
             DiscountText = dto.DiscountText,
             ImageUrl = dto.ImageUrl,
             DisplayMode = dto.DisplayMode,
+            ShowTitle = dto.ShowTitle,
+            ShowDescription = dto.ShowDescription,
+            ShowDiscountText = dto.ShowDiscountText,
+            ShowPeriod = dto.ShowPeriod,
+            ShowImage = dto.ShowImage,
             ValidFrom = dto.ValidFrom,
             ValidUntil = dto.ValidUntil,
             IsActive = dto.IsActive,
@@ -225,6 +230,11 @@ public class ContentService : IContentService
         promotion.DiscountText = dto.DiscountText;
         promotion.ImageUrl = dto.ImageUrl;
         promotion.DisplayMode = dto.DisplayMode;
+        promotion.ShowTitle = dto.ShowTitle;
+        promotion.ShowDescription = dto.ShowDescription;
+        promotion.ShowDiscountText = dto.ShowDiscountText;
+        promotion.ShowPeriod = dto.ShowPeriod;
+        promotion.ShowImage = dto.ShowImage;
         promotion.ValidFrom = dto.ValidFrom;
         promotion.ValidUntil = dto.ValidUntil;
         promotion.IsActive = dto.IsActive;
@@ -406,6 +416,7 @@ public class ContentService : IContentService
                 ReviewsMode = dto.ReviewsMode,
                 ReviewsFlampEmbed = dto.ReviewsFlampEmbed,
                 BookingDaysAhead = dto.BookingDaysAhead > 0 ? dto.BookingDaysAhead : 10,
+                PromotionsPerRow = dto.PromotionsPerRow > 0 ? dto.PromotionsPerRow : 1,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -465,6 +476,10 @@ public class ContentService : IContentService
             {
                 existing.BookingDaysAhead = dto.BookingDaysAhead;
             }
+            if (dto.PromotionsPerRow > 0)
+            {
+                existing.PromotionsPerRow = dto.PromotionsPerRow;
+            }
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -512,6 +527,11 @@ public class ContentService : IContentService
             DiscountText = promotion.DiscountText,
             ImageUrl = promotion.ImageUrl,
             DisplayMode = promotion.DisplayMode,
+            ShowTitle = promotion.ShowTitle,
+            ShowDescription = promotion.ShowDescription,
+            ShowDiscountText = promotion.ShowDiscountText,
+            ShowPeriod = promotion.ShowPeriod,
+            ShowImage = promotion.ShowImage,
             ValidFrom = promotion.ValidFrom,
             ValidUntil = promotion.ValidUntil,
             IsActive = promotion.IsActive,
@@ -597,6 +617,7 @@ public class ContentService : IContentService
             ReviewsMode = settings.ReviewsMode,
             ReviewsFlampEmbed = settings.ReviewsFlampEmbed,
             BookingDaysAhead = settings.BookingDaysAhead,
+            PromotionsPerRow = settings.PromotionsPerRow,
             UpdatedAt = settings.UpdatedAt
         };
     }
