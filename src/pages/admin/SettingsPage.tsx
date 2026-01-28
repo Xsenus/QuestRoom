@@ -12,6 +12,7 @@ const tabs = [
   { id: 'certificates', label: 'Сертификаты' },
   { id: 'reviews', label: 'Отзывы' },
   { id: 'booking', label: 'Бронирование' },
+  { id: 'promotions', label: 'Акции' },
 ];
 
 type SettingsTab = (typeof tabs)[number]['id'];
@@ -110,6 +111,7 @@ export default function SettingsPage() {
         reviewsMode: 'internal',
         reviewsFlampEmbed: null,
         bookingDaysAhead: 10,
+        promotionsPerRow: 1,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -162,6 +164,7 @@ export default function SettingsPage() {
       reviewsMode: settings.reviewsMode,
       reviewsFlampEmbed: settings.reviewsFlampEmbed,
       bookingDaysAhead: settings.bookingDaysAhead,
+      promotionsPerRow: settings.promotionsPerRow,
     };
 
     try {
@@ -752,6 +755,33 @@ export default function SettingsPage() {
               min={1}
               className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
             />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'promotions' && (
+        <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
+          <h3 className="text-xl font-bold text-gray-900">Акции</h3>
+          <div className="grid gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Количество акций в строке
+              </label>
+              <select
+                value={settings.promotionsPerRow || 1}
+                onChange={(e) =>
+                  setSettings({ ...settings, promotionsPerRow: Number(e.target.value) })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              >
+                <option value={1}>1 акция в строке</option>
+                <option value={2}>2 акции в строке</option>
+                <option value={3}>3 акции в строке</option>
+              </select>
+              <p className="mt-2 text-sm text-gray-500">
+                Настройка влияет на отображение карточек акций на публичной странице.
+              </p>
+            </div>
           </div>
         </div>
       )}

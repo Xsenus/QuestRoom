@@ -651,6 +651,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                 ReviewsMode = "internal",
                 ReviewsFlampEmbed = null,
                 BookingDaysAhead = 10,
+                PromotionsPerRow = 1,
                 SmtpHost = null,
                 SmtpPort = null,
                 SmtpUser = null,
