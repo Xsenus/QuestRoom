@@ -28,13 +28,17 @@ export default function QuestsPage() {
     const match = trimmed.match(/^(\d+)\s*\+$/);
     return match ? `${match[1]} +` : trimmed;
   };
+  const extractAgeRatingNumber = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    const match = trimmed.match(/^(\d+)/);
+    return match ? match[1] : '';
+  };
   const getAgeRatingOptions = (currentValue?: string | null) => {
-    const baseOptions = ['8 +', '10 +', '14 +', '16 +', '18 +'];
-    const normalizedCurrent = formatAgeRating(currentValue);
-    const options = normalizedCurrent && !baseOptions.includes(normalizedCurrent)
-      ? [normalizedCurrent, ...baseOptions]
+    const baseOptions = ['8', '10', '14', '16', '18'];
+    const currentNumber = extractAgeRatingNumber(currentValue);
+    return currentNumber && !baseOptions.includes(currentNumber)
+      ? [currentNumber, ...baseOptions]
       : baseOptions;
-    return options;
   };
 
   useEffect(() => {
@@ -714,9 +718,12 @@ export default function QuestsPage() {
                   Возрастной рейтинг
                 </label>
                 <select
-                  value={formatAgeRating(editingQuest.ageRating) || '18 +'}
+                  value={extractAgeRatingNumber(editingQuest.ageRating) || '18'}
                   onChange={(e) =>
-                    setEditingQuest({ ...editingQuest, ageRating: e.target.value })
+                    setEditingQuest({
+                      ...editingQuest,
+                      ageRating: formatAgeRating(`${e.target.value} +`),
+                    })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 >
