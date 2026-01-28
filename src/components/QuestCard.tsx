@@ -1,14 +1,13 @@
+import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key } from 'lucide-react';
+import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key, Youtube } from 'lucide-react';
 import { Quest } from '../lib/types';
 
 interface QuestCardProps {
   quest: Quest;
-  giftGameLabel?: string | null;
-  giftGameUrl?: string | null;
 }
 
-export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCardProps) {
+export default function QuestCard({ quest }: QuestCardProps) {
   const navigate = useNavigate();
   const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
@@ -16,6 +15,8 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
   const difficultyValue = quest.difficulty || 1;
   const difficultyMax = Math.max(1, quest.difficultyMax || 5);
   const filledKeys = Math.min(difficultyValue, difficultyMax);
+  const giftLabel = quest.giftGameLabel || 'Подарить игру';
+  const giftUrl = quest.giftGameUrl || '/certificate';
 
   while (additionalImages.length < 4) {
     additionalImages.push(mainImage);
@@ -25,71 +26,112 @@ export default function QuestCard({ quest, giftGameLabel, giftGameUrl }: QuestCa
     navigate(`/quest/${quest.slug || quest.id}`);
   };
 
+  const handleNavigate = (targetUrl: string) => {
+    if (targetUrl.startsWith('http')) {
+      window.location.href = targetUrl;
+    } else {
+      navigate(targetUrl);
+    }
+  };
+
+  const handleActionClick = (event: MouseEvent, targetUrl: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleNavigate(targetUrl);
+  };
+
   return (
     <div className="relative mb-4 md:mb-6 pt-3 md:pt-5">
       <div className="relative bg-white shadow-2xl overflow-visible border-4 border-white">
         <div className="relative">
           <div className="grid grid-cols-[1.4fr_1fr] md:grid-cols-[1.6fr_1fr] bg-black">
-            <div
-              className="relative min-h-[180px] md:min-h-[320px] bg-cover bg-center cursor-pointer"
-              style={{ backgroundImage: `url(${mainImage})` }}
-              onClick={handleBookingClick}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent"></div>
-              <div className="relative z-10 p-3 md:p-5 flex flex-col justify-start pt-5 md:pt-8">
-                <h2 className="text-lg md:text-3xl font-black text-white mb-2 md:mb-4 tracking-tight uppercase leading-tight font-display">
-                  {quest.title}
-                </h2>
-                <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-4">
-                  <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] md:text-sm font-bold px-2 py-1 rounded-full">
-                    <Star className="w-3.5 h-3.5 fill-white" />
-                    {quest.ageRating}
-                  </span>
-                  <span className="inline-flex items-center gap-2 bg-white/20 text-white text-[10px] md:text-sm font-semibold px-2 py-1 rounded-full">
-                    <span className="flex items-center gap-1">
-                      {Array.from({ length: difficultyMax }).map((_, index) => (
-                        <Key
-                          key={index}
-                          className={`w-4 h-4 ${
-                            index < filledKeys ? 'text-yellow-300' : 'text-white/40'
-                          }`}
-                        />
-                      ))}
+            <div className="flex flex-col">
+              <div
+                className="relative min-h-[180px] md:min-h-[320px] bg-cover bg-center cursor-pointer"
+                style={{ backgroundImage: `url(${mainImage})` }}
+                onClick={handleBookingClick}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent"></div>
+                <div className="relative z-10 p-3 md:p-5 flex flex-col justify-start pt-5 md:pt-8">
+                  <h2 className="text-lg md:text-3xl font-black text-white mb-2 md:mb-4 tracking-tight uppercase leading-tight font-display">
+                    {quest.title}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-4 justify-center md:justify-start">
+                    <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] md:text-sm font-bold px-2 py-1 rounded-full">
+                      <Star className="w-3.5 h-3.5 fill-white" />
+                      {quest.ageRating}
                     </span>
-                    {difficultyValue}/{difficultyMax}
-                  </span>
-                </div>
-                <div className="space-y-1.5 md:space-y-2">
-                  <button
-                    onClick={handleBookingClick}
-                    className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 md:py-2.5 md:px-6 transition-all hover:scale-[1.02] shadow-lg text-[10px] md:text-sm tracking-wider uppercase font-display"
-                  >
-                    Записаться на квест
-                  </button>
-                  <div>
-                    <button
-                      className="text-white/90 hover:text-white font-semibold text-[10px] md:text-sm tracking-wide transition-all underline"
-                      onClick={() => {
-                        const targetUrl = giftGameUrl || '/certificate';
-                        if (targetUrl.startsWith('http')) {
-                          window.location.href = targetUrl;
-                        } else {
-                          navigate(targetUrl);
-                        }
-                      }}
-                    >
-                      {giftGameLabel || 'Подарить игру'}
-                    </button>
+                    <span className="inline-flex items-center gap-2 bg-white/20 text-white text-[10px] md:text-sm font-semibold px-2 py-1 rounded-full">
+                      <span className="flex items-center gap-1">
+                        {Array.from({ length: difficultyMax }).map((_, index) => (
+                          <Key
+                            key={index}
+                            className={`w-4 h-4 ${
+                              index < filledKeys ? 'text-yellow-300' : 'text-white/40'
+                            }`}
+                          />
+                        ))}
+                      </span>
+                      {difficultyValue}/{difficultyMax}
+                    </span>
                   </div>
-                  <button className="flex items-center gap-2 text-white/90 hover:text-white transition-all">
-                    <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
-                      <span className="text-white text-[10px]">▶</span>
+                  <div className="hidden md:flex md:flex-col space-y-1.5 md:space-y-2">
+                    <button
+                      onClick={handleBookingClick}
+                      className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 md:py-2.5 md:px-6 transition-all hover:scale-[1.02] shadow-lg text-[10px] md:text-sm tracking-wider uppercase font-display"
+                    >
+                      Записаться на квест
+                    </button>
+                    <div>
+                      <button
+                        className="text-white/90 hover:text-white font-semibold text-[10px] md:text-sm tracking-wide transition-all underline decoration-dashed underline-offset-4"
+                        onClick={(event) => handleActionClick(event, giftUrl)}
+                      >
+                        {giftLabel}
+                      </button>
+                    </div>
+                    {quest.videoUrl && (
+                      <button
+                        className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
+                        onClick={(event) => handleActionClick(event, quest.videoUrl)}
+                      >
+                        <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                          <Youtube className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                        </span>
+                        <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
+                          Видео
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 bg-black p-3 md:hidden">
+                <button
+                  onClick={handleBookingClick}
+                  className="bg-[#c51f2e] hover:bg-[#a61b28] text-white font-bold py-2 px-4 transition-all shadow-lg text-[10px] tracking-wider uppercase font-display"
+                >
+                  Записаться на квест
+                </button>
+                <button
+                  className="text-white/90 hover:text-white font-semibold text-[10px] tracking-wide transition-all underline decoration-dashed underline-offset-4 text-left"
+                  onClick={(event) => handleActionClick(event, giftUrl)}
+                >
+                  {giftLabel}
+                </button>
+                {quest.videoUrl && (
+                  <button
+                    className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
+                    onClick={(event) => handleActionClick(event, quest.videoUrl)}
+                  >
+                    <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                      <Youtube className="w-4 h-4 text-white" />
                     </span>
-                    <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
+                    <span className="font-semibold text-[10px] tracking-wide uppercase font-display">
                       Видео
                     </span>
                   </button>
-                </div>
+                )}
               </div>
             </div>
 

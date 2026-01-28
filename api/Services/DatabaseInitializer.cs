@@ -52,16 +52,11 @@ public class DatabaseInitializer : IDatabaseInitializer
             var migrations = _context.Database.GetMigrations().ToList();
             if (migrations.Count == 0)
             {
-                _logger.LogWarning("No EF Core migrations were found. Creating tables from the current model.");
-                if (!await databaseCreator.HasTablesAsync())
-                {
-                    await databaseCreator.CreateTablesAsync();
-                }
+                _logger.LogError("No EF Core migrations were found. Database initialization requires migrations.");
+                throw new InvalidOperationException("Missing EF Core migrations. Use migrations to initialize the database.");
             }
-            else
-            {
-                await _context.Database.MigrateAsync();
-            }
+
+            await _context.Database.MigrateAsync();
 
         }
         else
@@ -78,6 +73,7 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         await SeedAsync(seedMode);
     }
+
 
     private SeedMode GetSeedMode()
     {

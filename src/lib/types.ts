@@ -19,6 +19,9 @@ export type Quest = {
   isVisible: boolean;
   mainImage: string | null;
   images: string[];
+  giftGameLabel: string | null;
+  giftGameUrl: string | null;
+  videoUrl: string | null;
   createdAt: string;
   updatedAt: string;
   sortOrder: number;
