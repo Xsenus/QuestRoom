@@ -237,6 +237,7 @@ export type ProductionCalendarDay = {
   date: string;
   title: string | null;
   isHoliday: boolean;
+  dayType: 'holidays' | 'preholidays' | 'nowork' | null;
   source: string | null;
   createdAt: string;
   updatedAt: string;
