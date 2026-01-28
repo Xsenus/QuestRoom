@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -53,7 +54,8 @@ public class ProductionCalendarController : ControllerBase
         if (existing != null)
         {
             existing.Title = dto.Title;
-            existing.IsHoliday = dto.IsHoliday;
+            existing.DayType = NormalizeDayType(dto.DayType, dto.IsHoliday);
+            existing.IsHoliday = ResolveIsHoliday(dto.DayType, dto.IsHoliday);
             existing.Source = dto.Source;
             existing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
@@ -65,7 +67,8 @@ public class ProductionCalendarController : ControllerBase
             Id = Guid.NewGuid(),
             Date = dto.Date,
             Title = dto.Title,
-            IsHoliday = dto.IsHoliday,
+            DayType = NormalizeDayType(dto.DayType, dto.IsHoliday),
+            IsHoliday = ResolveIsHoliday(dto.DayType, dto.IsHoliday),
             Source = dto.Source,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -87,7 +90,8 @@ public class ProductionCalendarController : ControllerBase
 
         day.Date = dto.Date;
         day.Title = dto.Title;
-        day.IsHoliday = dto.IsHoliday;
+        day.DayType = NormalizeDayType(dto.DayType, dto.IsHoliday);
+        day.IsHoliday = ResolveIsHoliday(dto.DayType, dto.IsHoliday);
         day.Source = dto.Source;
         day.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
@@ -119,7 +123,10 @@ public class ProductionCalendarController : ControllerBase
         }
 
         var client = _httpClientFactory.CreateClient();
-        var data = await client.GetFromJsonAsync<List<ProductionCalendarDayUpsertDto>>(dto.SourceUrl);
+        var json = await client.GetStringAsync(dto.SourceUrl);
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var calendarPayload = TryParseCalendarJson(json, options);
+        var data = calendarPayload ?? TryParseDayList(json, options);
         if (data == null)
         {
             return BadRequest("Не удалось получить данные календаря.");
@@ -127,11 +134,14 @@ public class ProductionCalendarController : ControllerBase
 
         foreach (var entry in data)
         {
+            entry.DayType = NormalizeDayType(entry.DayType, entry.IsHoliday);
+            entry.IsHoliday = ResolveIsHoliday(entry.DayType, entry.IsHoliday);
             var existing = await _context.ProductionCalendarDays
                 .FirstOrDefaultAsync(day => day.Date == entry.Date);
             if (existing != null)
             {
                 existing.Title = entry.Title;
+                existing.DayType = entry.DayType;
                 existing.IsHoliday = entry.IsHoliday;
                 existing.Source = entry.Source ?? dto.SourceUrl;
                 existing.UpdatedAt = DateTime.UtcNow;
@@ -143,6 +153,7 @@ public class ProductionCalendarController : ControllerBase
                     Id = Guid.NewGuid(),
                     Date = entry.Date,
                     Title = entry.Title,
+                    DayType = entry.DayType,
                     IsHoliday = entry.IsHoliday,
                     Source = entry.Source ?? dto.SourceUrl,
                     CreatedAt = DateTime.UtcNow,
@@ -163,9 +174,95 @@ public class ProductionCalendarController : ControllerBase
             Date = day.Date,
             Title = day.Title,
             IsHoliday = day.IsHoliday,
+            DayType = day.DayType,
             Source = day.Source,
             CreatedAt = day.CreatedAt,
             UpdatedAt = day.UpdatedAt
         };
+    }
+
+    private static string NormalizeDayType(string? dayType, bool isHoliday)
+    {
+        return dayType switch
+        {
+            "holidays" => "holidays",
+            "preholidays" => "preholidays",
+            "nowork" => "nowork",
+            _ => isHoliday ? "holidays" : "preholidays"
+        };
+    }
+
+    private static bool ResolveIsHoliday(string? dayType, bool fallback)
+    {
+        return dayType switch
+        {
+            "preholidays" => false,
+            "holidays" => true,
+            "nowork" => true,
+            _ => fallback
+        };
+    }
+
+    private static List<ProductionCalendarDayUpsertDto>? TryParseCalendarJson(
+        string json,
+        JsonSerializerOptions options)
+    {
+        try
+        {
+            var payload = JsonSerializer.Deserialize<ProductionCalendarJsonDto>(json, options);
+            if (payload == null || !payload.HasAnyDates)
+            {
+                return null;
+            }
+
+            var entries = new List<ProductionCalendarDayUpsertDto>();
+            if (payload.Holidays != null)
+            {
+                entries.AddRange(payload.Holidays.Select(date => new ProductionCalendarDayUpsertDto
+                {
+                    Date = date,
+                    IsHoliday = true,
+                    DayType = "holidays"
+                }));
+            }
+            if (payload.Preholidays != null)
+            {
+                entries.AddRange(payload.Preholidays.Select(date => new ProductionCalendarDayUpsertDto
+                {
+                    Date = date,
+                    IsHoliday = false,
+                    DayType = "preholidays"
+                }));
+            }
+            if (payload.Nowork != null)
+            {
+                entries.AddRange(payload.Nowork.Select(date => new ProductionCalendarDayUpsertDto
+                {
+                    Date = date,
+                    IsHoliday = true,
+                    DayType = "nowork"
+                }));
+            }
+
+            return entries;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static List<ProductionCalendarDayUpsertDto>? TryParseDayList(
+        string json,
+        JsonSerializerOptions options)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<ProductionCalendarDayUpsertDto>>(json, options);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }
