@@ -27,6 +27,21 @@ public class Promotion
     [Column("display_mode")]
     public string DisplayMode { get; set; } = "text_description";
 
+    [Column("show_title")]
+    public bool ShowTitle { get; set; }
+
+    [Column("show_description")]
+    public bool ShowDescription { get; set; }
+
+    [Column("show_discount_text")]
+    public bool ShowDiscountText { get; set; }
+
+    [Column("show_period")]
+    public bool ShowPeriod { get; set; }
+
+    [Column("show_image")]
+    public bool ShowImage { get; set; } = true;
+
     [Column("valid_from")]
     public DateOnly ValidFrom { get; set; }
 

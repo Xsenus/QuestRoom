@@ -28,10 +28,20 @@ export default function PromoCodesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PromoCodeUpsert>(createEmptyForm());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    if (typeof window === 'undefined') return 'cards';
+    return (localStorage.getItem('promoCodesViewMode') as 'cards' | 'table') || 'cards';
+  });
   const isDateRangeInvalid = useMemo(() => {
     if (!form.validUntil) return false;
     return form.validFrom > form.validUntil;
   }, [form.validFrom, form.validUntil]);
+  const exampleBasePrice = 5000;
+  const exampleDiscountAmount =
+    form.discountType === 'percent'
+      ? Math.round(exampleBasePrice * (form.discountValue / 100))
+      : form.discountValue;
+  const exampleFinalPrice = Math.max(exampleBasePrice - exampleDiscountAmount, 0);
 
   const loadPromoCodes = async () => {
     try {
@@ -47,6 +57,12 @@ export default function PromoCodesPage() {
   useEffect(() => {
     loadPromoCodes();
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('promoCodesViewMode', viewMode);
+    }
+  }, [viewMode]);
 
   const resetForm = () => {
     setForm(createEmptyForm());
@@ -130,97 +146,43 @@ export default function PromoCodesPage() {
           <div className="py-12 text-center text-gray-500">Промокодов пока нет.</div>
         ) : (
           <div className="space-y-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Карточки</h3>
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                {promoCodes.map((promo) => (
-                  <div
-                    key={promo.id}
-                    className="flex h-full flex-col justify-between rounded-lg border border-gray-200 p-4"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-semibold text-gray-900">
-                          {promo.code} {promo.isActive ? '' : '(неактивен)'}
-                        </div>
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            promo.isActive
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {promo.isActive ? 'Активен' : 'Неактивен'}
-                        </span>
-                      </div>
-                      <div className="mt-2 text-sm text-gray-600">
-                        {promo.discountType === 'percent'
-                          ? `${promo.discountValue}%`
-                          : `${promo.discountValue} ₽`}
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500">
-                        {promo.validFrom}
-                        {promo.validUntil ? ` → ${promo.validUntil}` : ''}
-                      </div>
-                      {promo.description && (
-                        <div className="mt-2 text-xs text-gray-500">{promo.description}</div>
-                      )}
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(promo)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Редактировать
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(promo)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Удалить
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-gray-900">Отображение</h3>
+              <div className="inline-flex overflow-hidden rounded-lg border border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('cards')}
+                  className={`px-4 py-2 text-sm font-semibold ${
+                    viewMode === 'cards' ? 'bg-red-600 text-white' : 'bg-white text-gray-600'
+                  }`}
+                >
+                  Карточки
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`px-4 py-2 text-sm font-semibold ${
+                    viewMode === 'table' ? 'bg-red-600 text-white' : 'bg-white text-gray-600'
+                  }`}
+                >
+                  Таблица
+                </button>
               </div>
             </div>
 
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Таблица</h3>
-              <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
-                    <tr>
-                      <th className="px-4 py-3">Код</th>
-                      <th className="px-4 py-3">Скидка</th>
-                      <th className="px-4 py-3">Период</th>
-                      <th className="px-4 py-3">Статус</th>
-                      <th className="px-4 py-3">Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 text-gray-700">
-                    {promoCodes.map((promo) => (
-                      <tr key={promo.id}>
-                        <td className="px-4 py-3 font-semibold text-gray-900">
-                          <div>{promo.code}</div>
-                          {promo.description && (
-                            <div className="text-xs text-gray-500">{promo.description}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {promo.discountType === 'percent'
-                            ? `${promo.discountValue}%`
-                            : `${promo.discountValue} ₽`}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
-                          {promo.validFrom}
-                          {promo.validUntil ? ` → ${promo.validUntil}` : ''}
-                        </td>
-                        <td className="px-4 py-3">
+            {viewMode === 'cards' ? (
+              <div>
+                <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                  {promoCodes.map((promo) => (
+                    <div
+                      key={promo.id}
+                      className="flex h-full flex-col justify-between rounded-lg border border-gray-200 p-4"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-semibold text-gray-900">
+                            {promo.code} {promo.isActive ? '' : '(неактивен)'}
+                          </div>
                           <span
                             className={`rounded-full px-2 py-1 text-xs font-semibold ${
                               promo.isActive
@@ -230,33 +192,111 @@ export default function PromoCodesPage() {
                           >
                             {promo.isActive ? 'Активен' : 'Неактивен'}
                           </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(promo)}
-                              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-                            >
-                              <Edit className="h-4 w-4" />
-                              Редактировать
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(promo)}
-                              className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Удалить
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        <div className="mt-2 text-sm text-gray-600">
+                          {promo.discountType === 'percent'
+                            ? `${promo.discountValue}%`
+                            : `${promo.discountValue} ₽`}
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          {promo.validFrom}
+                          {promo.validUntil ? ` → ${promo.validUntil}` : ' → без ограничения'}
+                        </div>
+                        {promo.description && (
+                          <div className="mt-2 text-xs text-gray-500">{promo.description}</div>
+                        )}
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(promo)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Редактировать
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(promo)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3">Код</th>
+                        <th className="px-4 py-3">Скидка</th>
+                        <th className="px-4 py-3">Период</th>
+                        <th className="px-4 py-3">Статус</th>
+                        <th className="px-4 py-3">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 text-gray-700">
+                      {promoCodes.map((promo) => (
+                        <tr key={promo.id}>
+                          <td className="px-4 py-3 font-semibold text-gray-900">
+                            <div>{promo.code}</div>
+                            {promo.description && (
+                              <div className="text-xs text-gray-500">{promo.description}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {promo.discountType === 'percent'
+                              ? `${promo.discountValue}%`
+                              : `${promo.discountValue} ₽`}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500">
+                            {promo.validFrom}
+                            {promo.validUntil ? ` → ${promo.validUntil}` : ' → без ограничения'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                promo.isActive
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {promo.isActive ? 'Активен' : 'Неактивен'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(promo)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                              >
+                                <Edit className="h-4 w-4" />
+                                Редактировать
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(promo)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Удалить
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -306,6 +346,34 @@ export default function PromoCodesPage() {
                 <option value="percent">Проценты</option>
                 <option value="amount">Рубли</option>
               </select>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 md:col-span-2">
+                <div className="font-semibold text-gray-700">Как считается скидка</div>
+                <div className="mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-100 text-gray-500">
+                      <tr>
+                        <th className="px-3 py-2">Базовая цена</th>
+                        <th className="px-3 py-2">Скидка</th>
+                        <th className="px-3 py-2">К оплате</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="text-gray-700">
+                        <td className="px-3 py-2">{exampleBasePrice} ₽</td>
+                        <td className="px-3 py-2">
+                          {form.discountType === 'percent'
+                            ? `${form.discountValue}% = ${exampleDiscountAmount} ₽`
+                            : `${form.discountValue} ₽`}
+                        </td>
+                        <td className="px-3 py-2">{exampleFinalPrice} ₽</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-2 text-[11px] text-gray-500">
+                  Пример приведён для цены {exampleBasePrice} ₽.
+                </p>
+              </div>
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-gray-500">Дата начала</label>
                 <input
