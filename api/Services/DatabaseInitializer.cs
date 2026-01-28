@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
 using QuestRoomApi.Data;
 using QuestRoomApi.Models;
@@ -60,6 +61,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             }
             else
             {
+                await EnsureMigrationHistoryAsync(databaseCreator, migrations);
                 await _context.Database.MigrateAsync();
             }
 
@@ -77,6 +79,29 @@ public class DatabaseInitializer : IDatabaseInitializer
         }
 
         await SeedAsync(seedMode);
+    }
+
+    private async Task EnsureMigrationHistoryAsync(IRelationalDatabaseCreator databaseCreator, List<string> migrations)
+    {
+        var historyRepository = _context.Database.GetService<IHistoryRepository>();
+        var historyExists = await historyRepository.ExistsAsync();
+        if (historyExists)
+        {
+            return;
+        }
+
+        if (!await databaseCreator.HasTablesAsync())
+        {
+            return;
+        }
+
+        _logger.LogWarning("Migrations history table is missing while tables exist. Baselineing initial migration.");
+        await historyRepository.CreateAsync();
+
+        var initialMigration = migrations.First();
+        var productVersion = typeof(DbContext).Assembly.GetName().Version?.ToString() ?? "unknown";
+        var insertScript = historyRepository.GetInsertScript(new HistoryRow(initialMigration, productVersion));
+        await _context.Database.ExecuteSqlRawAsync(insertScript);
     }
 
     private SeedMode GetSeedMode()
