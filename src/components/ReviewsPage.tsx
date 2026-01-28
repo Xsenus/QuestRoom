@@ -23,19 +23,23 @@ export default function ReviewsPage() {
     }
 
     const container = flampContainerRef.current;
-    container.innerHTML = settings.reviewsFlampEmbed;
+    const parsedEmbed = new DOMParser().parseFromString(
+      settings.reviewsFlampEmbed,
+      'text/html'
+    );
+    parsedEmbed.querySelectorAll('script').forEach((script) => script.remove());
+    container.innerHTML = parsedEmbed.body.innerHTML;
 
-    const scripts = Array.from(container.querySelectorAll('script'));
-    scripts.forEach((oldScript) => {
-      const newScript = document.createElement('script');
-      Array.from(oldScript.attributes).forEach((attribute) => {
-        newScript.setAttribute(attribute.name, attribute.value);
-      });
-      if (oldScript.text) {
-        newScript.text = oldScript.text;
-      }
-      oldScript.parentNode?.replaceChild(newScript, oldScript);
-    });
+    const existingLoader = document.querySelector('script[data-flamp-loader="true"]');
+    if (existingLoader?.parentNode) {
+      existingLoader.parentNode.removeChild(existingLoader);
+    }
+
+    const loaderScript = document.createElement('script');
+    loaderScript.async = true;
+    loaderScript.src = 'https://widget.flamp.ru/loader.js';
+    loaderScript.setAttribute('data-flamp-loader', 'true');
+    document.body.appendChild(loaderScript);
   }, [settings?.reviewsMode, settings?.reviewsFlampEmbed]);
 
   const loadData = async () => {
