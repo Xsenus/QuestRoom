@@ -67,8 +67,6 @@ export default function SettingsPage() {
         notifyCertificateCustomer: false,
         phone: null,
         logoUrl: null,
-        giftGameLabel: 'Подарить игру',
-        giftGameUrl: '/certificate',
         certificatePageTitle: 'Подарочные сертификаты',
         certificatePageDescription: null,
         certificatePagePricing: null,
@@ -121,8 +119,6 @@ export default function SettingsPage() {
       notifyCertificateCustomer: settings.notifyCertificateCustomer,
       phone: settings.phone,
       logoUrl: settings.logoUrl,
-      giftGameLabel: settings.giftGameLabel,
-      giftGameUrl: settings.giftGameUrl,
       certificatePageTitle: settings.certificatePageTitle,
       certificatePageDescription: settings.certificatePageDescription,
       certificatePagePricing: settings.certificatePagePricing,
@@ -221,30 +217,6 @@ export default function SettingsPage() {
                 onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               />
-            </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Текст кнопки «Подарить игру»
-                </label>
-                <input
-                  type="text"
-                  value={settings.giftGameLabel || ''}
-                  onChange={(e) => setSettings({ ...settings, giftGameLabel: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Ссылка для «Подарить игру»
-                </label>
-                <input
-                  type="text"
-                  value={settings.giftGameUrl || ''}
-                  onChange={(e) => setSettings({ ...settings, giftGameUrl: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
             </div>
           </div>
         </div>
