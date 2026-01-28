@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Quest, QuestSchedule, Settings } from '../lib/types';
-import { Users, Clock, Star, BadgeDollarSign } from 'lucide-react';
+import { Users, Clock, Star, BadgeDollarSign, Key } from 'lucide-react';
 import BookingModal from '../components/BookingModal';
 
 export default function QuestDetailPage() {
@@ -14,6 +14,7 @@ export default function QuestDetailPage() {
   const [selectedSlot, setSelectedSlot] = useState<QuestSchedule | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isImageOpen, setIsImageOpen] = useState(false);
   const thumbnailsRef = useRef<HTMLDivElement | null>(null);
   const formatAgeRating = (value?: string | null) => {
     const trimmed = value?.trim() ?? '';
@@ -177,6 +178,10 @@ export default function QuestDetailPage() {
     quest.mainImage,
     ...(quest.images || []),
   ].filter((img, index, arr): img is string => Boolean(img) && arr.indexOf(img) === index);
+  const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
+  const difficultyValue = quest.difficulty || 1;
+  const difficultyMax = Math.max(1, quest.difficultyMax || 5);
+  const filledKeys = Math.min(difficultyValue, difficultyMax);
 
   return (
     <div className="min-h-screen py-8">
@@ -184,12 +189,26 @@ export default function QuestDetailPage() {
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           <div className="relative">
             {selectedImage && (
-              <img
-                src={selectedImage}
-                alt={quest.title}
-                className="w-full h-96 object-cover rounded-lg shadow-2xl"
-              />
+              <button
+                type="button"
+                onClick={() => setIsImageOpen(true)}
+                className="group w-full overflow-hidden rounded-lg shadow-2xl"
+                aria-label="Открыть изображение в полном размере"
+              >
+                <img
+                  src={selectedImage}
+                  alt={quest.title}
+                  className="w-full h-96 object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                />
+              </button>
             )}
+            <div className="absolute -top-3 -right-3 md:-top-5 md:-right-5 z-20">
+              <img
+                src={durationBadgeUrl}
+                alt={`${quest.duration} минут`}
+                className="w-14 h-14 md:w-20 md:h-20 object-contain drop-shadow-2xl"
+              />
+            </div>
             {galleryImages.length > 1 && (
               <div className="mt-4 flex items-center gap-3">
                 <button
@@ -240,25 +259,40 @@ export default function QuestDetailPage() {
                 <Star className="w-5 h-5 fill-white" />
                 <span className="font-bold">{formatAgeRating(quest.ageRating)}</span>
               </div>
+              <div className="bg-white/20 rounded-full px-4 py-2 flex items-center gap-2">
+                <span className="flex items-center gap-1">
+                  {Array.from({ length: difficultyMax }).map((_, index) => (
+                    <Key
+                      key={index}
+                      className={`w-4 h-4 ${
+                        index < filledKeys ? 'text-yellow-300' : 'text-white/40'
+                      }`}
+                    />
+                  ))}
+                </span>
+                <span className="font-semibold">
+                  {difficultyValue}/{difficultyMax}
+                </span>
+              </div>
             </div>
 
-            <p className="text-lg mb-6 whitespace-pre-wrap">{quest.description}</p>
+            <p className="text-base mb-6 whitespace-pre-wrap">{quest.description}</p>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
                 <div className="flex items-center gap-2 mb-2 justify-center">
                   <Clock className="w-5 h-5 text-yellow-400" />
-                  <span className="text-sm text-white/80">Возрастное ограничение</span>
+                  <span className="text-base font-semibold text-white">Возрастное ограничение</span>
                 </div>
-                <p className="text-xl font-bold">{quest.ageRestriction}</p>
+                <p className="text-base text-white/90">{quest.ageRestriction}</p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
                 <div className="flex items-center gap-2 mb-2 justify-center">
                   <Users className="w-5 h-5 text-blue-400" />
-                  <span className="text-sm text-white/80">Количество участников</span>
+                  <span className="text-base font-semibold text-white">Количество участников</span>
                 </div>
-                <p className="text-xl font-bold">
+                <p className="text-base text-white/90">
                   от {quest.participantsMin} до {quest.participantsMax} человек
                 </p>
               </div>
@@ -266,17 +300,17 @@ export default function QuestDetailPage() {
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
                 <div className="flex items-center gap-2 mb-2 justify-center">
                   <Clock className="w-5 h-5 text-green-400" />
-                  <span className="text-sm text-white/80">Длительность</span>
+                  <span className="text-base font-semibold text-white">Длительность</span>
                 </div>
-                <p className="text-xl font-bold">{quest.duration} минут</p>
+                <p className="text-base text-white/90">{quest.duration} минут</p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
                 <div className="flex items-center gap-2 mb-2 justify-center">
                   <BadgeDollarSign className="w-5 h-5 text-emerald-400" />
-                  <span className="text-sm text-white/80">Стоимость</span>
+                  <span className="text-base font-semibold text-white">Стоимость</span>
                 </div>
-                <p className="text-xl font-bold">от {quest.price} ₽</p>
+                <p className="text-base text-white/90">от {quest.price} ₽</p>
               </div>
             </div>
 
@@ -367,6 +401,32 @@ export default function QuestDetailPage() {
           )}
         </div>
       </div>
+
+      {isImageOpen && selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setIsImageOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-5xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsImageOpen(false)}
+              className="absolute -top-4 -right-4 h-10 w-10 rounded-full bg-white text-black text-2xl leading-none flex items-center justify-center shadow-lg"
+              aria-label="Закрыть изображение"
+            >
+              ×
+            </button>
+            <img
+              src={selectedImage}
+              alt={quest.title}
+              className="w-full max-h-[80vh] object-contain rounded-lg"
+            />
+          </div>
+        </div>
+      )}
 
       {showBookingModal && selectedSlot && quest && (
         <BookingModal
