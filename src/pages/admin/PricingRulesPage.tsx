@@ -15,10 +15,16 @@ const dayOptions = [
 
 const dayLabels = new Map(dayOptions.map((day) => [day.value, day.label]));
 
+const getTodayISO = () => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 const getCurrentYearRange = () => {
   const year = new Date().getFullYear();
   return {
-    start: `${year}-01-01`,
+    start: getTodayISO(),
     end: `${year}-12-31`,
   };
 };
@@ -50,8 +56,8 @@ export default function PricingRulesPage() {
     (QuestPricingRuleUpsert & { id?: string }) | null
   >(null);
   const [generationQuestId, setGenerationQuestId] = useState<string>('');
-  const [generateFrom, setGenerateFrom] = useState<string>('');
-  const [generateTo, setGenerateTo] = useState<string>('');
+  const [generateFrom, setGenerateFrom] = useState<string>(getCurrentYearRange().start);
+  const [generateTo, setGenerateTo] = useState<string>(getCurrentYearRange().end);
   const [generateResult, setGenerateResult] = useState<string>('');
   const [rulesView, setRulesView] = useState<'cards' | 'table'>('cards');
 
@@ -154,6 +160,14 @@ export default function PricingRulesPage() {
     setEditingRule({ ...editingRule, daysOfWeek: days });
   };
 
+  const toggleQuest = (questId: string) => {
+    if (!editingRule) return;
+    const nextQuestIds = editingRule.questIds.includes(questId)
+      ? editingRule.questIds.filter((id) => id !== questId)
+      : [...editingRule.questIds, questId];
+    setEditingRule({ ...editingRule, questIds: nextQuestIds });
+  };
+
   const handleGenerate = async () => {
     if (!generateFrom || !generateTo) {
       setGenerateResult('Заполните диапазон дат.');
@@ -246,233 +260,253 @@ export default function PricingRulesPage() {
       </div>
 
       {editingRule && (
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h3 className="text-xl font-bold text-gray-800">
-            {editingRule.id ? 'Редактирование правила' : 'Новое правило'}
-          </h3>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Квесты
-              </label>
-              <select
-                multiple
-                value={editingRule.questIds}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    questIds: Array.from(e.target.selectedOptions, (option) => option.value),
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none min-h-[140px]"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8">
+          <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-lg max-h-full overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">
+                {editingRule.id ? 'Редактирование правила' : 'Новое правило'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingRule(null)}
+                className="inline-flex items-center justify-center rounded-full p-1 text-gray-500 hover:bg-gray-100"
               >
-                {questOptions.map((quest) => (
-                  <option key={quest.value} value={quest.value}>
-                    {quest.label}
-                  </option>
-                ))}
-              </select>
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Название правила
-              </label>
-              <input
-                type="text"
-                value={editingRule.title}
-                onChange={(e) => setEditingRule({ ...editingRule, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="Будни с 10:00 до 18:00"
-              />
-            </div>
-          </div>
+            <div className="mt-6 space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Квесты
+                  </label>
+                  <div className="grid gap-2 rounded-lg border border-gray-200 p-4 max-h-52 overflow-y-auto">
+                    {questOptions.map((quest) => (
+                      <label
+                        key={quest.value}
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editingRule.questIds.includes(quest.value)}
+                          onChange={() => toggleQuest(quest.value)}
+                          className="h-4 w-4 text-red-600 rounded focus:ring-red-500"
+                        />
+                        {quest.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Дата начала
-              </label>
-              <input
-                type="date"
-                value={editingRule.startDate || ''}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    startDate: e.target.value || null,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Дата окончания
-              </label>
-              <input
-                type="date"
-                value={editingRule.endDate || ''}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    endDate: e.target.value || null,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Приоритет (больше = важнее)
-              </label>
-              <input
-                type="number"
-                value={editingRule.priority}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    priority: parseInt(e.target.value) || 1,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                min="1"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Дни недели
-            </label>
-            <div className="flex flex-wrap gap-3">
-              {dayOptions.map((day) => (
-                <label
-                  key={day.value}
-                  className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-semibold transition-colors ${
-                    editingRule.daysOfWeek.includes(day.value)
-                      ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-gray-100 text-gray-700 border-gray-200'
-                  }`}
-                >
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Название правила
+                  </label>
                   <input
-                    type="checkbox"
-                    className="hidden"
-                    checked={editingRule.daysOfWeek.includes(day.value)}
-                    onChange={() => toggleDay(day.value)}
+                    type="text"
+                    value={editingRule.title}
+                    onChange={(e) => setEditingRule({ ...editingRule, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="Будни с 10:00 до 18:00"
                   />
-                  {day.label}
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата начала
+                  </label>
+                  <input
+                    type="date"
+                    value={editingRule.startDate || ''}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        startDate: e.target.value || null,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата окончания
+                  </label>
+                  <input
+                    type="date"
+                    value={editingRule.endDate || ''}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        endDate: e.target.value || null,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Приоритет (больше = важнее)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingRule.priority}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        priority: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Дни недели
                 </label>
-              ))}
-            </div>
-          </div>
+                <div className="flex flex-wrap gap-3">
+                  {dayOptions.map((day) => (
+                    <label
+                      key={day.value}
+                      className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-semibold transition-colors ${
+                        editingRule.daysOfWeek.includes(day.value)
+                          ? 'bg-red-600 text-white border-red-600'
+                          : 'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={editingRule.daysOfWeek.includes(day.value)}
+                        onChange={() => toggleDay(day.value)}
+                      />
+                      {day.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Время начала
-              </label>
-              <input
-                type="time"
-                value={editingRule.startTime}
-                onChange={(e) =>
-                  setEditingRule({ ...editingRule, startTime: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Время окончания
-              </label>
-              <input
-                type="time"
-                value={editingRule.endTime}
-                onChange={(e) =>
-                  setEditingRule({ ...editingRule, endTime: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Интервал (мин.)
-              </label>
-              <input
-                type="number"
-                value={editingRule.intervalMinutes}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    intervalMinutes: parseInt(e.target.value) || 60,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                min="15"
-              />
-            </div>
-          </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Время начала
+                  </label>
+                  <input
+                    type="time"
+                    value={editingRule.startTime}
+                    onChange={(e) =>
+                      setEditingRule({ ...editingRule, startTime: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Время окончания
+                  </label>
+                  <input
+                    type="time"
+                    value={editingRule.endTime}
+                    onChange={(e) =>
+                      setEditingRule({ ...editingRule, endTime: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Интервал (мин.)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingRule.intervalMinutes}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        intervalMinutes: parseInt(e.target.value) || 60,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    min="15"
+                  />
+                </div>
+              </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Цена (₽)
-              </label>
-              <input
-                type="number"
-                value={editingRule.price}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    price: parseInt(e.target.value) || 0,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                min="0"
-                disabled={editingRule.isBlocked}
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={editingRule.isBlocked}
-                  onChange={(e) =>
-                    setEditingRule({ ...editingRule, isBlocked: e.target.checked })
-                  }
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
-                />
-                Время недоступно (блокировка)
-              </label>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={editingRule.isActive}
-                  onChange={(e) =>
-                    setEditingRule({ ...editingRule, isActive: e.target.checked })
-                  }
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
-                />
-                Правило активно
-              </label>
-            </div>
-          </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Цена (₽)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingRule.price}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        price: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    min="0"
+                    disabled={editingRule.isBlocked}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={editingRule.isBlocked}
+                      onChange={(e) =>
+                        setEditingRule({ ...editingRule, isBlocked: e.target.checked })
+                      }
+                      className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                    />
+                    Время недоступно (блокировка)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={editingRule.isActive}
+                      onChange={(e) =>
+                        setEditingRule({ ...editingRule, isActive: e.target.checked })
+                      }
+                      className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                    />
+                    Правило активно
+                  </label>
+                </div>
+              </div>
 
-          <div className="flex gap-4">
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              <Save className="w-5 h-5" />
-              Сохранить
-            </button>
-            <button
-              onClick={() => setEditingRule(null)}
-              className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              <X className="w-5 h-5" />
-              Отмена
-            </button>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                <div className="font-semibold text-gray-700">Проверка отображения</div>
+                <div className="mt-2 text-gray-700">
+                  {editingRule.isBlocked ? 'Блокировка' : `Цена: ${editingRule.price} ₽`} ·
+                  Время: {editingRule.startTime}–{editingRule.endTime}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <Save className="w-5 h-5" />
+                  Сохранить
+                </button>
+                <button
+                  onClick={() => setEditingRule(null)}
+                  className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                  Отмена
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
