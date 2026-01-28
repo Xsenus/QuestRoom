@@ -23,7 +23,16 @@ export default function QuestsPage() {
     const trimmed = value?.trim();
     return trimmed ? trimmed : null;
   };
-
+  const formatAgeRating = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    const match = trimmed.match(/^(\d+)\s*\+$/);
+    return match ? `${match[1]} +` : trimmed;
+  };
+  const extractAgeRatingNumber = (value?: string | null) => {
+    const trimmed = value?.trim() ?? '';
+    const match = trimmed.match(/^(\d+)/);
+    return match ? match[1] : '';
+  };
   useEffect(() => {
     loadQuests();
     loadDurationBadges();
@@ -59,7 +68,7 @@ export default function QuestsPage() {
       extraParticipantsMax: 0,
       extraParticipantPrice: 0,
       ageRestriction: '',
-      ageRating: '18+',
+      ageRating: '18 +',
       price: 0,
       duration: 60,
       difficulty: 2,
@@ -700,18 +709,20 @@ export default function QuestsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Возрастной рейтинг
                 </label>
-                <select
-                  value={editingQuest.ageRating || '18+'}
+                <input
+                  type="number"
+                  min="0"
+                  max="18"
+                  value={extractAgeRatingNumber(editingQuest.ageRating)}
                   onChange={(e) =>
-                    setEditingQuest({ ...editingQuest, ageRating: e.target.value })
+                    setEditingQuest({
+                      ...editingQuest,
+                      ageRating: formatAgeRating(`${e.target.value} +`),
+                    })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                >
-                  <option value="6+">6+</option>
-                  <option value="12+">12+</option>
-                  <option value="16+">16+</option>
-                  <option value="18+">18+</option>
-                </select>
+                  placeholder="12"
+                />
               </div>
             </div>
 
