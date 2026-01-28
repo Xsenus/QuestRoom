@@ -29,6 +29,41 @@ const getCurrentYearRange = () => {
   };
 };
 
+const timeToMinutes = (time: string) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+  return hours * 60 + minutes;
+};
+
+const minutesToTime = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+const buildTimeSlots = (startTime: string, endTime: string, interval: number) => {
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+  if (
+    startMinutes === null ||
+    endMinutes === null ||
+    interval <= 0 ||
+    endMinutes <= startMinutes
+  ) {
+    return [];
+  }
+  const slots: string[] = [];
+  let current = startMinutes;
+  const maxSlots = 24;
+  while (current + interval <= endMinutes && slots.length < maxSlots) {
+    slots.push(minutesToTime(current));
+    current += interval;
+  }
+  return slots;
+};
+
 const buildEmptyRule = (questIds: string[]): QuestPricingRuleUpsert => {
   const { start, end } = getCurrentYearRange();
   return {
@@ -51,7 +86,7 @@ export default function PricingRulesPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [rules, setRules] = useState<QuestPricingRule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedQuestId, setSelectedQuestId] = useState<string>('');
+  const [selectedQuestIds, setSelectedQuestIds] = useState<string[]>([]);
   const [editingRule, setEditingRule] = useState<
     (QuestPricingRuleUpsert & { id?: string }) | null
   >(null);
@@ -63,15 +98,8 @@ export default function PricingRulesPage() {
 
   useEffect(() => {
     loadQuests();
+    loadRules();
   }, []);
-
-  useEffect(() => {
-    if (selectedQuestId) {
-      loadRules(selectedQuestId);
-    } else {
-      loadRules();
-    }
-  }, [selectedQuestId]);
 
   const loadQuests = async () => {
     try {
@@ -86,9 +114,9 @@ export default function PricingRulesPage() {
     setLoading(false);
   };
 
-  const loadRules = async (questId?: string) => {
+  const loadRules = async () => {
     try {
-      const data = await api.getPricingRules(questId);
+      const data = await api.getPricingRules();
       setRules(data || []);
     } catch (error) {
       console.error('Ошибка загрузки правил:', error);
@@ -96,11 +124,7 @@ export default function PricingRulesPage() {
   };
 
   const handleCreate = () => {
-    if (!selectedQuestId) {
-      alert('Выберите квест для нового правила.');
-      return;
-    }
-    setEditingRule(buildEmptyRule([selectedQuestId]));
+    setEditingRule(buildEmptyRule(selectedQuestIds));
   };
 
   const handleEdit = (rule: QuestPricingRule) => {
@@ -136,7 +160,7 @@ export default function PricingRulesPage() {
         await api.createPricingRule(editingRule);
       }
       setEditingRule(null);
-      loadRules(selectedQuestId || undefined);
+      loadRules();
     } catch (error) {
       alert('Ошибка сохранения: ' + (error as Error).message);
     }
@@ -146,7 +170,7 @@ export default function PricingRulesPage() {
     if (!confirm('Удалить правило?')) return;
     try {
       await api.deletePricingRule(ruleId);
-      loadRules(selectedQuestId || undefined);
+      loadRules();
     } catch (error) {
       alert('Ошибка удаления: ' + (error as Error).message);
     }
@@ -166,6 +190,12 @@ export default function PricingRulesPage() {
       ? editingRule.questIds.filter((id) => id !== questId)
       : [...editingRule.questIds, questId];
     setEditingRule({ ...editingRule, questIds: nextQuestIds });
+  };
+
+  const toggleQuestFilter = (questId: string) => {
+    setSelectedQuestIds((prev) =>
+      prev.includes(questId) ? prev.filter((id) => id !== questId) : [...prev, questId]
+    );
   };
 
   const handleGenerate = async () => {
@@ -199,10 +229,11 @@ export default function PricingRulesPage() {
     () => quests.map((quest) => ({ value: quest.id, label: quest.title })),
     [quests]
   );
-  const questFilterOptions = useMemo(
-    () => [{ value: '', label: 'Все квесты' }, ...questOptions],
-    [questOptions]
-  );
+  const questFilterOptions = useMemo(() => {
+    const visibleQuests = quests.filter((quest) => quest.isVisible);
+    const target = visibleQuests.length > 0 ? visibleQuests : quests;
+    return target.map((quest) => ({ value: quest.id, label: quest.title }));
+  }, [quests]);
   const generationOptions = useMemo(
     () => [{ value: '', label: 'Все квесты' }, ...questOptions],
     [questOptions]
@@ -212,10 +243,33 @@ export default function PricingRulesPage() {
     [questOptions]
   );
 
+  const filteredRules = useMemo(() => {
+    if (selectedQuestIds.length === 0) {
+      return rules;
+    }
+    return rules.filter((rule) =>
+      rule.questIds.some((questId) => selectedQuestIds.includes(questId))
+    );
+  }, [rules, selectedQuestIds]);
+
   const formatDays = (days: number[]) =>
     days
       .map((day) => dayLabels.get(day) || day.toString())
       .join(', ');
+
+  const formatDateRange = (startDate: string | null, endDate: string | null) => {
+    if (!startDate && !endDate) {
+      return '';
+    }
+    if (startDate && endDate) {
+      return `${startDate} – ${endDate}`;
+    }
+    return startDate || endDate || '';
+  };
+
+  const previewSlots = editingRule
+    ? buildTimeSlots(editingRule.startTime, editingRule.endTime, editingRule.intervalMinutes)
+    : [];
 
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
@@ -240,17 +294,36 @@ export default function PricingRulesPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Квест для фильтрации
             </label>
-            <select
-              value={selectedQuestId}
-              onChange={(e) => setSelectedQuestId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-            >
-              {questFilterOptions.map((quest) => (
-                <option key={quest.value || 'all'} value={quest.value}>
-                  {quest.label}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedQuestIds([])}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                  selectedQuestIds.length === 0
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                }`}
+              >
+                Все квесты
+              </button>
+              {questFilterOptions.map((quest) => {
+                const isActive = selectedQuestIds.includes(quest.value);
+                return (
+                  <button
+                    key={quest.value}
+                    type="button"
+                    onClick={() => toggleQuestFilter(quest.value)}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                      isActive
+                        ? 'bg-red-600 text-white border-red-600'
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    {quest.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="text-sm text-gray-500 md:col-span-2">
             Настраивайте периоды, дни недели и интервалы времени. Эти правила
@@ -484,9 +557,25 @@ export default function PricingRulesPage() {
 
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
                 <div className="font-semibold text-gray-700">Проверка отображения</div>
-                <div className="mt-2 text-gray-700">
-                  {editingRule.isBlocked ? 'Блокировка' : `Цена: ${editingRule.price} ₽`} ·
-                  Время: {editingRule.startTime}–{editingRule.endTime}
+                <div className="mt-3 space-y-3 text-gray-700">
+                  <div className="flex flex-wrap gap-2">
+                    {previewSlots.map((slot) => (
+                      <span
+                        key={slot}
+                        className="w-[68px] px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] text-center bg-green-600 text-white"
+                      >
+                        {slot}
+                      </span>
+                    ))}
+                    {previewSlots.length === 0 && (
+                      <span className="text-xs text-gray-500">
+                        Нет доступных слотов при выбранных параметрах.
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {editingRule.isBlocked ? 'Блокировка' : `Цена: ${editingRule.price} ₽`}
+                  </div>
                 </div>
               </div>
 
@@ -597,55 +686,62 @@ export default function PricingRulesPage() {
           </div>
         </div>
 
-        {rules.length === 0 ? (
+        {filteredRules.length === 0 ? (
           <p className="text-gray-500">Правила пока не заданы.</p>
         ) : rulesView === 'cards' ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {rules.map((rule) => (
-              <div
-                key={rule.id}
-                className="flex flex-col justify-between gap-4 border border-gray-200 rounded-lg p-4 h-full"
-              >
-                <div className="space-y-2">
-                  <div className="font-semibold text-gray-800">{rule.title}</div>
-                  <div className="text-sm text-gray-500">
-                    {rule.isBlocked ? (
-                      <>Блокировка · Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
-                    ) : (
-                      <>
-                        Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·
-                        Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
-                      </>
-                    )}
+            {filteredRules.map((rule) => {
+              const dateRange = formatDateRange(rule.startDate, rule.endDate);
+              return (
+                <div
+                  key={rule.id}
+                  className="flex flex-col justify-between gap-4 border border-gray-200 rounded-lg p-4 h-full"
+                >
+                  <div className="space-y-2">
+                    <div className="font-semibold text-gray-800">{rule.title}</div>
+                    <div className="text-sm text-gray-500">
+                      {rule.isBlocked ? (
+                        <>Блокировка · Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
+                      ) : (
+                        <>
+                          Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·
+                          Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
+                        </>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {dateRange ? (
+                        <>
+                          Даты: {dateRange} ·{' '}
+                        </>
+                      ) : null}
+                      Дни: {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
+                      {rule.isActive ? '' : '(не активно)'}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Квесты:{' '}
+                      {rule.questIds
+                        .map((id) => questMap.get(id) || id.slice(0, 6))
+                        .join(', ')}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-400">
-                    Даты: {rule.startDate || 'без начала'} – {rule.endDate || 'без конца'}
-                    · Дни: {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
-                    {rule.isActive ? '' : '(не активно)'}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    Квесты:{' '}
-                    {rule.questIds
-                      .map((id) => questMap.get(id) || id.slice(0, 6))
-                      .join(', ')}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(rule)}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                    >
+                      Редактировать
+                    </button>
+                    <button
+                      onClick={() => handleDelete(rule.id)}
+                      className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(rule)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
-                  >
-                    Редактировать
-                  </button>
-                  <button
-                    onClick={() => handleDelete(rule.id)}
-                    className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -660,49 +756,52 @@ export default function PricingRulesPage() {
                 </tr>
               </thead>
               <tbody>
-                {rules.map((rule) => (
-                  <tr key={rule.id} className="border-b last:border-b-0">
-                    <td className="py-3 pr-4 font-semibold text-gray-800">{rule.title}</td>
-                    <td className="py-3 pr-4 text-gray-500">
-                      {rule.isBlocked ? (
-                        <>Блокировка · {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
-                      ) : (
-                        <>
-                          Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·{' '}
-                          {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
-                        </>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4 text-gray-400">
-                      {rule.startDate || 'без начала'} – {rule.endDate || 'без конца'}
-                      <div>
-                        {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
-                        {rule.isActive ? '' : '(не активно)'}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4 text-gray-400">
-                      {rule.questIds
-                        .map((id) => questMap.get(id) || id.slice(0, 6))
-                        .join(', ')}
-                    </td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(rule)}
-                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
-                        >
-                          Редактировать
-                        </button>
-                        <button
-                          onClick={() => handleDelete(rule.id)}
-                          className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredRules.map((rule) => {
+                  const dateRange = formatDateRange(rule.startDate, rule.endDate);
+                  return (
+                    <tr key={rule.id} className="border-b last:border-b-0">
+                      <td className="py-3 pr-4 font-semibold text-gray-800">{rule.title}</td>
+                      <td className="py-3 pr-4 text-gray-500">
+                        {rule.isBlocked ? (
+                          <>Блокировка · {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
+                        ) : (
+                          <>
+                            Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·{' '}
+                            {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
+                          </>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 text-gray-400">
+                        {dateRange ? <div>{dateRange}</div> : null}
+                        <div>
+                          {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
+                          {rule.isActive ? '' : '(не активно)'}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4 text-gray-400">
+                        {rule.questIds
+                          .map((id) => questMap.get(id) || id.slice(0, 6))
+                          .join(', ')}
+                      </td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(rule)}
+                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                          >
+                            Редактировать
+                          </button>
+                          <button
+                            onClick={() => handleDelete(rule.id)}
+                            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
