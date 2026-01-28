@@ -19,6 +19,9 @@ public class ProductionCalendarDay
     [Column("is_holiday")]
     public bool IsHoliday { get; set; }
 
+    [Column("day_type")]
+    public string? DayType { get; set; }
+
     [Column("source")]
     public string? Source { get; set; }
 
