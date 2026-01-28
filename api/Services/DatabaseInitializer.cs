@@ -63,6 +63,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             {
                 await EnsureMigrationHistoryAsync(databaseCreator, migrations);
                 await _context.Database.MigrateAsync();
+                await EnsureQuestGiftColumnsAsync();
             }
 
         }
@@ -101,6 +102,34 @@ public class DatabaseInitializer : IDatabaseInitializer
         var initialMigration = migrations.First();
         var productVersion = typeof(DbContext).Assembly.GetName().Version?.ToString() ?? "unknown";
         var insertScript = historyRepository.GetInsertScript(new HistoryRow(initialMigration, productVersion));
+        await _context.Database.ExecuteSqlRawAsync(insertScript);
+    }
+
+    private async Task EnsureQuestGiftColumnsAsync()
+    {
+        const string migrationId = "20260201090000_AddQuestGiftFields";
+
+        await _context.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE quests
+                ADD COLUMN IF NOT EXISTS gift_game_label text,
+                ADD COLUMN IF NOT EXISTS gift_game_url text,
+                ADD COLUMN IF NOT EXISTS video_url text;
+            """);
+
+        var historyRepository = _context.Database.GetService<IHistoryRepository>();
+        if (!await historyRepository.ExistsAsync())
+        {
+            return;
+        }
+
+        var appliedMigrations = await _context.Database.GetAppliedMigrationsAsync();
+        if (appliedMigrations.Contains(migrationId))
+        {
+            return;
+        }
+
+        var productVersion = typeof(DbContext).Assembly.GetName().Version?.ToString() ?? "unknown";
+        var insertScript = historyRepository.GetInsertScript(new HistoryRow(migrationId, productVersion));
         await _context.Database.ExecuteSqlRawAsync(insertScript);
     }
 
