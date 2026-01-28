@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
 using QuestRoomApi.Data;
 using QuestRoomApi.Models;
@@ -53,18 +52,11 @@ public class DatabaseInitializer : IDatabaseInitializer
             var migrations = _context.Database.GetMigrations().ToList();
             if (migrations.Count == 0)
             {
-                _logger.LogWarning("No EF Core migrations were found. Creating tables from the current model.");
-                if (!await databaseCreator.HasTablesAsync())
-                {
-                    await databaseCreator.CreateTablesAsync();
-                }
+                _logger.LogError("No EF Core migrations were found. Database initialization requires migrations.");
+                throw new InvalidOperationException("Missing EF Core migrations. Use migrations to initialize the database.");
             }
-            else
-            {
-                await EnsureMigrationHistoryAsync(databaseCreator, migrations);
-                await _context.Database.MigrateAsync();
-                await EnsureQuestGiftColumnsAsync();
-            }
+
+            await _context.Database.MigrateAsync();
 
         }
         else
@@ -82,56 +74,6 @@ public class DatabaseInitializer : IDatabaseInitializer
         await SeedAsync(seedMode);
     }
 
-    private async Task EnsureMigrationHistoryAsync(IRelationalDatabaseCreator databaseCreator, List<string> migrations)
-    {
-        var historyRepository = _context.Database.GetService<IHistoryRepository>();
-        var historyExists = await historyRepository.ExistsAsync();
-        if (historyExists)
-        {
-            return;
-        }
-
-        if (!await databaseCreator.HasTablesAsync())
-        {
-            return;
-        }
-
-        _logger.LogWarning("Migrations history table is missing while tables exist. Baselineing initial migration.");
-        await historyRepository.CreateAsync();
-
-        var initialMigration = migrations.First();
-        var productVersion = typeof(DbContext).Assembly.GetName().Version?.ToString() ?? "unknown";
-        var insertScript = historyRepository.GetInsertScript(new HistoryRow(initialMigration, productVersion));
-        await _context.Database.ExecuteSqlRawAsync(insertScript);
-    }
-
-    private async Task EnsureQuestGiftColumnsAsync()
-    {
-        const string migrationId = "20260201090000_AddQuestGiftFields";
-
-        await _context.Database.ExecuteSqlRawAsync("""
-            ALTER TABLE quests
-                ADD COLUMN IF NOT EXISTS gift_game_label text,
-                ADD COLUMN IF NOT EXISTS gift_game_url text,
-                ADD COLUMN IF NOT EXISTS video_url text;
-            """);
-
-        var historyRepository = _context.Database.GetService<IHistoryRepository>();
-        if (!await historyRepository.ExistsAsync())
-        {
-            return;
-        }
-
-        var appliedMigrations = await _context.Database.GetAppliedMigrationsAsync();
-        if (appliedMigrations.Contains(migrationId))
-        {
-            return;
-        }
-
-        var productVersion = typeof(DbContext).Assembly.GetName().Version?.ToString() ?? "unknown";
-        var insertScript = historyRepository.GetInsertScript(new HistoryRow(migrationId, productVersion));
-        await _context.Database.ExecuteSqlRawAsync(insertScript);
-    }
 
     private SeedMode GetSeedMode()
     {
