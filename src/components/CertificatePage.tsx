@@ -128,6 +128,24 @@ export default function CertificatePage() {
           </h1>
         </div>
 
+        <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">
+          {settings?.certificatePageTitle || 'Подарочные сертификаты'}
+        </h2>
+
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 md:p-8 mb-6 md:mb-8">
+          <div className="text-white space-y-4 md:space-y-6">
+            <p className="text-sm md:text-base lg:text-lg leading-relaxed">
+              {settings?.certificatePageDescription ||
+                'Вы можете приобрести как Подарочный сертификат в бумажном виде в нашем фирменном конверте так и Электронный подарочный сертификат на участие в реалити-квестах "Вловушке24". Сертификат распространяется на команду от 2 до 4 человек. Использовать сертификат можно в любой локации на выбор участников соответствующий максимальной цене квеста на сайте компании, по предварительной записи. Срок действия подарочных сертификатов - 3 месяца с даты приобретения. Для приобретения Подарочного сертификата позвоните по телефону: 294-59-50 или отправьте заявку на электронную почту - krsk@vlovushke24.ru.'}
+            </p>
+
+            <p className="text-base md:text-lg lg:text-xl leading-relaxed font-semibold">
+              {settings?.certificatePagePricing ||
+                'Стоимость подарочных сертификатов на квесты: "Ключ от всех дверей", "Звонок", "Школа магии Хогвартс", "Алиса в стране чудес" и "Шерлок" - 3500 руб. (60/75-минутные квесты) и "Идеальное ограбление" - 4000 руб. (90-минутный квест).'}
+            </p>
+          </div>
+        </div>
+
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 md:p-8 mb-8">
           <h2 className="text-xl md:text-2xl font-bold text-white mb-4 text-center">
             Оформить подарочный сертификат
@@ -230,24 +248,6 @@ export default function CertificatePage() {
             ))}
           </div>
         )}
-
-        <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">
-          {settings?.certificatePageTitle || 'Подарочные сертификаты'}
-        </h2>
-
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 md:p-8 mb-6 md:mb-8">
-          <div className="text-white space-y-4 md:space-y-6">
-            <p className="text-sm md:text-base lg:text-lg leading-relaxed">
-              {settings?.certificatePageDescription ||
-                'Вы можете приобрести как Подарочный сертификат в бумажном виде в нашем фирменном конверте так и Электронный подарочный сертификат на участие в реалити-квестах "Вловушке24". Сертификат распространяется на команду от 2 до 4 человек. Использовать сертификат можно в любой локации на выбор участников соответствующий максимальной цене квеста на сайте компании, по предварительной записи. Срок действия подарочных сертификатов - 3 месяца с даты приобретения. Для приобретения Подарочного сертификата позвоните по телефону: 294-59-50 или отправьте заявку на электронную почту - krsk@vlovushke24.ru.'}
-            </p>
-
-            <p className="text-base md:text-lg lg:text-xl leading-relaxed font-semibold">
-              {settings?.certificatePagePricing ||
-                'Стоимость подарочных сертификатов на квесты: "Ключ от всех дверей", "Звонок", "Школа магии Хогвартс", "Алиса в стране чудес" и "Шерлок" - 3500 руб. (60/75-минутные квесты) и "Идеальное ограбление" - 4000 руб. (90-минутный квест).'}
-            </p>
-          </div>
-        </div>
 
         {selectedCertificate && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
