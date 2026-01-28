@@ -253,32 +253,34 @@ export default function QuestDetailPage() {
           </div>
 
           <div className="text-white">
-            <div className="flex items-center gap-3 mb-4">
-              <h1 className="text-4xl font-bold">{quest.title}</h1>
-              <div className="bg-red-600 rounded-full px-4 py-2 flex items-center gap-2">
-                <Star className="w-5 h-5 fill-white" />
-                <span className="font-bold">{formatAgeRating(quest.ageRating)}</span>
-              </div>
-              <div className="bg-white/20 rounded-full px-4 py-2 flex items-center gap-2">
-                <span className="flex items-center gap-1">
-                  {Array.from({ length: difficultyMax }).map((_, index) => (
-                    <Key
-                      key={index}
-                      className={`w-4 h-4 ${
-                        index < filledKeys ? 'text-yellow-300' : 'text-white/40'
-                      }`}
-                    />
-                  ))}
-                </span>
-                <span className="font-semibold">
-                  {difficultyValue}/{difficultyMax}
-                </span>
+            <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:gap-3">
+              <h1 className="text-3xl sm:text-4xl font-bold">{quest.title}</h1>
+              <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
+                <div className="bg-red-600 rounded-full px-4 py-2 flex items-center gap-2">
+                  <Star className="w-5 h-5 fill-white" />
+                  <span className="font-bold">{formatAgeRating(quest.ageRating)}</span>
+                </div>
+                <div className="bg-white/20 rounded-full px-4 py-2 flex items-center gap-2">
+                  <span className="flex items-center gap-1">
+                    {Array.from({ length: difficultyMax }).map((_, index) => (
+                      <Key
+                        key={index}
+                        className={`w-4 h-4 ${
+                          index < filledKeys ? 'text-yellow-300' : 'text-white/40'
+                        }`}
+                      />
+                    ))}
+                  </span>
+                  <span className="font-semibold">
+                    {difficultyValue}/{difficultyMax}
+                  </span>
+                </div>
               </div>
             </div>
 
             <p className="text-base mb-6 whitespace-pre-wrap">{quest.description}</p>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center flex flex-col items-center">
                 <div className="flex items-center gap-2 mb-2 justify-center">
                   <Clock className="w-5 h-5 text-yellow-400" />
