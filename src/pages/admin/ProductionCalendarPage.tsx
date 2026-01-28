@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import type { ProductionCalendarDay, ProductionCalendarDayUpsert } from '../../lib/types';
 import {
@@ -54,12 +54,13 @@ export default function ProductionCalendarPage() {
   const [days, setDays] = useState<ProductionCalendarDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [yearFilter, setYearFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('');
   const [importUrl, setImportUrl] = useState(defaultCalendarUrl);
   const [importJson, setImportJson] = useState('');
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
+  const isYearSelectionLocked = useRef(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDay, setEditingDay] = useState<ProductionCalendarDay | null>(null);
   const [draft, setDraft] = useState<CalendarDraft>({
@@ -91,11 +92,22 @@ export default function ProductionCalendarPage() {
   }, [days]);
 
   const filteredDays = useMemo(() => {
-    if (yearFilter === 'all') {
+    if (!yearFilter || yearFilter === 'all') {
       return days;
     }
     return days.filter((day) => formatYear(day.date).toString() === yearFilter);
   }, [days, yearFilter]);
+
+  useEffect(() => {
+    if (days.length === 0 || isYearSelectionLocked.current) {
+      if (days.length === 0 && !isYearSelectionLocked.current) {
+        setYearFilter('all');
+      }
+      return;
+    }
+    const latestYear = Math.max(...days.map((day) => formatYear(day.date)));
+    setYearFilter(String(latestYear));
+  }, [days]);
 
   const groupedByMonth = useMemo(() => {
     const groups = new Map<string, ProductionCalendarDay[]>();
@@ -288,6 +300,13 @@ export default function ProductionCalendarPage() {
     await handleImportFromUrl(defaultCalendarUrl);
   };
 
+  const handleRefresh = async () => {
+    if (!confirm('Обновить данные календаря?')) {
+      return;
+    }
+    await loadDays();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -308,7 +327,7 @@ export default function ProductionCalendarPage() {
           </button>
           <button
             type="button"
-            onClick={loadDays}
+            onClick={handleRefresh}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
           >
             <RefreshCw className="h-4 w-4" />
@@ -330,7 +349,10 @@ export default function ProductionCalendarPage() {
               <label className="text-sm text-gray-500">Год</label>
               <select
                 value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
+                onChange={(e) => {
+                  isYearSelectionLocked.current = true;
+                  setYearFilter(e.target.value);
+                }}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
                 <option value="all">Все</option>
@@ -354,13 +376,13 @@ export default function ProductionCalendarPage() {
                   <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     {group.monthName}
                   </h4>
-                  <div className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {group.days.map((day) => {
                       const dayType = normalizeDayType(day);
                       return (
                         <div
                           key={day.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3"
+                          className="flex h-full flex-col justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3"
                         >
                           <div>
                             <div className="font-semibold text-gray-900">
