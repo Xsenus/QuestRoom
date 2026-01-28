@@ -15,12 +15,53 @@ const dayOptions = [
 
 const dayLabels = new Map(dayOptions.map((day) => [day.value, day.label]));
 
+const getTodayISO = () => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 const getCurrentYearRange = () => {
   const year = new Date().getFullYear();
   return {
-    start: `${year}-01-01`,
+    start: getTodayISO(),
     end: `${year}-12-31`,
   };
+};
+
+const timeToMinutes = (time: string) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+  return hours * 60 + minutes;
+};
+
+const minutesToTime = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+const buildTimeSlots = (startTime: string, endTime: string, interval: number) => {
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+  if (
+    startMinutes === null ||
+    endMinutes === null ||
+    interval <= 0 ||
+    endMinutes <= startMinutes
+  ) {
+    return [];
+  }
+  const slots: string[] = [];
+  let current = startMinutes;
+  const maxSlots = 24;
+  while (current + interval <= endMinutes && slots.length < maxSlots) {
+    slots.push(minutesToTime(current));
+    current += interval;
+  }
+  return slots;
 };
 
 const buildEmptyRule = (questIds: string[]): QuestPricingRuleUpsert => {
@@ -45,27 +86,20 @@ export default function PricingRulesPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [rules, setRules] = useState<QuestPricingRule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedQuestId, setSelectedQuestId] = useState<string>('');
+  const [selectedQuestIds, setSelectedQuestIds] = useState<string[]>([]);
   const [editingRule, setEditingRule] = useState<
     (QuestPricingRuleUpsert & { id?: string }) | null
   >(null);
   const [generationQuestId, setGenerationQuestId] = useState<string>('');
-  const [generateFrom, setGenerateFrom] = useState<string>('');
-  const [generateTo, setGenerateTo] = useState<string>('');
+  const [generateFrom, setGenerateFrom] = useState<string>(getCurrentYearRange().start);
+  const [generateTo, setGenerateTo] = useState<string>(getCurrentYearRange().end);
   const [generateResult, setGenerateResult] = useState<string>('');
   const [rulesView, setRulesView] = useState<'cards' | 'table'>('cards');
 
   useEffect(() => {
     loadQuests();
+    loadRules();
   }, []);
-
-  useEffect(() => {
-    if (selectedQuestId) {
-      loadRules(selectedQuestId);
-    } else {
-      loadRules();
-    }
-  }, [selectedQuestId]);
 
   const loadQuests = async () => {
     try {
@@ -80,9 +114,9 @@ export default function PricingRulesPage() {
     setLoading(false);
   };
 
-  const loadRules = async (questId?: string) => {
+  const loadRules = async () => {
     try {
-      const data = await api.getPricingRules(questId);
+      const data = await api.getPricingRules();
       setRules(data || []);
     } catch (error) {
       console.error('Ошибка загрузки правил:', error);
@@ -90,11 +124,7 @@ export default function PricingRulesPage() {
   };
 
   const handleCreate = () => {
-    if (!selectedQuestId) {
-      alert('Выберите квест для нового правила.');
-      return;
-    }
-    setEditingRule(buildEmptyRule([selectedQuestId]));
+    setEditingRule(buildEmptyRule(selectedQuestIds));
   };
 
   const handleEdit = (rule: QuestPricingRule) => {
@@ -130,7 +160,7 @@ export default function PricingRulesPage() {
         await api.createPricingRule(editingRule);
       }
       setEditingRule(null);
-      loadRules(selectedQuestId || undefined);
+      loadRules();
     } catch (error) {
       alert('Ошибка сохранения: ' + (error as Error).message);
     }
@@ -140,7 +170,7 @@ export default function PricingRulesPage() {
     if (!confirm('Удалить правило?')) return;
     try {
       await api.deletePricingRule(ruleId);
-      loadRules(selectedQuestId || undefined);
+      loadRules();
     } catch (error) {
       alert('Ошибка удаления: ' + (error as Error).message);
     }
@@ -152,6 +182,20 @@ export default function PricingRulesPage() {
       ? editingRule.daysOfWeek.filter((d) => d !== day)
       : [...editingRule.daysOfWeek, day];
     setEditingRule({ ...editingRule, daysOfWeek: days });
+  };
+
+  const toggleQuest = (questId: string) => {
+    if (!editingRule) return;
+    const nextQuestIds = editingRule.questIds.includes(questId)
+      ? editingRule.questIds.filter((id) => id !== questId)
+      : [...editingRule.questIds, questId];
+    setEditingRule({ ...editingRule, questIds: nextQuestIds });
+  };
+
+  const toggleQuestFilter = (questId: string) => {
+    setSelectedQuestIds((prev) =>
+      prev.includes(questId) ? prev.filter((id) => id !== questId) : [...prev, questId]
+    );
   };
 
   const handleGenerate = async () => {
@@ -185,10 +229,11 @@ export default function PricingRulesPage() {
     () => quests.map((quest) => ({ value: quest.id, label: quest.title })),
     [quests]
   );
-  const questFilterOptions = useMemo(
-    () => [{ value: '', label: 'Все квесты' }, ...questOptions],
-    [questOptions]
-  );
+  const questFilterOptions = useMemo(() => {
+    const visibleQuests = quests.filter((quest) => quest.isVisible);
+    const target = visibleQuests.length > 0 ? visibleQuests : quests;
+    return target.map((quest) => ({ value: quest.id, label: quest.title }));
+  }, [quests]);
   const generationOptions = useMemo(
     () => [{ value: '', label: 'Все квесты' }, ...questOptions],
     [questOptions]
@@ -198,10 +243,33 @@ export default function PricingRulesPage() {
     [questOptions]
   );
 
+  const filteredRules = useMemo(() => {
+    if (selectedQuestIds.length === 0) {
+      return rules;
+    }
+    return rules.filter((rule) =>
+      rule.questIds.some((questId) => selectedQuestIds.includes(questId))
+    );
+  }, [rules, selectedQuestIds]);
+
   const formatDays = (days: number[]) =>
     days
       .map((day) => dayLabels.get(day) || day.toString())
       .join(', ');
+
+  const formatDateRange = (startDate: string | null, endDate: string | null) => {
+    if (!startDate && !endDate) {
+      return '';
+    }
+    if (startDate && endDate) {
+      return `${startDate} – ${endDate}`;
+    }
+    return startDate || endDate || '';
+  };
+
+  const previewSlots = editingRule
+    ? buildTimeSlots(editingRule.startTime, editingRule.endTime, editingRule.intervalMinutes)
+    : [];
 
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
@@ -226,253 +294,304 @@ export default function PricingRulesPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Квест для фильтрации
             </label>
-            <select
-              value={selectedQuestId}
-              onChange={(e) => setSelectedQuestId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-            >
-              {questFilterOptions.map((quest) => (
-                <option key={quest.value || 'all'} value={quest.value}>
-                  {quest.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="text-sm text-gray-500 md:col-span-2">
-            Настраивайте периоды, дни недели и интервалы времени. Эти правила
-            используются для генерации расписания.
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedQuestIds([])}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                  selectedQuestIds.length === 0
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                }`}
+              >
+                Все квесты
+              </button>
+              {questFilterOptions.map((quest) => {
+                const isActive = selectedQuestIds.includes(quest.value);
+                return (
+                  <button
+                    key={quest.value}
+                    type="button"
+                    onClick={() => toggleQuestFilter(quest.value)}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                      isActive
+                        ? 'bg-red-600 text-white border-red-600'
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    {quest.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
       {editingRule && (
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h3 className="text-xl font-bold text-gray-800">
-            {editingRule.id ? 'Редактирование правила' : 'Новое правило'}
-          </h3>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Квесты
-              </label>
-              <select
-                multiple
-                value={editingRule.questIds}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    questIds: Array.from(e.target.selectedOptions, (option) => option.value),
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none min-h-[140px]"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8">
+          <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-lg max-h-full overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">
+                {editingRule.id ? 'Редактирование правила' : 'Новое правило'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingRule(null)}
+                className="inline-flex items-center justify-center rounded-full p-1 text-gray-500 hover:bg-gray-100"
               >
-                {questOptions.map((quest) => (
-                  <option key={quest.value} value={quest.value}>
-                    {quest.label}
-                  </option>
-                ))}
-              </select>
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Название правила
-              </label>
-              <input
-                type="text"
-                value={editingRule.title}
-                onChange={(e) => setEditingRule({ ...editingRule, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="Будни с 10:00 до 18:00"
-              />
-            </div>
-          </div>
+            <div className="mt-6 space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Квесты
+                  </label>
+                  <div className="grid gap-2 rounded-lg border border-gray-200 p-4 max-h-52 overflow-y-auto">
+                    {questOptions.map((quest) => (
+                      <label
+                        key={quest.value}
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editingRule.questIds.includes(quest.value)}
+                          onChange={() => toggleQuest(quest.value)}
+                          className="h-4 w-4 text-red-600 rounded focus:ring-red-500"
+                        />
+                        {quest.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Дата начала
-              </label>
-              <input
-                type="date"
-                value={editingRule.startDate || ''}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    startDate: e.target.value || null,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Дата окончания
-              </label>
-              <input
-                type="date"
-                value={editingRule.endDate || ''}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    endDate: e.target.value || null,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Приоритет (больше = важнее)
-              </label>
-              <input
-                type="number"
-                value={editingRule.priority}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    priority: parseInt(e.target.value) || 1,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                min="1"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Дни недели
-            </label>
-            <div className="flex flex-wrap gap-3">
-              {dayOptions.map((day) => (
-                <label
-                  key={day.value}
-                  className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-semibold transition-colors ${
-                    editingRule.daysOfWeek.includes(day.value)
-                      ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-gray-100 text-gray-700 border-gray-200'
-                  }`}
-                >
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Название правила
+                  </label>
                   <input
-                    type="checkbox"
-                    className="hidden"
-                    checked={editingRule.daysOfWeek.includes(day.value)}
-                    onChange={() => toggleDay(day.value)}
+                    type="text"
+                    value={editingRule.title}
+                    onChange={(e) => setEditingRule({ ...editingRule, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="Будни с 10:00 до 18:00"
                   />
-                  {day.label}
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата начала
+                  </label>
+                  <input
+                    type="date"
+                    value={editingRule.startDate || ''}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        startDate: e.target.value || null,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата окончания
+                  </label>
+                  <input
+                    type="date"
+                    value={editingRule.endDate || ''}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        endDate: e.target.value || null,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Приоритет (больше = важнее)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingRule.priority}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        priority: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Дни недели
                 </label>
-              ))}
-            </div>
-          </div>
+                <div className="flex flex-wrap gap-3">
+                  {dayOptions.map((day) => (
+                    <label
+                      key={day.value}
+                      className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-semibold transition-colors ${
+                        editingRule.daysOfWeek.includes(day.value)
+                          ? 'bg-red-600 text-white border-red-600'
+                          : 'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={editingRule.daysOfWeek.includes(day.value)}
+                        onChange={() => toggleDay(day.value)}
+                      />
+                      {day.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Время начала
-              </label>
-              <input
-                type="time"
-                value={editingRule.startTime}
-                onChange={(e) =>
-                  setEditingRule({ ...editingRule, startTime: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Время окончания
-              </label>
-              <input
-                type="time"
-                value={editingRule.endTime}
-                onChange={(e) =>
-                  setEditingRule({ ...editingRule, endTime: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Интервал (мин.)
-              </label>
-              <input
-                type="number"
-                value={editingRule.intervalMinutes}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    intervalMinutes: parseInt(e.target.value) || 60,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                min="15"
-              />
-            </div>
-          </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Время начала
+                  </label>
+                  <input
+                    type="time"
+                    value={editingRule.startTime}
+                    onChange={(e) =>
+                      setEditingRule({ ...editingRule, startTime: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Время окончания
+                  </label>
+                  <input
+                    type="time"
+                    value={editingRule.endTime}
+                    onChange={(e) =>
+                      setEditingRule({ ...editingRule, endTime: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Интервал (мин.)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingRule.intervalMinutes}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        intervalMinutes: parseInt(e.target.value) || 60,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    min="15"
+                  />
+                </div>
+              </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Цена (₽)
-              </label>
-              <input
-                type="number"
-                value={editingRule.price}
-                onChange={(e) =>
-                  setEditingRule({
-                    ...editingRule,
-                    price: parseInt(e.target.value) || 0,
-                  })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                min="0"
-                disabled={editingRule.isBlocked}
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={editingRule.isBlocked}
-                  onChange={(e) =>
-                    setEditingRule({ ...editingRule, isBlocked: e.target.checked })
-                  }
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
-                />
-                Время недоступно (блокировка)
-              </label>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={editingRule.isActive}
-                  onChange={(e) =>
-                    setEditingRule({ ...editingRule, isActive: e.target.checked })
-                  }
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
-                />
-                Правило активно
-              </label>
-            </div>
-          </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Цена (₽)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingRule.price}
+                    onChange={(e) =>
+                      setEditingRule({
+                        ...editingRule,
+                        price: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    min="0"
+                    disabled={editingRule.isBlocked}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={editingRule.isBlocked}
+                      onChange={(e) =>
+                        setEditingRule({ ...editingRule, isBlocked: e.target.checked })
+                      }
+                      className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                    />
+                    Время недоступно (блокировка)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={editingRule.isActive}
+                      onChange={(e) =>
+                        setEditingRule({ ...editingRule, isActive: e.target.checked })
+                      }
+                      className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                    />
+                    Правило активно
+                  </label>
+                </div>
+              </div>
 
-          <div className="flex gap-4">
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              <Save className="w-5 h-5" />
-              Сохранить
-            </button>
-            <button
-              onClick={() => setEditingRule(null)}
-              className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              <X className="w-5 h-5" />
-              Отмена
-            </button>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                <div className="font-semibold text-gray-700">Проверка отображения</div>
+                <div className="mt-3 space-y-3 text-gray-700">
+                  <div className="flex flex-wrap gap-2">
+                    {previewSlots.map((slot) => (
+                      <span
+                        key={slot}
+                        className="w-[68px] px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] text-center bg-green-600 text-white"
+                      >
+                        {slot}
+                      </span>
+                    ))}
+                    {previewSlots.length === 0 && (
+                      <span className="text-xs text-gray-500">
+                        Нет доступных слотов при выбранных параметрах.
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {editingRule.isBlocked ? 'Блокировка' : `Цена: ${editingRule.price} ₽`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <Save className="w-5 h-5" />
+                  Сохранить
+                </button>
+                <button
+                  onClick={() => setEditingRule(null)}
+                  className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                  Отмена
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -563,55 +682,62 @@ export default function PricingRulesPage() {
           </div>
         </div>
 
-        {rules.length === 0 ? (
+        {filteredRules.length === 0 ? (
           <p className="text-gray-500">Правила пока не заданы.</p>
         ) : rulesView === 'cards' ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {rules.map((rule) => (
-              <div
-                key={rule.id}
-                className="flex flex-col justify-between gap-4 border border-gray-200 rounded-lg p-4 h-full"
-              >
-                <div className="space-y-2">
-                  <div className="font-semibold text-gray-800">{rule.title}</div>
-                  <div className="text-sm text-gray-500">
-                    {rule.isBlocked ? (
-                      <>Блокировка · Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
-                    ) : (
-                      <>
-                        Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·
-                        Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
-                      </>
-                    )}
+            {filteredRules.map((rule) => {
+              const dateRange = formatDateRange(rule.startDate, rule.endDate);
+              return (
+                <div
+                  key={rule.id}
+                  className="flex flex-col justify-between gap-4 border border-gray-200 rounded-lg p-4 h-full"
+                >
+                  <div className="space-y-2">
+                    <div className="font-semibold text-gray-800">{rule.title}</div>
+                    <div className="text-sm text-gray-500">
+                      {rule.isBlocked ? (
+                        <>Блокировка · Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
+                      ) : (
+                        <>
+                          Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·
+                          Время: {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
+                        </>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {dateRange ? (
+                        <>
+                          Даты: {dateRange} ·{' '}
+                        </>
+                      ) : null}
+                      Дни: {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
+                      {rule.isActive ? '' : '(не активно)'}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Квесты:{' '}
+                      {rule.questIds
+                        .map((id) => questMap.get(id) || id.slice(0, 6))
+                        .join(', ')}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-400">
-                    Даты: {rule.startDate || 'без начала'} – {rule.endDate || 'без конца'}
-                    · Дни: {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
-                    {rule.isActive ? '' : '(не активно)'}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    Квесты:{' '}
-                    {rule.questIds
-                      .map((id) => questMap.get(id) || id.slice(0, 6))
-                      .join(', ')}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(rule)}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                    >
+                      Редактировать
+                    </button>
+                    <button
+                      onClick={() => handleDelete(rule.id)}
+                      className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(rule)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
-                  >
-                    Редактировать
-                  </button>
-                  <button
-                    onClick={() => handleDelete(rule.id)}
-                    className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -626,49 +752,52 @@ export default function PricingRulesPage() {
                 </tr>
               </thead>
               <tbody>
-                {rules.map((rule) => (
-                  <tr key={rule.id} className="border-b last:border-b-0">
-                    <td className="py-3 pr-4 font-semibold text-gray-800">{rule.title}</td>
-                    <td className="py-3 pr-4 text-gray-500">
-                      {rule.isBlocked ? (
-                        <>Блокировка · {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
-                      ) : (
-                        <>
-                          Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·{' '}
-                          {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
-                        </>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4 text-gray-400">
-                      {rule.startDate || 'без начала'} – {rule.endDate || 'без конца'}
-                      <div>
-                        {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
-                        {rule.isActive ? '' : '(не активно)'}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4 text-gray-400">
-                      {rule.questIds
-                        .map((id) => questMap.get(id) || id.slice(0, 6))
-                        .join(', ')}
-                    </td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(rule)}
-                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
-                        >
-                          Редактировать
-                        </button>
-                        <button
-                          onClick={() => handleDelete(rule.id)}
-                          className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredRules.map((rule) => {
+                  const dateRange = formatDateRange(rule.startDate, rule.endDate);
+                  return (
+                    <tr key={rule.id} className="border-b last:border-b-0">
+                      <td className="py-3 pr-4 font-semibold text-gray-800">{rule.title}</td>
+                      <td className="py-3 pr-4 text-gray-500">
+                        {rule.isBlocked ? (
+                          <>Блокировка · {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}</>
+                        ) : (
+                          <>
+                            Цена: {rule.price} ₽ · Интервал: {rule.intervalMinutes} мин. ·{' '}
+                            {rule.startTime.slice(0, 5)}–{rule.endTime.slice(0, 5)}
+                          </>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 text-gray-400">
+                        {dateRange ? <div>{dateRange}</div> : null}
+                        <div>
+                          {formatDays(rule.daysOfWeek)} · Приоритет: {rule.priority}{' '}
+                          {rule.isActive ? '' : '(не активно)'}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4 text-gray-400">
+                        {rule.questIds
+                          .map((id) => questMap.get(id) || id.slice(0, 6))
+                          .join(', ')}
+                      </td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(rule)}
+                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                          >
+                            Редактировать
+                          </button>
+                          <button
+                            onClick={() => handleDelete(rule.id)}
+                            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
