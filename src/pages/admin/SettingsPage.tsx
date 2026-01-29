@@ -43,6 +43,18 @@ const getColorValue = (value: string | null, fallback: string) =>
   isValidHexColor(value) ? (value as string) : fallback;
 
 export default function SettingsPage() {
+  const timeZoneOptions = [
+    { value: 'Asia/Krasnoyarsk', label: 'Asia/Krasnoyarsk (Красноярск, UTC+7)' },
+    { value: 'Asia/Novosibirsk', label: 'Asia/Novosibirsk (Новосибирск, UTC+7)' },
+    { value: 'Asia/Irkutsk', label: 'Asia/Irkutsk (Иркутск, UTC+8)' },
+    { value: 'Asia/Yekaterinburg', label: 'Asia/Yekaterinburg (Екатеринбург, UTC+5)' },
+    { value: 'Europe/Moscow', label: 'Europe/Moscow (Москва, UTC+3)' },
+    { value: 'Europe/Samara', label: 'Europe/Samara (Самара, UTC+4)' },
+    { value: 'Asia/Vladivostok', label: 'Asia/Vladivostok (Владивосток, UTC+10)' },
+    { value: 'Asia/Yakutsk', label: 'Asia/Yakutsk (Якутск, UTC+9)' },
+    { value: 'Asia/Chita', label: 'Asia/Chita (Чита, UTC+9)' },
+    { value: 'Asia/Omsk', label: 'Asia/Omsk (Омск, UTC+6)' },
+  ];
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -821,13 +833,17 @@ export default function SettingsPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Часовой пояс (IANA)
               </label>
-              <input
-                type="text"
-                value={settings.timeZone || ''}
+              <select
+                value={settings.timeZone || 'Asia/Krasnoyarsk'}
                 onChange={(e) => setSettings({ ...settings, timeZone: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="Asia/Krasnoyarsk"
-              />
+              >
+                {timeZoneOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
               <p className="mt-2 text-xs text-gray-500">
                 Используется для расчета времени закрытия слотов на публичной странице.
               </p>
