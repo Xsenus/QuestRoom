@@ -3,9 +3,10 @@ import { api } from '../../lib/api';
 import {
   QuestScheduleOverride,
   QuestScheduleOverrideUpsert,
+  QuestScheduleSettingsUpsert,
   QuestWeeklySlot,
 } from '../../lib/types';
-import { CalendarClock, Plus, Save, Trash2, X, RefreshCw } from 'lucide-react';
+import { CalendarClock, Plus, Save, Trash2, X } from 'lucide-react';
 
 const dayOptions = [
   { value: 1, label: 'Понедельник' },
@@ -25,12 +26,6 @@ const getTodayISO = () => {
   return local.toISOString().slice(0, 10);
 };
 
-const addDays = (date: string, days: number) => {
-  const base = new Date(date + 'T00:00:00');
-  base.setDate(base.getDate() + days);
-  return base.toISOString().slice(0, 10);
-};
-
 const buildEmptyOverride = (questId: string): QuestScheduleOverrideUpsert => ({
   questId,
   date: getTodayISO(),
@@ -45,24 +40,20 @@ type Props = {
 export default function QuestScheduleEditor({ questId }: Props) {
   const [weeklySlots, setWeeklySlots] = useState<QuestWeeklySlot[]>([]);
   const [overrides, setOverrides] = useState<QuestScheduleOverride[]>([]);
+  const [holidayPriceInput, setHolidayPriceInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [newSlotTime, setNewSlotTime] = useState('10:00');
   const [newSlotPrice, setNewSlotPrice] = useState('');
-  const [newSlotHolidayPrice, setNewSlotHolidayPrice] = useState('');
   const [editingOverride, setEditingOverride] = useState<
     (QuestScheduleOverrideUpsert & { id?: string }) | null
   >(null);
-  const [importRange, setImportRange] = useState({
-    from: getTodayISO(),
-    to: addDays(getTodayISO(), 30),
-  });
-  const [importResult, setImportResult] = useState('');
 
   useEffect(() => {
     setLoading(true);
-    loadWeeklySlots();
-    loadOverrides();
+    Promise.all([loadWeeklySlots(), loadOverrides(), loadSettings()])
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
   }, [questId]);
 
   const loadWeeklySlots = async () => {
@@ -71,8 +62,6 @@ export default function QuestScheduleEditor({ questId }: Props) {
       setWeeklySlots(data || []);
     } catch (error) {
       console.error('Ошибка загрузки недельного расписания:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -85,6 +74,19 @@ export default function QuestScheduleEditor({ questId }: Props) {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const data = await api.getQuestScheduleSettings(questId);
+      setHolidayPriceInput(
+        data?.holidayPrice === null || data?.holidayPrice === undefined
+          ? ''
+          : String(data.holidayPrice)
+      );
+    } catch (error) {
+      console.error('Ошибка загрузки настроек расписания:', error);
+    }
+  };
+
   const slotsForDay = useMemo(() => {
     return weeklySlots
       .filter((slot) => slot.dayOfWeek === selectedDay)
@@ -93,7 +95,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
 
   const handleUpdateSlotField = (
     slotId: string,
-    field: 'timeSlot' | 'price' | 'holidayPrice',
+    field: 'timeSlot' | 'price',
     value: string
   ) => {
     setWeeklySlots((prev) =>
@@ -101,9 +103,6 @@ export default function QuestScheduleEditor({ questId }: Props) {
         if (slot.id !== slotId) return slot;
         if (field === 'price') {
           return { ...slot, price: Number(value) || 0 };
-        }
-        if (field === 'holidayPrice') {
-          return { ...slot, holidayPrice: value === '' ? null : Number(value) || 0 };
         }
         return { ...slot, timeSlot: value };
       })
@@ -117,7 +116,6 @@ export default function QuestScheduleEditor({ questId }: Props) {
         dayOfWeek: slot.dayOfWeek,
         timeSlot: slot.timeSlot,
         price: slot.price,
-        holidayPrice: slot.holidayPrice,
       });
       await loadWeeklySlots();
     } catch (error) {
@@ -152,27 +150,30 @@ export default function QuestScheduleEditor({ questId }: Props) {
         dayOfWeek: selectedDay,
         timeSlot: newSlotTime,
         price,
-        holidayPrice: newSlotHolidayPrice ? Number(newSlotHolidayPrice) : null,
       });
       setNewSlotTime('10:00');
       setNewSlotPrice('');
-      setNewSlotHolidayPrice('');
       await loadWeeklySlots();
     } catch (error) {
       alert('Ошибка добавления слота: ' + (error as Error).message);
     }
   };
 
-  const handleImport = async () => {
+  const handleSaveSettings = async () => {
+    const payload: QuestScheduleSettingsUpsert = {
+      questId,
+      holidayPrice: holidayPriceInput === '' ? null : Number(holidayPriceInput) || 0,
+    };
+
     try {
-      const result = await api.importQuestWeeklySlots(questId, {
-        fromDate: importRange.from,
-        toDate: importRange.to,
-      });
-      setImportResult(`Добавлено слотов: ${result.createdCount}`);
-      await loadWeeklySlots();
+      const updated = await api.updateQuestScheduleSettings(payload);
+      setHolidayPriceInput(
+        updated.holidayPrice === null || updated.holidayPrice === undefined
+          ? ''
+          : String(updated.holidayPrice)
+      );
     } catch (error) {
-      setImportResult('Ошибка импорта: ' + (error as Error).message);
+      alert('Ошибка сохранения настроек: ' + (error as Error).message);
     }
   };
 
@@ -283,6 +284,33 @@ export default function QuestScheduleEditor({ questId }: Props) {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 space-y-6">
+        <div className="grid md:grid-cols-[1fr_auto] gap-4 items-end">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Цена в праздники (общая)
+            </label>
+            <input
+              type="number"
+              value={holidayPriceInput}
+              onChange={(e) => setHolidayPriceInput(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              placeholder="Например, 5000"
+              min="0"
+            />
+            <p className="mt-2 text-xs text-gray-500">
+              Используется для всех праздничных и выходных дат. Если не задано, берется базовая цена слота.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveSettings}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
+          >
+            <Save className="w-4 h-4" />
+            Сохранить
+          </button>
+        </div>
+
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <h3 className="text-xl font-bold text-gray-800">Недельное расписание</h3>
           <div className="flex flex-wrap gap-2">
@@ -310,7 +338,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
             {slotsForDay.map((slot) => (
               <div
                 key={slot.id}
-                className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto_auto] gap-3 items-center"
+                className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-3 items-center"
               >
                 <input
                   type="time"
@@ -326,16 +354,6 @@ export default function QuestScheduleEditor({ questId }: Props) {
                   onChange={(e) => handleUpdateSlotField(slot.id, 'price', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="Цена"
-                  min="0"
-                />
-                <input
-                  type="number"
-                  value={slot.holidayPrice ?? ''}
-                  onChange={(e) =>
-                    handleUpdateSlotField(slot.id, 'holidayPrice', e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  placeholder="Цена в праздники"
                   min="0"
                 />
                 <button
@@ -360,7 +378,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
 
         <div className="border-t border-gray-200 pt-4 space-y-3">
           <h4 className="font-semibold text-gray-700">Добавить слот</h4>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-center">
             <input
               type="time"
               value={newSlotTime}
@@ -375,14 +393,6 @@ export default function QuestScheduleEditor({ questId }: Props) {
               placeholder="Цена"
               min="0"
             />
-            <input
-              type="number"
-              value={newSlotHolidayPrice}
-              onChange={(e) => setNewSlotHolidayPrice(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              placeholder="Цена в праздники"
-              min="0"
-            />
             <button
               type="button"
               onClick={handleAddSlot}
@@ -392,33 +402,6 @@ export default function QuestScheduleEditor({ questId }: Props) {
               Добавить
             </button>
           </div>
-        </div>
-
-        <div className="border-t border-gray-200 pt-4 space-y-3">
-          <h4 className="font-semibold text-gray-700">Импорт из существующего расписания</h4>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-center">
-            <input
-              type="date"
-              value={importRange.from}
-              onChange={(e) => setImportRange({ ...importRange, from: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-            />
-            <input
-              type="date"
-              value={importRange.to}
-              onChange={(e) => setImportRange({ ...importRange, to: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleImport}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Импортировать
-            </button>
-          </div>
-          {importResult && <p className="text-sm text-gray-600">{importResult}</p>}
         </div>
       </div>
 

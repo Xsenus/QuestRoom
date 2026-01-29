@@ -87,16 +87,6 @@ public class ScheduleController : ControllerBase
     }
 
     [Authorize(Roles = "admin")]
-    [HttpPost("weekly/import/{questId}")]
-    public async Task<ActionResult<object>> ImportWeeklySlots(Guid questId, [FromBody] QuestWeeklySlotImportDto? payload)
-    {
-        var fromDate = payload?.FromDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var toDate = payload?.ToDate ?? fromDate.AddDays(30);
-        var createdCount = await _scheduleService.ImportWeeklySlotsFromScheduleAsync(questId, fromDate, toDate);
-        return Ok(new { createdCount });
-    }
-
-    [Authorize(Roles = "admin")]
     [HttpGet("overrides/{questId}")]
     public async Task<ActionResult<IEnumerable<QuestScheduleOverrideDto>>> GetOverrides(
         Guid questId,
@@ -129,5 +119,21 @@ public class ScheduleController : ControllerBase
     {
         var deleted = await _scheduleService.DeleteOverrideAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpGet("settings/{questId}")]
+    public async Task<ActionResult<QuestScheduleSettingsDto>> GetSettings(Guid questId)
+    {
+        var settings = await _scheduleService.GetSettingsAsync(questId);
+        return Ok(settings);
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPut("settings")]
+    public async Task<ActionResult<QuestScheduleSettingsDto>> UpdateSettings([FromBody] QuestScheduleSettingsUpsertDto payload)
+    {
+        var updated = await _scheduleService.UpsertSettingsAsync(payload);
+        return Ok(updated);
     }
 }

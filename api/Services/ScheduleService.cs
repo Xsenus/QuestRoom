@@ -19,7 +19,8 @@ public interface IScheduleService
     Task<QuestScheduleOverrideDto> CreateOverrideAsync(QuestScheduleOverrideUpsertDto dto);
     Task<bool> UpdateOverrideAsync(Guid id, QuestScheduleOverrideUpsertDto dto);
     Task<bool> DeleteOverrideAsync(Guid id);
-    Task<int> ImportWeeklySlotsFromScheduleAsync(Guid questId, DateOnly fromDate, DateOnly toDate);
+    Task<QuestScheduleSettingsDto> GetSettingsAsync(Guid questId);
+    Task<QuestScheduleSettingsDto> UpsertSettingsAsync(QuestScheduleSettingsUpsertDto dto);
 }
 
 public class ScheduleService : IScheduleService
@@ -326,6 +327,9 @@ public class ScheduleService : IScheduleService
             .ThenBy(slot => slot.TimeSlot)
             .ToListAsync();
 
+        var settings = await _context.QuestScheduleSettings
+            .FirstOrDefaultAsync(entry => entry.QuestId == questId);
+
         var overrides = await _context.QuestScheduleOverrides
             .Where(overrideDay => overrideDay.QuestId == questId && overrideDay.Date >= fromDate && overrideDay.Date <= toDate)
             .Include(overrideDay => overrideDay.Slots)
@@ -402,7 +406,7 @@ public class ScheduleService : IScheduleService
                     continue;
                 }
 
-                var price = isHoliday ? slot.HolidayPrice ?? slot.Price : slot.Price;
+                var price = isHoliday ? settings?.HolidayPrice ?? slot.Price : slot.Price;
                 selectedSlots[key] = price;
             }
         }
@@ -492,7 +496,6 @@ public class ScheduleService : IScheduleService
                 DayOfWeek = slot.DayOfWeek,
                 TimeSlot = slot.TimeSlot,
                 Price = slot.Price,
-                HolidayPrice = slot.HolidayPrice,
                 CreatedAt = slot.CreatedAt,
                 UpdatedAt = slot.UpdatedAt
             })
@@ -508,7 +511,6 @@ public class ScheduleService : IScheduleService
             DayOfWeek = dto.DayOfWeek,
             TimeSlot = dto.TimeSlot,
             Price = dto.Price,
-            HolidayPrice = dto.HolidayPrice,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -523,7 +525,6 @@ public class ScheduleService : IScheduleService
             DayOfWeek = slot.DayOfWeek,
             TimeSlot = slot.TimeSlot,
             Price = slot.Price,
-            HolidayPrice = slot.HolidayPrice,
             CreatedAt = slot.CreatedAt,
             UpdatedAt = slot.UpdatedAt
         };
@@ -541,7 +542,6 @@ public class ScheduleService : IScheduleService
         slot.DayOfWeek = dto.DayOfWeek;
         slot.TimeSlot = dto.TimeSlot;
         slot.Price = dto.Price;
-        slot.HolidayPrice = dto.HolidayPrice;
         slot.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -665,68 +665,66 @@ public class ScheduleService : IScheduleService
         return true;
     }
 
-    public async Task<int> ImportWeeklySlotsFromScheduleAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
+    public async Task<QuestScheduleSettingsDto> GetSettingsAsync(Guid questId)
     {
-        if (fromDate > toDate)
+        var settings = await _context.QuestScheduleSettings
+            .FirstOrDefaultAsync(entry => entry.QuestId == questId);
+
+        if (settings == null)
         {
-            return 0;
-        }
-
-        var scheduleSlots = await _context.QuestSchedules
-            .Where(slot => slot.QuestId == questId && slot.Date >= fromDate && slot.Date <= toDate)
-            .OrderBy(slot => slot.Date)
-            .ThenBy(slot => slot.TimeSlot)
-            .ToListAsync();
-
-        if (!scheduleSlots.Any())
-        {
-            return 0;
-        }
-
-        var existingKeys = await _context.QuestWeeklySlots
-            .Where(slot => slot.QuestId == questId)
-            .Select(slot => new { slot.DayOfWeek, slot.TimeSlot })
-            .ToListAsync();
-
-        var existingSet = existingKeys
-            .Select(key => $"{key.DayOfWeek}|{key.TimeSlot}")
-            .ToHashSet();
-
-        var grouped = scheduleSlots
-            .GroupBy(slot => new { DayOfWeek = (int)slot.Date.DayOfWeek, slot.TimeSlot })
-            .ToList();
-
-        var newSlots = new List<QuestWeeklySlot>();
-        foreach (var group in grouped)
-        {
-            var key = $"{group.Key.DayOfWeek}|{group.Key.TimeSlot}";
-            if (existingSet.Contains(key))
+            return new QuestScheduleSettingsDto
             {
-                continue;
-            }
-
-            var price = group.First().Price;
-            newSlots.Add(new QuestWeeklySlot
-            {
-                Id = Guid.NewGuid(),
+                Id = Guid.Empty,
                 QuestId = questId,
-                DayOfWeek = group.Key.DayOfWeek,
-                TimeSlot = group.Key.TimeSlot,
-                Price = price,
                 HolidayPrice = null,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
-            });
+            };
         }
 
-        if (!newSlots.Any())
+        return new QuestScheduleSettingsDto
         {
-            return 0;
+            Id = settings.Id,
+            QuestId = settings.QuestId,
+            HolidayPrice = settings.HolidayPrice,
+            CreatedAt = settings.CreatedAt,
+            UpdatedAt = settings.UpdatedAt
+        };
+    }
+
+    public async Task<QuestScheduleSettingsDto> UpsertSettingsAsync(QuestScheduleSettingsUpsertDto dto)
+    {
+        var settings = await _context.QuestScheduleSettings
+            .FirstOrDefaultAsync(entry => entry.QuestId == dto.QuestId);
+
+        if (settings == null)
+        {
+            settings = new QuestScheduleSettings
+            {
+                Id = Guid.NewGuid(),
+                QuestId = dto.QuestId,
+                HolidayPrice = dto.HolidayPrice,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.QuestScheduleSettings.Add(settings);
+        }
+        else
+        {
+            settings.HolidayPrice = dto.HolidayPrice;
+            settings.UpdatedAt = DateTime.UtcNow;
         }
 
-        _context.QuestWeeklySlots.AddRange(newSlots);
         await _context.SaveChangesAsync();
-        return newSlots.Count;
+
+        return new QuestScheduleSettingsDto
+        {
+            Id = settings.Id,
+            QuestId = settings.QuestId,
+            HolidayPrice = settings.HolidayPrice,
+            CreatedAt = settings.CreatedAt,
+            UpdatedAt = settings.UpdatedAt
+        };
     }
 
     private static QuestScheduleOverrideDto ToOverrideDto(QuestScheduleOverride overrideDay)

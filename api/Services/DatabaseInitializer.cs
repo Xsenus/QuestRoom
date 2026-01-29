@@ -322,13 +322,27 @@ public class DatabaseInitializer : IDatabaseInitializer
             _context.Quests.AddRange(questData);
         }
 
+        List<QuestPricingRule> seededPricingRules = new();
         if (!await _context.QuestPricingRules.AnyAsync())
         {
             var questsForRules = questData.Any()
                 ? questData
                 : await _context.Quests.ToListAsync();
 
-            AddPricingRules(questsForRules, now);
+            seededPricingRules = AddPricingRules(questsForRules, now);
+        }
+
+        if (!await _context.QuestWeeklySlots.AnyAsync())
+        {
+            var questsForTemplates = questData.Any()
+                ? questData
+                : await _context.Quests.ToListAsync();
+
+            var rulesForTemplates = seededPricingRules.Any()
+                ? seededPricingRules
+                : await _context.QuestPricingRules.ToListAsync();
+
+            AddScheduleTemplatesFromPricingRules(questsForTemplates, rulesForTemplates, now);
         }
 
         if (!await _context.Rules.AnyAsync())
@@ -764,6 +778,10 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.Bookings.RemoveRange(await _context.Bookings.ToListAsync());
         _context.CertificateOrders.RemoveRange(await _context.CertificateOrders.ToListAsync());
         _context.QuestSchedules.RemoveRange(await _context.QuestSchedules.ToListAsync());
+        _context.QuestScheduleOverrideSlots.RemoveRange(await _context.QuestScheduleOverrideSlots.ToListAsync());
+        _context.QuestScheduleOverrides.RemoveRange(await _context.QuestScheduleOverrides.ToListAsync());
+        _context.QuestWeeklySlots.RemoveRange(await _context.QuestWeeklySlots.ToListAsync());
+        _context.QuestScheduleSettings.RemoveRange(await _context.QuestScheduleSettings.ToListAsync());
         _context.QuestPricingRules.RemoveRange(await _context.QuestPricingRules.ToListAsync());
         _context.Quests.RemoveRange(await _context.Quests.ToListAsync());
         _context.DurationBadges.RemoveRange(await _context.DurationBadges.ToListAsync());
@@ -781,7 +799,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         await _context.SaveChangesAsync();
     }
 
-    private void AddPricingRules(IEnumerable<Quest> quests, DateTime now)
+    private List<QuestPricingRule> AddPricingRules(IEnumerable<Quest> quests, DateTime now)
     {
         var questList = quests.ToList();
         var weekDays = new[] { 1, 2, 3, 4, 5 };
@@ -889,6 +907,126 @@ public class DatabaseInitializer : IDatabaseInitializer
         if (rules.Any())
         {
             _context.QuestPricingRules.AddRange(rules);
+        }
+
+        return rules;
+    }
+
+    private void AddScheduleTemplatesFromPricingRules(
+        IEnumerable<Quest> quests,
+        IEnumerable<QuestPricingRule> rules,
+        DateTime now)
+    {
+        var questList = quests.ToList();
+        var ruleList = rules
+            .Where(rule => rule.IsActive && !rule.IsBlocked)
+            .ToList();
+
+        var slotMap = new Dictionary<string, (int Priority, int Price)>();
+
+        foreach (var rule in ruleList)
+        {
+            var questId = rule.QuestId;
+            var interval = rule.IntervalMinutes;
+            if (interval <= 0)
+            {
+                continue;
+            }
+
+            foreach (var dayOfWeek in rule.DaysOfWeek)
+            {
+                var time = rule.StartTime;
+                while (time < rule.EndTime)
+                {
+                    var key = $"{questId}|{dayOfWeek}|{time}";
+                    if (!slotMap.TryGetValue(key, out var existing) ||
+                        rule.Priority > existing.Priority ||
+                        (rule.Priority == existing.Priority && rule.Price > existing.Price))
+                    {
+                        slotMap[key] = (rule.Priority, rule.Price);
+                    }
+
+                    var nextTime = time.AddMinutes(interval);
+                    if (nextTime <= time)
+                    {
+                        break;
+                    }
+
+                    time = nextTime;
+                }
+            }
+        }
+
+        var weeklySlots = new List<QuestWeeklySlot>();
+        foreach (var entry in slotMap)
+        {
+            var parts = entry.Key.Split('|');
+            if (parts.Length != 3)
+            {
+                continue;
+            }
+
+            if (!Guid.TryParse(parts[0], out var questId))
+            {
+                continue;
+            }
+
+            if (!int.TryParse(parts[1], out var dayOfWeek))
+            {
+                continue;
+            }
+
+            if (!TimeOnly.TryParse(parts[2], out var timeSlot))
+            {
+                continue;
+            }
+
+            weeklySlots.Add(new QuestWeeklySlot
+            {
+                Id = Guid.NewGuid(),
+                QuestId = questId,
+                DayOfWeek = dayOfWeek,
+                TimeSlot = timeSlot,
+                Price = entry.Value.Price,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        if (weeklySlots.Any())
+        {
+            _context.QuestWeeklySlots.AddRange(weeklySlots);
+        }
+
+        var settingsToAdd = new List<QuestScheduleSettings>();
+        foreach (var quest in questList)
+        {
+            var holidayPrice = ruleList
+                .Where(rule => rule.QuestId == quest.Id &&
+                    (rule.DaysOfWeek.Contains(0) || rule.DaysOfWeek.Contains(6)))
+                .Select(rule => rule.Price)
+                .DefaultIfEmpty()
+                .Max();
+
+            var shouldSetHolidayPrice = holidayPrice > 0;
+            if (!shouldSetHolidayPrice)
+            {
+                continue;
+            }
+
+            settingsToAdd.Add(new QuestScheduleSettings
+            {
+                Id = Guid.NewGuid(),
+                QuestId = quest.Id,
+                HolidayPrice = holidayPrice,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        if (settingsToAdd.Any())
+        {
+            _context.QuestScheduleSettings.AddRange(settingsToAdd);
         }
     }
 

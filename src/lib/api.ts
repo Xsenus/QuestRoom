@@ -27,6 +27,8 @@ import type {
   QuestScheduleUpsert,
   QuestScheduleOverride,
   QuestScheduleOverrideUpsert,
+  QuestScheduleSettings,
+  QuestScheduleSettingsUpsert,
   QuestWeeklySlot,
   QuestWeeklySlotUpsert,
   ScheduleGenerateRequest,
@@ -351,16 +353,6 @@ class ApiClient {
     });
   }
 
-  async importQuestWeeklySlots(
-    questId: string,
-    payload: { fromDate?: string; toDate?: string }
-  ): Promise<{ createdCount: number }> {
-    return this.request(`/schedule/weekly/import/${questId}`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  }
-
   async getQuestScheduleOverrides(
     questId: string,
     fromDate?: string,
@@ -395,6 +387,19 @@ class ApiClient {
   async deleteQuestScheduleOverride(id: string) {
     return this.request(`/schedule/overrides/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async getQuestScheduleSettings(questId: string): Promise<QuestScheduleSettings> {
+    return this.request(`/schedule/settings/${questId}`);
+  }
+
+  async updateQuestScheduleSettings(
+    payload: QuestScheduleSettingsUpsert
+  ): Promise<QuestScheduleSettings> {
+    return this.request('/schedule/settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
     });
   }
 

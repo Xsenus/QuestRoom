@@ -306,7 +306,6 @@ export type QuestWeeklySlot = {
   dayOfWeek: number;
   timeSlot: string;
   price: number;
-  holidayPrice: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -337,6 +336,19 @@ export type QuestScheduleOverrideUpsert = {
   date: string;
   isClosed: boolean;
   slots: Array<{ timeSlot: string; price: number }>;
+};
+
+export type QuestScheduleSettings = {
+  id: string;
+  questId: string;
+  holidayPrice: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuestScheduleSettingsUpsert = {
+  questId: string;
+  holidayPrice: number | null;
 };
 
 export type QuestPricingRule = {

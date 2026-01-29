@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<QuestWeeklySlot> QuestWeeklySlots { get; set; }
     public DbSet<QuestScheduleOverride> QuestScheduleOverrides { get; set; }
     public DbSet<QuestScheduleOverrideSlot> QuestScheduleOverrideSlots { get; set; }
+    public DbSet<QuestScheduleSettings> QuestScheduleSettings { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<BookingExtraService> BookingExtraServices { get; set; }
     public DbSet<ImageAsset> ImageAssets { get; set; }
@@ -91,6 +92,16 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<QuestScheduleOverrideSlot>()
             .HasIndex(e => new { e.OverrideId, e.TimeSlot })
+            .IsUnique();
+
+        modelBuilder.Entity<QuestScheduleSettings>()
+            .HasOne(e => e.Quest)
+            .WithMany()
+            .HasForeignKey(e => e.QuestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QuestScheduleSettings>()
+            .HasIndex(e => e.QuestId)
             .IsUnique();
 
         modelBuilder.Entity<User>()

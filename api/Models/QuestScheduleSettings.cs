@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuestRoomApi.Models;
 
-[Table("quest_weekly_slots")]
-public class QuestWeeklySlot
+[Table("quest_schedule_settings")]
+public class QuestScheduleSettings
 {
     [Key]
     [Column("id")]
@@ -13,14 +13,8 @@ public class QuestWeeklySlot
     [Column("quest_id")]
     public Guid QuestId { get; set; }
 
-    [Column("day_of_week")]
-    public int DayOfWeek { get; set; }
-
-    [Column("time_slot")]
-    public TimeOnly TimeSlot { get; set; }
-
-    [Column("price")]
-    public int Price { get; set; }
+    [Column("holiday_price")]
+    public int? HolidayPrice { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
