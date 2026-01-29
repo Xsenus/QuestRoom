@@ -132,6 +132,11 @@ public class AdminUsersController : ControllerBase
         {
             return BadRequest("Нельзя изменить email основного администратора.");
         }
+        if (string.Equals(user.Email, ProtectedAdminEmail, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(dto.Status, "active", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Основной администратор всегда должен быть активен.");
+        }
 
         var role = await _context.Roles.FindAsync(dto.RoleId);
         if (role == null)
@@ -171,6 +176,11 @@ public class AdminUsersController : ControllerBase
         if (user == null)
         {
             return NotFound();
+        }
+        if (string.Equals(user.Email, ProtectedAdminEmail, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(dto.Status, "active", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Основной администратор всегда должен быть активен.");
         }
 
         user.Status = dto.Status.ToLowerInvariant();

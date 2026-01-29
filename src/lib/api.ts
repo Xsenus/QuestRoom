@@ -116,13 +116,16 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ message: 'Request failed' }));
-      if (typeof error === 'string') {
-        throw new Error(error);
+      const rawText = await response.text();
+      try {
+        const error = rawText ? JSON.parse(rawText) : { message: 'Request failed' };
+        if (typeof error === 'string') {
+          throw new Error(error);
+        }
+        throw new Error(error.message || `HTTP ${response.status}`);
+      } catch (parseError) {
+        throw new Error(rawText || `HTTP ${response.status}`);
       }
-      throw new Error(error.message || `HTTP ${response.status}`);
     }
 
     if (response.status === 204) {

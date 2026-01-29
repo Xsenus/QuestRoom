@@ -124,7 +124,7 @@ export default function UsersPage() {
       email: user.email,
       phone: user.phone,
       roleId: user.roleId || fallbackRoleId,
-      status: user.status,
+      status: user.status || 'active',
       notes: user.notes,
     });
     setIsCreating(false);
@@ -280,6 +280,15 @@ export default function UsersPage() {
   };
 
   const updateStatus = async (user: AdminUser, status: AdminUser['status']) => {
+    if (user.email.toLowerCase() === protectedAdminEmail && status !== 'active') {
+      setNotification({
+        isOpen: true,
+        title: 'Статус защищён',
+        message: 'Основной администратор всегда должен быть активен.',
+        tone: 'error',
+      });
+      return;
+    }
     try {
       const updated = await api.updateAdminUserStatus(user.id, status);
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
@@ -557,10 +566,15 @@ export default function UsersPage() {
                     <span>{statusLabels[selectedUser.status]}</span>
                   </div>
                   <select
-                    value={selectedUser.status}
+                    value={
+                      selectedUser.email.toLowerCase() === protectedAdminEmail
+                        ? 'active'
+                        : selectedUser.status
+                    }
                     onChange={(event) =>
                       updateStatus(selectedUser, event.target.value as AdminUser['status'])
                     }
+                    disabled={selectedUser.email.toLowerCase() === protectedAdminEmail}
                     className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
                   >
                     <option value="active">Активен</option>
@@ -739,10 +753,13 @@ export default function UsersPage() {
               <div>
                 <label className="text-sm font-semibold text-gray-700">Статус</label>
                 <select
-                  value={editor.status}
+                  value={
+                    editor.email.toLowerCase() === protectedAdminEmail ? 'active' : editor.status
+                  }
                   onChange={(event) =>
                     setEditor({ ...editor, status: event.target.value as AdminUser['status'] })
                   }
+                  disabled={editor.email.toLowerCase() === protectedAdminEmail}
                   className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
                 >
                   <option value="active">Активен</option>
