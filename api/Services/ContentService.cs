@@ -416,6 +416,8 @@ public class ContentService : IContentService
                 ReviewsMode = dto.ReviewsMode,
                 ReviewsFlampEmbed = dto.ReviewsFlampEmbed,
                 BookingDaysAhead = dto.BookingDaysAhead > 0 ? dto.BookingDaysAhead : 10,
+                BookingCutoffMinutes = dto.BookingCutoffMinutes > 0 ? dto.BookingCutoffMinutes : 10,
+                TimeZone = dto.TimeZone,
                 PromotionsPerRow = dto.PromotionsPerRow > 0 ? dto.PromotionsPerRow : 1,
                 VideoModalEnabled = dto.VideoModalEnabled ?? false,
                 UpdatedAt = DateTime.UtcNow
@@ -476,6 +478,14 @@ public class ContentService : IContentService
             if (dto.BookingDaysAhead > 0)
             {
                 existing.BookingDaysAhead = dto.BookingDaysAhead;
+            }
+            if (dto.BookingCutoffMinutes > 0)
+            {
+                existing.BookingCutoffMinutes = dto.BookingCutoffMinutes;
+            }
+            if (dto.TimeZone != null)
+            {
+                existing.TimeZone = dto.TimeZone;
             }
             if (dto.PromotionsPerRow > 0)
             {
@@ -622,6 +632,8 @@ public class ContentService : IContentService
             ReviewsMode = settings.ReviewsMode,
             ReviewsFlampEmbed = settings.ReviewsFlampEmbed,
             BookingDaysAhead = settings.BookingDaysAhead,
+            BookingCutoffMinutes = settings.BookingCutoffMinutes,
+            TimeZone = settings.TimeZone,
             PromotionsPerRow = settings.PromotionsPerRow,
             VideoModalEnabled = settings.VideoModalEnabled,
             UpdatedAt = settings.UpdatedAt

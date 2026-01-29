@@ -68,6 +68,8 @@ export default function SettingsPage() {
       const data = await api.getSettings();
       setSettings({
         ...data,
+        bookingCutoffMinutes: data.bookingCutoffMinutes ?? 10,
+        timeZone: data.timeZone ?? null,
         videoModalEnabled: data.videoModalEnabled ?? false,
       });
     } catch (error) {
@@ -114,6 +116,8 @@ export default function SettingsPage() {
         reviewsMode: 'internal',
         reviewsFlampEmbed: null,
         bookingDaysAhead: 10,
+        bookingCutoffMinutes: 10,
+        timeZone: 'Asia/Krasnoyarsk',
         promotionsPerRow: 1,
         videoModalEnabled: false,
         updatedAt: new Date().toISOString(),
@@ -168,6 +172,8 @@ export default function SettingsPage() {
       reviewsMode: settings.reviewsMode,
       reviewsFlampEmbed: settings.reviewsFlampEmbed,
       bookingDaysAhead: settings.bookingDaysAhead,
+      bookingCutoffMinutes: settings.bookingCutoffMinutes,
+      timeZone: settings.timeZone,
       promotionsPerRow: settings.promotionsPerRow,
       videoModalEnabled: settings.videoModalEnabled,
     };
@@ -773,22 +779,59 @@ export default function SettingsPage() {
       {activeTab === 'booking' && (
         <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
           <h3 className="text-xl font-bold text-gray-900">Бронирование</h3>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Количество дней для отображения расписания
-            </label>
-            <input
-              type="number"
-              value={settings.bookingDaysAhead ?? 10}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  bookingDaysAhead: parseInt(e.target.value, 10) || 0,
-                })
-              }
-              min={1}
-              className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-            />
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Количество дней для отображения расписания
+              </label>
+              <input
+                type="number"
+                value={settings.bookingDaysAhead ?? 10}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    bookingDaysAhead: parseInt(e.target.value, 10) || 0,
+                  })
+                }
+                min={1}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Закрывать бронь за (минут)
+              </label>
+              <input
+                type="number"
+                value={settings.bookingCutoffMinutes ?? 10}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    bookingCutoffMinutes: parseInt(e.target.value, 10) || 0,
+                  })
+                }
+                min={1}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                За сколько минут до начала игры слот становится недоступным.
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Часовой пояс (IANA)
+              </label>
+              <input
+                type="text"
+                value={settings.timeZone || ''}
+                onChange={(e) => setSettings({ ...settings, timeZone: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                placeholder="Asia/Krasnoyarsk"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Используется для расчета времени закрытия слотов на публичной странице.
+              </p>
+            </div>
           </div>
         </div>
       )}

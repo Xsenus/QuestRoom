@@ -665,6 +665,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 ReviewsMode = "internal",
                 ReviewsFlampEmbed = null,
                 BookingDaysAhead = 10,
+                BookingCutoffMinutes = 10,
+                TimeZone = "Asia/Krasnoyarsk",
                 PromotionsPerRow = 1,
                 SmtpHost = null,
                 SmtpPort = null,

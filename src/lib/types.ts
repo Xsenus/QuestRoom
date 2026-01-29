@@ -85,6 +85,8 @@ export type Settings = {
   reviewsMode: string | null;
   reviewsFlampEmbed: string | null;
   bookingDaysAhead: number;
+  bookingCutoffMinutes: number;
+  timeZone: string | null;
   promotionsPerRow: number | null;
   videoModalEnabled: boolean;
   updatedAt: string;

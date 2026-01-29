@@ -45,6 +45,8 @@ public class SettingsDto
     public string? ReviewsMode { get; set; }
     public string? ReviewsFlampEmbed { get; set; }
     public int BookingDaysAhead { get; set; }
+    public int BookingCutoffMinutes { get; set; }
+    public string? TimeZone { get; set; }
     public int PromotionsPerRow { get; set; }
     public bool VideoModalEnabled { get; set; }
     public DateTime UpdatedAt { get; set; }
