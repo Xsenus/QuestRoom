@@ -33,9 +33,8 @@ public class User
     [MaxLength(20)]
     public string Status { get; set; } = "active";
 
-    [Required]
     [Column("role_id")]
-    public Guid RoleId { get; set; }
+    public Guid? RoleId { get; set; }
 
     public Role? Role { get; set; }
 

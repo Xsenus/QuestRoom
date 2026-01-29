@@ -695,10 +695,40 @@ public class DatabaseInitializer : IDatabaseInitializer
         var adminRole = existingRoles.TryGetValue("admin", out var roleEntry)
             ? roleEntry
             : null;
+        var viewerRole = existingRoles.TryGetValue("viewer", out var viewerEntry)
+            ? viewerEntry
+            : adminRole;
+
+        var adminEmail = _configuration["AdminUser:Email"];
+        var usersWithoutRole = await _context.Users
+            .Where(user => user.RoleId == null || user.RoleId == Guid.Empty)
+            .ToListAsync();
+
+        if (usersWithoutRole.Count > 0 && (adminRole != null || viewerRole != null))
+        {
+            foreach (var user in usersWithoutRole)
+            {
+                if (!string.IsNullOrWhiteSpace(adminEmail) &&
+                    adminRole != null &&
+                    string.Equals(user.Email, adminEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    user.RoleId = adminRole.Id;
+                }
+                else if (viewerRole != null)
+                {
+                    user.RoleId = viewerRole.Id;
+                }
+                else if (adminRole != null)
+                {
+                    user.RoleId = adminRole.Id;
+                }
+
+                user.UpdatedAt = DateTime.UtcNow;
+            }
+        }
 
         if (adminRole != null && !await _context.Users.AnyAsync(u => u.RoleId == adminRole.Id))
         {
-            var adminEmail = _configuration["AdminUser:Email"];
             var adminPassword = _configuration["AdminUser:Password"];
 
             if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))

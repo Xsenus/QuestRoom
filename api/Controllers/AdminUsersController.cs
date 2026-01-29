@@ -209,7 +209,7 @@ public class AdminUsersController : ControllerBase
             Email = user.Email,
             Phone = user.Phone,
             Status = user.Status,
-            RoleId = user.RoleId,
+            RoleId = user.RoleId ?? Guid.Empty,
             RoleName = user.Role?.Name ?? string.Empty,
             CreatedAt = user.CreatedAt,
             LastLoginAt = user.LastLoginAt,
