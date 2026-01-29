@@ -397,8 +397,7 @@ public class ScheduleService : IScheduleService
                 continue;
             }
 
-            var isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
-            var isHoliday = isWeekend || holidaySet.Contains(date);
+            var isHoliday = holidaySet.Contains(date);
 
             foreach (var slot in slotsForDay)
             {
