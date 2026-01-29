@@ -98,6 +98,9 @@ export type Settings = {
   timeZone: string | null;
   promotionsPerRow: number | null;
   videoModalEnabled: boolean;
+  backgroundGradientFrom: string | null;
+  backgroundGradientVia: string | null;
+  backgroundGradientTo: string | null;
   updatedAt: string;
 };
 

@@ -422,6 +422,9 @@ public class ContentService : IContentService
                 TimeZone = dto.TimeZone,
                 PromotionsPerRow = dto.PromotionsPerRow > 0 ? dto.PromotionsPerRow : 1,
                 VideoModalEnabled = dto.VideoModalEnabled ?? false,
+                BackgroundGradientFrom = dto.BackgroundGradientFrom,
+                BackgroundGradientVia = dto.BackgroundGradientVia,
+                BackgroundGradientTo = dto.BackgroundGradientTo,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -501,6 +504,9 @@ public class ContentService : IContentService
             {
                 existing.VideoModalEnabled = dto.VideoModalEnabled.Value;
             }
+            existing.BackgroundGradientFrom = dto.BackgroundGradientFrom;
+            existing.BackgroundGradientVia = dto.BackgroundGradientVia;
+            existing.BackgroundGradientTo = dto.BackgroundGradientTo;
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -644,6 +650,9 @@ public class ContentService : IContentService
             TimeZone = settings.TimeZone,
             PromotionsPerRow = settings.PromotionsPerRow,
             VideoModalEnabled = settings.VideoModalEnabled,
+            BackgroundGradientFrom = settings.BackgroundGradientFrom,
+            BackgroundGradientVia = settings.BackgroundGradientVia,
+            BackgroundGradientTo = settings.BackgroundGradientTo,
             UpdatedAt = settings.UpdatedAt
         };
     }

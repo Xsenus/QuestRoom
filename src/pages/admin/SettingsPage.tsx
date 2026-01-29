@@ -330,6 +330,9 @@ export default function SettingsPage() {
         bookingCutoffMinutes: data.bookingCutoffMinutes ?? 10,
         timeZone: data.timeZone ?? null,
         videoModalEnabled: data.videoModalEnabled ?? false,
+        backgroundGradientFrom: data.backgroundGradientFrom ?? null,
+        backgroundGradientVia: data.backgroundGradientVia ?? null,
+        backgroundGradientTo: data.backgroundGradientTo ?? null,
         bookingStatusPlannedColor: data.bookingStatusPlannedColor ?? null,
         bookingStatusCreatedColor: data.bookingStatusCreatedColor ?? null,
         bookingStatusPendingColor: data.bookingStatusPendingColor ?? null,
@@ -395,6 +398,9 @@ export default function SettingsPage() {
         timeZone: 'Asia/Krasnoyarsk',
         promotionsPerRow: 1,
         videoModalEnabled: false,
+        backgroundGradientFrom: '#070816',
+        backgroundGradientVia: '#160a2e',
+        backgroundGradientTo: '#2c0b3f',
         updatedAt: new Date().toISOString(),
       });
     }
@@ -460,6 +466,9 @@ export default function SettingsPage() {
       timeZone: settings.timeZone,
       promotionsPerRow: settings.promotionsPerRow,
       videoModalEnabled: settings.videoModalEnabled,
+      backgroundGradientFrom: settings.backgroundGradientFrom,
+      backgroundGradientVia: settings.backgroundGradientVia,
+      backgroundGradientTo: settings.backgroundGradientTo,
     };
 
     try {
@@ -573,6 +582,60 @@ export default function SettingsPage() {
                 value={settings.logoUrl || ''}
                 onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="rounded-lg border border-gray-200 p-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Фон сайта (градиент)</h4>
+              <div className="grid md:grid-cols-3 gap-4">
+                {([
+                  { key: 'backgroundGradientFrom', label: 'Начальный цвет', fallback: '#070816' },
+                  { key: 'backgroundGradientVia', label: 'Средний цвет', fallback: '#160a2e' },
+                  { key: 'backgroundGradientTo', label: 'Конечный цвет', fallback: '#2c0b3f' },
+                ] as const).map((item) => {
+                  const key = item.key as keyof Settings;
+                  const currentValue = getColorValue(
+                    settings[key] as string | null,
+                    item.fallback,
+                  );
+                  return (
+                    <div key={item.key} className="grid gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        {item.label}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={currentValue}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [key]: e.target.value })
+                          }
+                          className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
+                        />
+                        <input
+                          type="text"
+                          value={(settings[key] as string | null) || ''}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [key]: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          placeholder={item.fallback}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div
+                className="mt-4 h-16 rounded-lg border border-gray-200"
+                style={{
+                  background: `linear-gradient(135deg, ${
+                    getColorValue(settings.backgroundGradientFrom, '#070816')
+                  }, ${
+                    getColorValue(settings.backgroundGradientVia, '#160a2e')
+                  }, ${
+                    getColorValue(settings.backgroundGradientTo, '#2c0b3f')
+                  })`,
+                }}
               />
             </div>
             <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">

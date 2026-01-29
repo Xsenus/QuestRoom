@@ -679,6 +679,9 @@ public class DatabaseInitializer : IDatabaseInitializer
                 NotifyBookingCustomer = false,
                 NotifyCertificateAdmin = false,
                 NotifyCertificateCustomer = false,
+                BackgroundGradientFrom = "#070816",
+                BackgroundGradientVia = "#160a2e",
+                BackgroundGradientTo = "#2c0b3f",
                 BookingEmailTemplateAdmin = """
                                             <p><strong>Информация о квесте:</strong></p>
                                             <p>

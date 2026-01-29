@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuestRoomApi.Data;
@@ -11,9 +12,11 @@ using QuestRoomApi.Data;
 namespace QuestRoomApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129105450_AddSettingsBackgroundGradient")]
+    partial class AddSettingsBackgroundGradient
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1120,14 +1123,6 @@ namespace QuestRoomApi.Migrations
                     b.Property<string>("BookingEmailTemplateCustomer")
                         .HasColumnType("text")
                         .HasColumnName("booking_email_template_customer");
-
-                    b.Property<string>("CertificateEmailTemplateAdmin")
-                        .HasColumnType("text")
-                        .HasColumnName("certificate_email_template_admin");
-
-                    b.Property<string>("CertificateEmailTemplateCustomer")
-                        .HasColumnType("text")
-                        .HasColumnName("certificate_email_template_customer");
 
                     b.Property<string>("CertificatePageDescription")
                         .HasColumnType("text")
