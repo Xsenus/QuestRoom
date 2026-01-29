@@ -988,10 +988,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("promotions_per_row");
 
-                    b.Property<bool>("VideoModalEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("video_modal_enabled");
-
                     b.Property<string>("ReviewsFlampEmbed")
                         .HasColumnType("text")
                         .HasColumnName("reviews_flamp_embed");
