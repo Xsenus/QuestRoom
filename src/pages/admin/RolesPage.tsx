@@ -353,8 +353,8 @@ export default function RolesPage() {
 
       {editor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between">
+          <div className="max-h-[calc(100vh-3rem)] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-start justify-between border-b border-gray-100 px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 {isCreating ? 'Новая роль' : 'Редактирование роли'}
               </h3>
@@ -377,66 +377,68 @@ export default function RolesPage() {
                 </button>
               </div>
             </div>
-            <div className="mt-4 grid gap-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Название</label>
-                <input
-                  type="text"
-                  value={editor.name}
-                  onChange={(event) => setEditor({ ...editor, name: event.target.value })}
-                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                  placeholder="Например: Старший менеджер"
-                  disabled={editor.system}
-                />
+            <div className="max-h-[calc(100vh-11rem)] overflow-y-auto px-6 pb-6">
+              <div className="mt-4 grid gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Название</label>
+                  <input
+                    type="text"
+                    value={editor.name}
+                    onChange={(event) => setEditor({ ...editor, name: event.target.value })}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    placeholder="Например: Старший менеджер"
+                    disabled={editor.system}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Описание</label>
+                  <textarea
+                    value={editor.description}
+                    onChange={(event) => setEditor({ ...editor, description: event.target.value })}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    rows={3}
+                    placeholder="Опишите, за что отвечает роль"
+                    disabled={editor.system}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Описание</label>
-                <textarea
-                  value={editor.description}
-                  onChange={(event) => setEditor({ ...editor, description: event.target.value })}
-                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                  rows={3}
-                  placeholder="Опишите, за что отвечает роль"
-                  disabled={editor.system}
-                />
-              </div>
-            </div>
-            <div className="mt-6 space-y-4">
-              <h4 className="text-sm font-semibold text-gray-700">Права доступа</h4>
-              <div className="grid gap-4">
-                {permissionGroups.map((group) => (
-                  <div key={group.id} className="rounded-lg border border-gray-200 p-4">
-                    <div className="mb-3">
-                      <div className="text-sm font-semibold text-gray-900">{group.title}</div>
-                      <div className="text-xs text-gray-500">{group.description}</div>
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {group.permissions.map((permission) => (
-                        <label
-                          key={permission.id}
-                          className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={editor.permissions.includes(permission.id)}
-                            onChange={() => togglePermission(permission.id)}
-                            className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                            disabled={editor.system}
-                          />
-                          <span>
-                            <span className="font-semibold text-gray-800">{permission.title}</span>
-                            <span className="block text-xs text-gray-500">
-                              {permission.description}
+              <div className="mt-6 space-y-4">
+                <h4 className="text-sm font-semibold text-gray-700">Права доступа</h4>
+                <div className="grid gap-4">
+                  {permissionGroups.map((group) => (
+                    <div key={group.id} className="rounded-lg border border-gray-200 p-4">
+                      <div className="mb-3">
+                        <div className="text-sm font-semibold text-gray-900">{group.title}</div>
+                        <div className="text-xs text-gray-500">{group.description}</div>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {group.permissions.map((permission) => (
+                          <label
+                            key={permission.id}
+                            className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={editor.permissions.includes(permission.id)}
+                              onChange={() => togglePermission(permission.id)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                              disabled={editor.system}
+                            />
+                            <span>
+                              <span className="font-semibold text-gray-800">{permission.title}</span>
+                              <span className="block text-xs text-gray-500">
+                                {permission.description}
+                              </span>
                             </span>
-                          </span>
-                        </label>
-                      ))}
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <div className="flex flex-wrap justify-end gap-3 border-t border-gray-100 px-6 py-4">
               <button
                 type="button"
                 onClick={() => {
