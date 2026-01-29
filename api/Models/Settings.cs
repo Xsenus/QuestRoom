@@ -148,6 +148,15 @@ public class Settings
     [Column("video_modal_enabled")]
     public bool VideoModalEnabled { get; set; }
 
+    [Column("background_gradient_from")]
+    public string? BackgroundGradientFrom { get; set; }
+
+    [Column("background_gradient_via")]
+    public string? BackgroundGradientVia { get; set; }
+
+    [Column("background_gradient_to")]
+    public string? BackgroundGradientTo { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }

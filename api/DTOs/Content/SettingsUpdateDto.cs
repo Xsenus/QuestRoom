@@ -48,4 +48,7 @@ public class SettingsUpdateDto
     public string? TimeZone { get; set; }
     public int PromotionsPerRow { get; set; }
     public bool? VideoModalEnabled { get; set; }
+    public string? BackgroundGradientFrom { get; set; }
+    public string? BackgroundGradientVia { get; set; }
+    public string? BackgroundGradientTo { get; set; }
 }
