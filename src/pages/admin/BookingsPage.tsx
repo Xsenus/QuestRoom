@@ -1138,10 +1138,10 @@ export default function BookingsPage() {
           </div>
 
           {viewMode === 'table' ? (
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="bg-white rounded-lg shadow overflow-x-auto max-w-full">
               <table
-                className="text-sm table-fixed"
-                style={{ width: totalTableWidth || '100%' }}
+                className="text-sm table-fixed min-w-full w-full"
+                style={{ minWidth: totalTableWidth || '100%' }}
               >
                 <thead className="bg-gray-50 text-gray-700">
                   <tr>
@@ -1363,7 +1363,7 @@ export default function BookingsPage() {
 
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Создать бронь</h3>
@@ -1377,7 +1377,7 @@ export default function BookingsPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto">
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Квест</label>
@@ -1520,7 +1520,7 @@ export default function BookingsPage() {
 
       {editingBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Редактирование брони</h3>
@@ -1534,7 +1534,7 @@ export default function BookingsPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto">
               <div
                 className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
                 style={getStatusBadgeStyle(editingBooking.status)}
@@ -1930,7 +1930,7 @@ export default function BookingsPage() {
 
       {isColumnsModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Настройка таблицы</h3>
@@ -1944,7 +1944,7 @@ export default function BookingsPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto">
               <div className="grid gap-4 md:grid-cols-2">
                 {tableColumns.map((column) => (
                   <div key={column.key} className="rounded-lg border border-gray-200 p-4">
