@@ -35,6 +35,8 @@ public class SettingsDto
     public string? BookingEmailTemplateCustomer { get; set; }
     public bool NotifyCertificateAdmin { get; set; }
     public bool NotifyCertificateCustomer { get; set; }
+    public string? CertificateEmailTemplateAdmin { get; set; }
+    public string? CertificateEmailTemplateCustomer { get; set; }
     public string? Phone { get; set; }
     public string? LogoUrl { get; set; }
     public string? GiftGameLabel { get; set; }
@@ -56,5 +58,8 @@ public class SettingsDto
     public string? TimeZone { get; set; }
     public int PromotionsPerRow { get; set; }
     public bool VideoModalEnabled { get; set; }
+    public string? BackgroundGradientFrom { get; set; }
+    public string? BackgroundGradientVia { get; set; }
+    public string? BackgroundGradientTo { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

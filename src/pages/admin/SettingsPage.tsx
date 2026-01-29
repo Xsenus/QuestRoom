@@ -9,6 +9,7 @@ const tabs = [
   { id: 'social', label: 'Соцсети' },
   { id: 'icons', label: 'Иконки' },
   { id: 'email', label: 'Почта' },
+  { id: 'email-templates', label: 'Шаблоны писем' },
   { id: 'certificates', label: 'Сертификаты' },
   { id: 'reviews', label: 'Отзывы' },
   { id: 'booking', label: 'Бронирование' },
@@ -42,6 +43,226 @@ const isValidHexColor = (value?: string | null) =>
 const getColorValue = (value: string | null, fallback: string) =>
   isValidHexColor(value) ? (value as string) : fallback;
 
+const defaultBookingAdminTemplate = `
+<p><strong>Информация о квесте:</strong></p>
+<p>
+  <strong>Квест:</strong> {{questTitle}}<br />
+  <strong>Дата, время:</strong> {{bookingDateTime}}<br />
+  <strong>Цена:</strong> {{totalPrice}} ₽
+</p>
+<p><strong>Данные клиента:</strong></p>
+<p>
+  Имя: {{customerName}}<br />
+  Телефон: {{customerPhone}}<br />
+  Email: {{customerEmail}}<br />
+  Комментарий: {{notes}}
+</p>
+<p><strong>Дополнительная информация:</strong></p>
+<p>
+  Участников: {{participantsCount}}<br />
+  Доп. участники: {{extraParticipantsCount}}<br />
+  Доп. услуги: {{extraServicesText}}
+</p>
+<p>
+  Адрес: {{companyAddress}}<br />
+  Телефон: {{companyPhone}}
+</p>
+<p>С уважением,<br />Администрация</p>
+`.trim();
+
+const defaultBookingCustomerTemplate = `
+<p>Спасибо за бронирование!</p>
+<p><strong>Информация о квесте:</strong></p>
+<p>
+  <strong>Квест:</strong> {{questTitle}}<br />
+  <strong>Дата, время:</strong> {{bookingDateTime}}<br />
+  <strong>Цена:</strong> {{totalPrice}} ₽
+</p>
+<p><strong>Ваши данные:</strong></p>
+<p>
+  Имя: {{customerName}}<br />
+  Телефон: {{customerPhone}}<br />
+  Email: {{customerEmail}}<br />
+  Комментарий: {{notes}}
+</p>
+<p>
+  Адрес: {{companyAddress}}<br />
+  Телефон: {{companyPhone}}
+</p>
+<p>Мы свяжемся с вами для подтверждения бронирования.</p>
+`.trim();
+
+const defaultCertificateAdminTemplate = `
+<p><strong>Новая заявка на сертификат:</strong></p>
+<p>
+  Сертификат: {{certificateTitle}}<br />
+  Тип доставки: {{deliveryType}}<br />
+  Статус: {{status}}
+</p>
+<p><strong>Данные клиента:</strong></p>
+<p>
+  Имя: {{customerName}}<br />
+  Телефон: {{customerPhone}}<br />
+  Email: {{customerEmail}}<br />
+  Комментарий: {{notes}}
+</p>
+<p>
+  Адрес: {{companyAddress}}<br />
+  Телефон: {{companyPhone}}
+</p>
+`.trim();
+
+const defaultCertificateCustomerTemplate = `
+<p>Спасибо за оформление сертификата!</p>
+<p>
+  Сертификат: {{certificateTitle}}<br />
+  Тип доставки: {{deliveryType}}
+</p>
+<p><strong>Ваши данные:</strong></p>
+<p>
+  Имя: {{customerName}}<br />
+  Телефон: {{customerPhone}}<br />
+  Email: {{customerEmail}}<br />
+  Комментарий: {{notes}}
+</p>
+<p>
+  Адрес: {{companyAddress}}<br />
+  Телефон: {{companyPhone}}
+</p>
+<p>Мы свяжемся с вами для подтверждения заказа.</p>
+`.trim();
+
+const bookingTemplateTokens = [
+  {
+    token: '{{questTitle}}',
+    description: 'Название квеста из бронирования',
+    example: 'Идеальное ограбление',
+  },
+  {
+    token: '{{bookingDate}}',
+    description: 'Дата бронирования (без времени)',
+    example: '25.01.2026',
+  },
+  {
+    token: '{{bookingTime}}',
+    description: 'Время бронирования',
+    example: '21:45',
+  },
+  {
+    token: '{{bookingDateTime}}',
+    description: 'Дата и время бронирования',
+    example: '25.01.2026 21:45',
+  },
+  {
+    token: '{{totalPrice}}',
+    description: 'Итоговая стоимость',
+    example: '5500',
+  },
+  {
+    token: '{{customerName}}',
+    description: 'Имя клиента',
+    example: 'Дарья',
+  },
+  {
+    token: '{{customerPhone}}',
+    description: 'Телефон клиента',
+    example: '89083126674',
+  },
+  {
+    token: '{{customerEmail}}',
+    description: 'Email клиента (или «не указан»)',
+    example: 'daria@example.com',
+  },
+  {
+    token: '{{participantsCount}}',
+    description: 'Количество участников',
+    example: '5',
+  },
+  {
+    token: '{{extraParticipantsCount}}',
+    description: 'Количество доп. участников',
+    example: '1',
+  },
+  {
+    token: '{{extraServices}}',
+    description: 'HTML-список дополнительных услуг',
+    example: '<ul><li>Аренда зоны отдыха — 500 ₽</li></ul>',
+  },
+  {
+    token: '{{extraServicesText}}',
+    description: 'Список доп. услуг в одну строку',
+    example: 'Аренда зоны отдыха — 500 ₽, Аниматор — 1000 ₽',
+  },
+  {
+    token: '{{status}}',
+    description: 'Статус брони',
+    example: 'pending',
+  },
+  {
+    token: '{{notes}}',
+    description: 'Комментарий клиента',
+    example: '5 чел',
+  },
+  {
+    token: '{{companyAddress}}',
+    description: 'Адрес из настроек',
+    example: 'г. Красноярск, ул. Кирова, 43',
+  },
+  {
+    token: '{{companyPhone}}',
+    description: 'Телефон из настроек',
+    example: '8 (391) 294-59-50',
+  },
+];
+
+const certificateTemplateTokens = [
+  {
+    token: '{{certificateTitle}}',
+    description: 'Название сертификата',
+    example: 'Подарочный сертификат',
+  },
+  {
+    token: '{{deliveryType}}',
+    description: 'Тип доставки сертификата',
+    example: 'paper',
+  },
+  {
+    token: '{{status}}',
+    description: 'Статус заявки',
+    example: 'pending',
+  },
+  {
+    token: '{{customerName}}',
+    description: 'Имя клиента',
+    example: 'Дарья',
+  },
+  {
+    token: '{{customerPhone}}',
+    description: 'Телефон клиента',
+    example: '89083126674',
+  },
+  {
+    token: '{{customerEmail}}',
+    description: 'Email клиента (или «не указан»)',
+    example: 'daria@example.com',
+  },
+  {
+    token: '{{notes}}',
+    description: 'Комментарий клиента',
+    example: 'Позвонить после 18:00',
+  },
+  {
+    token: '{{companyAddress}}',
+    description: 'Адрес из настроек',
+    example: 'г. Красноярск, ул. Кирова, 43',
+  },
+  {
+    token: '{{companyPhone}}',
+    description: 'Телефон из настроек',
+    example: '8 (391) 294-59-50',
+  },
+];
+
 export default function SettingsPage() {
   const timeZoneOptions = [
     { value: 'Europe/Kaliningrad', label: 'Europe/Kaliningrad (Калининград, UTC+2)' },
@@ -73,6 +294,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [activeTemplateTab, setActiveTemplateTab] = useState<
+    'booking-admin' | 'booking-customer' | 'certificate-admin' | 'certificate-customer'
+  >('booking-admin');
   const [notification, setNotification] = useState<{
     isOpen: boolean;
     title: string;
@@ -94,10 +318,21 @@ export default function SettingsPage() {
       const data = await api.getSettings();
       setSettings({
         ...data,
+        bookingEmailTemplateAdmin:
+          data.bookingEmailTemplateAdmin ?? defaultBookingAdminTemplate,
+        bookingEmailTemplateCustomer:
+          data.bookingEmailTemplateCustomer ?? defaultBookingCustomerTemplate,
+        certificateEmailTemplateAdmin:
+          data.certificateEmailTemplateAdmin ?? defaultCertificateAdminTemplate,
+        certificateEmailTemplateCustomer:
+          data.certificateEmailTemplateCustomer ?? defaultCertificateCustomerTemplate,
         bookingDaysAhead: data.bookingDaysAhead ?? 10,
         bookingCutoffMinutes: data.bookingCutoffMinutes ?? 10,
         timeZone: data.timeZone ?? null,
         videoModalEnabled: data.videoModalEnabled ?? false,
+        backgroundGradientFrom: data.backgroundGradientFrom ?? null,
+        backgroundGradientVia: data.backgroundGradientVia ?? null,
+        backgroundGradientTo: data.backgroundGradientTo ?? null,
         bookingStatusPlannedColor: data.bookingStatusPlannedColor ?? null,
         bookingStatusCreatedColor: data.bookingStatusCreatedColor ?? null,
         bookingStatusPendingColor: data.bookingStatusPendingColor ?? null,
@@ -138,10 +373,12 @@ export default function SettingsPage() {
         smtpFromName: null,
         notifyBookingAdmin: false,
         notifyBookingCustomer: false,
-        bookingEmailTemplateAdmin: null,
-        bookingEmailTemplateCustomer: null,
+        bookingEmailTemplateAdmin: defaultBookingAdminTemplate,
+        bookingEmailTemplateCustomer: defaultBookingCustomerTemplate,
         notifyCertificateAdmin: false,
         notifyCertificateCustomer: false,
+        certificateEmailTemplateAdmin: defaultCertificateAdminTemplate,
+        certificateEmailTemplateCustomer: defaultCertificateCustomerTemplate,
         phone: null,
         logoUrl: null,
         certificatePageTitle: 'Подарочные сертификаты',
@@ -161,6 +398,9 @@ export default function SettingsPage() {
         timeZone: 'Asia/Krasnoyarsk',
         promotionsPerRow: 1,
         videoModalEnabled: false,
+        backgroundGradientFrom: '#070816',
+        backgroundGradientVia: '#160a2e',
+        backgroundGradientTo: '#2c0b3f',
         updatedAt: new Date().toISOString(),
       });
     }
@@ -205,6 +445,8 @@ export default function SettingsPage() {
       bookingEmailTemplateCustomer: settings.bookingEmailTemplateCustomer,
       notifyCertificateAdmin: settings.notifyCertificateAdmin,
       notifyCertificateCustomer: settings.notifyCertificateCustomer,
+      certificateEmailTemplateAdmin: settings.certificateEmailTemplateAdmin,
+      certificateEmailTemplateCustomer: settings.certificateEmailTemplateCustomer,
       phone: settings.phone,
       logoUrl: settings.logoUrl,
       certificatePageTitle: settings.certificatePageTitle,
@@ -224,6 +466,9 @@ export default function SettingsPage() {
       timeZone: settings.timeZone,
       promotionsPerRow: settings.promotionsPerRow,
       videoModalEnabled: settings.videoModalEnabled,
+      backgroundGradientFrom: settings.backgroundGradientFrom,
+      backgroundGradientVia: settings.backgroundGradientVia,
+      backgroundGradientTo: settings.backgroundGradientTo,
     };
 
     try {
@@ -337,6 +582,60 @@ export default function SettingsPage() {
                 value={settings.logoUrl || ''}
                 onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="rounded-lg border border-gray-200 p-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Фон сайта (градиент)</h4>
+              <div className="grid md:grid-cols-3 gap-4">
+                {([
+                  { key: 'backgroundGradientFrom', label: 'Начальный цвет', fallback: '#070816' },
+                  { key: 'backgroundGradientVia', label: 'Средний цвет', fallback: '#160a2e' },
+                  { key: 'backgroundGradientTo', label: 'Конечный цвет', fallback: '#2c0b3f' },
+                ] as const).map((item) => {
+                  const key = item.key as keyof Settings;
+                  const currentValue = getColorValue(
+                    settings[key] as string | null,
+                    item.fallback,
+                  );
+                  return (
+                    <div key={item.key} className="grid gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        {item.label}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={currentValue}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [key]: e.target.value })
+                          }
+                          className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
+                        />
+                        <input
+                          type="text"
+                          value={(settings[key] as string | null) || ''}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [key]: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          placeholder={item.fallback}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div
+                className="mt-4 h-16 rounded-lg border border-gray-200"
+                style={{
+                  background: `linear-gradient(135deg, ${
+                    getColorValue(settings.backgroundGradientFrom, '#070816')
+                  }, ${
+                    getColorValue(settings.backgroundGradientVia, '#160a2e')
+                  }, ${
+                    getColorValue(settings.backgroundGradientTo, '#2c0b3f')
+                  })`,
+                }}
               />
             </div>
             <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
@@ -716,34 +1015,154 @@ export default function SettingsPage() {
                 Сертификат → пользователь
               </label>
             </div>
+          </div>
+        </div>
+      )}
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма администратору
-              </label>
-              <textarea
-                value={settings.bookingEmailTemplateAdmin || ''}
-                onChange={(e) =>
-                  setSettings({ ...settings, bookingEmailTemplateAdmin: e.target.value })
-                }
-                rows={5}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
+      {activeTab === 'email-templates' && (
+        <div className="bg-white rounded-lg shadow-lg p-8 space-y-8">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Шаблоны писем</h3>
+            <p className="text-sm text-gray-500 mt-2">
+              Используйте переменные в формате <span className="font-semibold">{'{{token}}'}</span>. 
+              Ниже указано описание и примеры подстановок.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold text-gray-800">Переменные для бронирований</h4>
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-semibold">Переменная</th>
+                    <th className="px-4 py-2 text-left font-semibold">Описание</th>
+                    <th className="px-4 py-2 text-left font-semibold">Пример</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-gray-700">
+                  {bookingTemplateTokens.map((item) => (
+                    <tr key={item.token}>
+                      <td className="px-4 py-2 font-mono text-xs">{item.token}</td>
+                      <td className="px-4 py-2">{item.description}</td>
+                      <td className="px-4 py-2">{item.example}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold text-gray-800">Переменные для сертификатов</h4>
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-semibold">Переменная</th>
+                    <th className="px-4 py-2 text-left font-semibold">Описание</th>
+                    <th className="px-4 py-2 text-left font-semibold">Пример</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-gray-700">
+                  {certificateTemplateTokens.map((item) => (
+                    <tr key={item.token}>
+                      <td className="px-4 py-2 font-mono text-xs">{item.token}</td>
+                      <td className="px-4 py-2">{item.description}</td>
+                      <td className="px-4 py-2">{item.example}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {([
+                { id: 'booking-admin', label: 'Бронь → админ' },
+                { id: 'booking-customer', label: 'Бронь → клиент' },
+                { id: 'certificate-admin', label: 'Сертификат → админ' },
+                { id: 'certificate-customer', label: 'Сертификат → клиент' },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTemplateTab(tab.id)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    activeTemplateTab === tab.id
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма клиенту
-              </label>
-              <textarea
-                value={settings.bookingEmailTemplateCustomer || ''}
-                onChange={(e) =>
-                  setSettings({ ...settings, bookingEmailTemplateCustomer: e.target.value })
-                }
-                rows={5}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
+            {activeTemplateTab === 'booking-admin' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма администратору (бронирование)
+                </label>
+                <textarea
+                  value={settings.bookingEmailTemplateAdmin || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, bookingEmailTemplateAdmin: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
+
+            {activeTemplateTab === 'booking-customer' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма клиенту (бронирование)
+                </label>
+                <textarea
+                  value={settings.bookingEmailTemplateCustomer || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, bookingEmailTemplateCustomer: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
+
+            {activeTemplateTab === 'certificate-admin' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма администратору (сертификат)
+                </label>
+                <textarea
+                  value={settings.certificateEmailTemplateAdmin || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, certificateEmailTemplateAdmin: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
+
+            {activeTemplateTab === 'certificate-customer' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма клиенту (сертификат)
+                </label>
+                <textarea
+                  value={settings.certificateEmailTemplateCustomer || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, certificateEmailTemplateCustomer: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -406,6 +406,8 @@ public class ContentService : IContentService
                 BookingEmailTemplateCustomer = dto.BookingEmailTemplateCustomer,
                 NotifyCertificateAdmin = dto.NotifyCertificateAdmin ?? false,
                 NotifyCertificateCustomer = dto.NotifyCertificateCustomer ?? false,
+                CertificateEmailTemplateAdmin = dto.CertificateEmailTemplateAdmin,
+                CertificateEmailTemplateCustomer = dto.CertificateEmailTemplateCustomer,
                 Phone = dto.Phone,
                 LogoUrl = dto.LogoUrl,
                 GiftGameLabel = dto.GiftGameLabel,
@@ -427,6 +429,9 @@ public class ContentService : IContentService
                 TimeZone = dto.TimeZone,
                 PromotionsPerRow = dto.PromotionsPerRow > 0 ? dto.PromotionsPerRow : 1,
                 VideoModalEnabled = dto.VideoModalEnabled ?? false,
+                BackgroundGradientFrom = dto.BackgroundGradientFrom,
+                BackgroundGradientVia = dto.BackgroundGradientVia,
+                BackgroundGradientTo = dto.BackgroundGradientTo,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -470,6 +475,10 @@ public class ContentService : IContentService
                 dto.NotifyCertificateAdmin ?? existing.NotifyCertificateAdmin;
             existing.NotifyCertificateCustomer =
                 dto.NotifyCertificateCustomer ?? existing.NotifyCertificateCustomer;
+            existing.CertificateEmailTemplateAdmin =
+                dto.CertificateEmailTemplateAdmin ?? existing.CertificateEmailTemplateAdmin;
+            existing.CertificateEmailTemplateCustomer =
+                dto.CertificateEmailTemplateCustomer ?? existing.CertificateEmailTemplateCustomer;
             existing.Phone = dto.Phone;
             existing.LogoUrl = dto.LogoUrl;
             existing.GiftGameLabel = dto.GiftGameLabel ?? existing.GiftGameLabel;
@@ -516,6 +525,9 @@ public class ContentService : IContentService
             {
                 existing.VideoModalEnabled = dto.VideoModalEnabled.Value;
             }
+            existing.BackgroundGradientFrom = dto.BackgroundGradientFrom;
+            existing.BackgroundGradientVia = dto.BackgroundGradientVia;
+            existing.BackgroundGradientTo = dto.BackgroundGradientTo;
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -643,6 +655,8 @@ public class ContentService : IContentService
             BookingEmailTemplateCustomer = settings.BookingEmailTemplateCustomer,
             NotifyCertificateAdmin = settings.NotifyCertificateAdmin,
             NotifyCertificateCustomer = settings.NotifyCertificateCustomer,
+            CertificateEmailTemplateAdmin = settings.CertificateEmailTemplateAdmin,
+            CertificateEmailTemplateCustomer = settings.CertificateEmailTemplateCustomer,
             Phone = settings.Phone,
             LogoUrl = settings.LogoUrl,
             GiftGameLabel = settings.GiftGameLabel,
@@ -664,6 +678,9 @@ public class ContentService : IContentService
             TimeZone = settings.TimeZone,
             PromotionsPerRow = settings.PromotionsPerRow,
             VideoModalEnabled = settings.VideoModalEnabled,
+            BackgroundGradientFrom = settings.BackgroundGradientFrom,
+            BackgroundGradientVia = settings.BackgroundGradientVia,
+            BackgroundGradientTo = settings.BackgroundGradientTo,
             UpdatedAt = settings.UpdatedAt
         };
     }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuestRoomApi.Data;
@@ -11,9 +12,11 @@ using QuestRoomApi.Data;
 namespace QuestRoomApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129105450_AddSettingsBackgroundGradient")]
+    partial class AddSettingsBackgroundGradient
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1120,41 +1123,6 @@ namespace QuestRoomApi.Migrations
                     b.Property<string>("BookingEmailTemplateCustomer")
                         .HasColumnType("text")
                         .HasColumnName("booking_email_template_customer");
-
-                    b.Property<string>("BookingStatusCancelledColor")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_status_cancelled_color");
-
-                    b.Property<string>("BookingStatusCompletedColor")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_status_completed_color");
-
-                    b.Property<string>("BookingStatusConfirmedColor")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_status_confirmed_color");
-
-                    b.Property<string>("BookingStatusCreatedColor")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_status_created_color");
-
-                    b.Property<string>("BookingStatusNotConfirmedColor")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_status_not_confirmed_color");
-
-                    b.Property<string>("BookingStatusPendingColor")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_status_pending_color");
-
-                    b.Property<string>("BookingStatusPlannedColor")
-                        .HasColumnType("text")
-                        .HasColumnName("booking_status_planned_color");
-                    b.Property<string>("CertificateEmailTemplateAdmin")
-                        .HasColumnType("text")
-                        .HasColumnName("certificate_email_template_admin");
-
-                    b.Property<string>("CertificateEmailTemplateCustomer")
-                        .HasColumnType("text")
-                        .HasColumnName("certificate_email_template_customer");
 
                     b.Property<string>("CertificatePageDescription")
                         .HasColumnType("text")

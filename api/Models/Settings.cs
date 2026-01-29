@@ -106,6 +106,12 @@ public class Settings
     [Column("notify_certificate_customer")]
     public bool NotifyCertificateCustomer { get; set; }
 
+    [Column("certificate_email_template_admin")]
+    public string? CertificateEmailTemplateAdmin { get; set; }
+
+    [Column("certificate_email_template_customer")]
+    public string? CertificateEmailTemplateCustomer { get; set; }
+
     [Column("phone")]
     public string? Phone { get; set; }
 
@@ -168,6 +174,15 @@ public class Settings
 
     [Column("video_modal_enabled")]
     public bool VideoModalEnabled { get; set; }
+
+    [Column("background_gradient_from")]
+    public string? BackgroundGradientFrom { get; set; }
+
+    [Column("background_gradient_via")]
+    public string? BackgroundGradientVia { get; set; }
+
+    [Column("background_gradient_to")]
+    public string? BackgroundGradientTo { get; set; }
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }

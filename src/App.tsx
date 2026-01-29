@@ -1,5 +1,5 @@
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -27,14 +27,42 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PricingRulesPage from './pages/admin/PricingRulesPage';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import ProductionCalendarPage from './pages/admin/ProductionCalendarPage';
+import { api } from './lib/api';
+import { Settings } from './lib/types';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const navigate = useNavigate();
+  const [publicSettings, setPublicSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await api.getSettings();
+        setPublicSettings(data);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const handlePageChange = (page: string) => {
     setCurrentPage(page);
     navigate('/');
+  };
+
+  const fallbackGradient = {
+    from: '#070816',
+    via: '#160a2e',
+    to: '#2c0b3f',
+  };
+
+  const backgroundGradient = {
+    from: publicSettings?.backgroundGradientFrom || fallbackGradient.from,
+    via: publicSettings?.backgroundGradientVia || fallbackGradient.via,
+    to: publicSettings?.backgroundGradientTo || fallbackGradient.to,
   };
 
   return (
@@ -71,7 +99,12 @@ function App() {
       <Route
         path="/*"
         element={
-          <div className="min-h-screen bg-gradient-to-br from-[#0b0f2a] via-[#24124a] to-[#4a1362]">
+          <div
+            className="min-h-screen"
+            style={{
+              background: `linear-gradient(135deg, ${backgroundGradient.from}, ${backgroundGradient.via}, ${backgroundGradient.to})`,
+            }}
+          >
             <Header currentPage={currentPage} setCurrentPage={handlePageChange} />
             <Routes>
               <Route path="/" element={<HomePage />} />
