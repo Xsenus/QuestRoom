@@ -44,16 +44,21 @@ const getColorValue = (value: string | null, fallback: string) =>
 
 export default function SettingsPage() {
   const timeZoneOptions = [
-    { value: 'Asia/Krasnoyarsk', label: 'Asia/Krasnoyarsk (Красноярск, UTC+7)' },
-    { value: 'Asia/Novosibirsk', label: 'Asia/Novosibirsk (Новосибирск, UTC+7)' },
-    { value: 'Asia/Irkutsk', label: 'Asia/Irkutsk (Иркутск, UTC+8)' },
-    { value: 'Asia/Yekaterinburg', label: 'Asia/Yekaterinburg (Екатеринбург, UTC+5)' },
+    { value: 'Europe/Kaliningrad', label: 'Europe/Kaliningrad (Калининград, UTC+2)' },
     { value: 'Europe/Moscow', label: 'Europe/Moscow (Москва, UTC+3)' },
     { value: 'Europe/Samara', label: 'Europe/Samara (Самара, UTC+4)' },
-    { value: 'Asia/Vladivostok', label: 'Asia/Vladivostok (Владивосток, UTC+10)' },
+    { value: 'Asia/Yekaterinburg', label: 'Asia/Yekaterinburg (Екатеринбург, UTC+5)' },
+    { value: 'Asia/Omsk', label: 'Asia/Omsk (Омск, UTC+6)' },
+    { value: 'Asia/Novosibirsk', label: 'Asia/Novosibirsk (Новосибирск, UTC+7)' },
+    { value: 'Asia/Krasnoyarsk', label: 'Asia/Krasnoyarsk (Красноярск, UTC+7)' },
+    { value: 'Asia/Irkutsk', label: 'Asia/Irkutsk (Иркутск, UTC+8)' },
     { value: 'Asia/Yakutsk', label: 'Asia/Yakutsk (Якутск, UTC+9)' },
     { value: 'Asia/Chita', label: 'Asia/Chita (Чита, UTC+9)' },
-    { value: 'Asia/Omsk', label: 'Asia/Omsk (Омск, UTC+6)' },
+    { value: 'Asia/Vladivostok', label: 'Asia/Vladivostok (Владивосток, UTC+10)' },
+    { value: 'Asia/Magadan', label: 'Asia/Magadan (Магадан, UTC+11)' },
+    { value: 'Asia/Sakhalin', label: 'Asia/Sakhalin (Сахалин, UTC+11)' },
+    { value: 'Asia/Kamchatka', label: 'Asia/Kamchatka (Камчатка, UTC+12)' },
+    { value: 'Asia/Anadyr', label: 'Asia/Anadyr (Анадырь, UTC+12)' },
   ];
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,6 +85,7 @@ export default function SettingsPage() {
       const data = await api.getSettings();
       setSettings({
         ...data,
+        bookingDaysAhead: data.bookingDaysAhead ?? 10,
         bookingCutoffMinutes: data.bookingCutoffMinutes ?? 10,
         timeZone: data.timeZone ?? null,
         videoModalEnabled: data.videoModalEnabled ?? false,

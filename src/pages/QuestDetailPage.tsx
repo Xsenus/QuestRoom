@@ -388,11 +388,9 @@ export default function QuestDetailPage() {
                             aria-disabled={isDisabled}
                             type="button"
                             className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-                              slot.isBooked
+                              slot.isBooked || slotIsClosed
                                 ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
-                                : slotIsClosed
-                                  ? 'bg-gray-500/80 text-white/80 cursor-not-allowed'
-                                  : 'bg-green-600 text-white hover:bg-green-500'
+                                : 'bg-green-600 text-white hover:bg-green-500'
                             }`}
                           >
                             <span
@@ -404,6 +402,11 @@ export default function QuestDetailPage() {
                             >
                               {slot.timeSlot.substring(0, 5)}
                             </span>
+                            {isDisabled && (
+                              <span className="mt-0.5 block text-center text-[9px] font-bold uppercase tracking-[0.1em] text-slate-900/80">
+                                Забронировано
+                              </span>
+                            )}
                           </button>
                         );
                       })}
