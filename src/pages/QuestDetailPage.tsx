@@ -368,8 +368,9 @@ export default function QuestDetailPage() {
               {Object.entries(groupedSchedule).map(([date, slots]) => (
                 <div key={date} className="flex flex-col gap-3 lg:flex-row lg:gap-6 lg:items-start">
                   <div className="flex-shrink-0 w-full lg:w-40 text-white pt-1">
-                    <div className="text-base lg:text-lg font-bold">
-                      {getDisplayDate(date)} ({getDayName(date)})
+                    <div className="text-base lg:text-lg font-bold flex flex-col items-center text-center">
+                      <span>{getDisplayDate(date)}</span>
+                      <span>{getDayName(date)}</span>
                     </div>
                   </div>
 
