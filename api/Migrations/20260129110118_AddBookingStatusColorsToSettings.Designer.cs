@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuestRoomApi.Data;
@@ -11,9 +12,11 @@ using QuestRoomApi.Data;
 namespace QuestRoomApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129110118_AddBookingStatusColorsToSettings")]
+    partial class AddBookingStatusColorsToSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1093,18 +1096,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("address");
 
-                    b.Property<string>("BackgroundGradientFrom")
-                        .HasColumnType("text")
-                        .HasColumnName("background_gradient_from");
-
-                    b.Property<string>("BackgroundGradientTo")
-                        .HasColumnType("text")
-                        .HasColumnName("background_gradient_to");
-
-                    b.Property<string>("BackgroundGradientVia")
-                        .HasColumnType("text")
-                        .HasColumnName("background_gradient_via");
-
                     b.Property<int>("BookingCutoffMinutes")
                         .HasColumnType("integer")
                         .HasColumnName("booking_cutoff_minutes");
@@ -1148,13 +1139,6 @@ namespace QuestRoomApi.Migrations
                     b.Property<string>("BookingStatusPlannedColor")
                         .HasColumnType("text")
                         .HasColumnName("booking_status_planned_color");
-                    b.Property<string>("CertificateEmailTemplateAdmin")
-                        .HasColumnType("text")
-                        .HasColumnName("certificate_email_template_admin");
-
-                    b.Property<string>("CertificateEmailTemplateCustomer")
-                        .HasColumnType("text")
-                        .HasColumnName("certificate_email_template_customer");
 
                     b.Property<string>("CertificatePageDescription")
                         .HasColumnType("text")

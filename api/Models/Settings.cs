@@ -145,6 +145,27 @@ public class Settings
     [Column("booking_cutoff_minutes")]
     public int BookingCutoffMinutes { get; set; } = 10;
 
+    [Column("booking_status_planned_color")]
+    public string? BookingStatusPlannedColor { get; set; }
+
+    [Column("booking_status_created_color")]
+    public string? BookingStatusCreatedColor { get; set; }
+
+    [Column("booking_status_pending_color")]
+    public string? BookingStatusPendingColor { get; set; }
+
+    [Column("booking_status_not_confirmed_color")]
+    public string? BookingStatusNotConfirmedColor { get; set; }
+
+    [Column("booking_status_confirmed_color")]
+    public string? BookingStatusConfirmedColor { get; set; }
+
+    [Column("booking_status_completed_color")]
+    public string? BookingStatusCompletedColor { get; set; }
+
+    [Column("booking_status_cancelled_color")]
+    public string? BookingStatusCancelledColor { get; set; }
+
     [Column("time_zone")]
     public string? TimeZone { get; set; }
 
