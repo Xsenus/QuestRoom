@@ -417,6 +417,7 @@ public class ContentService : IContentService
                 ReviewsFlampEmbed = dto.ReviewsFlampEmbed,
                 BookingDaysAhead = dto.BookingDaysAhead > 0 ? dto.BookingDaysAhead : 10,
                 PromotionsPerRow = dto.PromotionsPerRow > 0 ? dto.PromotionsPerRow : 1,
+                VideoModalEnabled = dto.VideoModalEnabled ?? false,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -479,6 +480,10 @@ public class ContentService : IContentService
             if (dto.PromotionsPerRow > 0)
             {
                 existing.PromotionsPerRow = dto.PromotionsPerRow;
+            }
+            if (dto.VideoModalEnabled.HasValue)
+            {
+                existing.VideoModalEnabled = dto.VideoModalEnabled.Value;
             }
             existing.UpdatedAt = DateTime.UtcNow;
         }
@@ -618,6 +623,7 @@ public class ContentService : IContentService
             ReviewsFlampEmbed = settings.ReviewsFlampEmbed,
             BookingDaysAhead = settings.BookingDaysAhead,
             PromotionsPerRow = settings.PromotionsPerRow,
+            VideoModalEnabled = settings.VideoModalEnabled,
             UpdatedAt = settings.UpdatedAt
         };
     }
