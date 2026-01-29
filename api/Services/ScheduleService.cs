@@ -27,6 +27,15 @@ public class ScheduleService : IScheduleService
         DateOnly? fromDate,
         DateOnly? toDate)
     {
+        if (fromDate.HasValue && toDate.HasValue)
+        {
+            var hasTemplates = await HasTemplateConfigAsync(questId);
+            if (hasTemplates)
+            {
+                await GenerateScheduleFromTemplatesAsync(questId, fromDate.Value, toDate.Value);
+            }
+        }
+
         var query = _context.QuestSchedules.Where(s => s.QuestId == questId);
 
         if (fromDate.HasValue)
@@ -111,6 +120,150 @@ public class ScheduleService : IScheduleService
     }
 
     private async Task<int> GenerateScheduleForQuestAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
+    {
+        if (await HasTemplateConfigAsync(questId))
+        {
+            return await GenerateScheduleFromTemplatesAsync(questId, fromDate, toDate);
+        }
+
+        return await GenerateScheduleFromPricingRulesAsync(questId, fromDate, toDate);
+    }
+
+    private async Task<bool> HasTemplateConfigAsync(Guid questId)
+    {
+        var hasWeekly = await _context.QuestWeeklySlots.AnyAsync(slot => slot.QuestId == questId);
+        if (hasWeekly)
+        {
+            return true;
+        }
+
+        return await _context.QuestDateOverrides.AnyAsync(overrideDay => overrideDay.QuestId == questId);
+    }
+
+    private async Task<int> GenerateScheduleFromTemplatesAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
+    {
+        var weeklySlots = await _context.QuestWeeklySlots
+            .Where(slot => slot.QuestId == questId)
+            .ToListAsync();
+
+        var overrides = await _context.QuestDateOverrides
+            .Include(overrideDay => overrideDay.Slots)
+            .Where(overrideDay =>
+                overrideDay.QuestId == questId &&
+                overrideDay.Date >= fromDate &&
+                overrideDay.Date <= toDate)
+            .ToListAsync();
+
+        var holidayDates = await _context.ProductionCalendarDays
+            .Where(day => day.Date >= fromDate && day.Date <= toDate && day.IsHoliday)
+            .Select(day => day.Date)
+            .ToListAsync();
+
+        var holidaySet = holidayDates.ToHashSet();
+        var overridesByDate = overrides.ToDictionary(overrideDay => overrideDay.Date, overrideDay => overrideDay);
+        var weeklyByDay = weeklySlots
+            .GroupBy(slot => slot.DayOfWeek)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        var existingSlots = await _context.QuestSchedules
+            .Where(slot => slot.QuestId == questId && slot.Date >= fromDate && slot.Date <= toDate)
+            .ToListAsync();
+
+        var existingByKey = existingSlots.ToDictionary(
+            slot => $"{slot.Date:yyyy-MM-dd}|{slot.TimeSlot}",
+            slot => slot);
+
+        var desiredSlots = new Dictionary<string, int>();
+
+        for (var date = fromDate; date <= toDate; date = date.AddDays(1))
+        {
+            if (overridesByDate.TryGetValue(date, out var overrideDay))
+            {
+                if (!overrideDay.IsClosed)
+                {
+                    foreach (var slot in overrideDay.Slots)
+                    {
+                        var key = $"{date:yyyy-MM-dd}|{slot.TimeSlot}";
+                        desiredSlots[key] = slot.Price;
+                    }
+                }
+
+                continue;
+            }
+
+            var dayOfWeek = (int)date.DayOfWeek;
+            if (!weeklyByDay.TryGetValue(dayOfWeek, out var daySlots))
+            {
+                continue;
+            }
+
+            var isHoliday = holidaySet.Contains(date);
+            foreach (var slot in daySlots)
+            {
+                var key = $"{date:yyyy-MM-dd}|{slot.TimeSlot}";
+                var price = isHoliday && slot.HolidayPrice.HasValue ? slot.HolidayPrice.Value : slot.Price;
+                desiredSlots[key] = price;
+            }
+        }
+
+        var newSlots = new List<QuestSchedule>();
+        foreach (var (key, price) in desiredSlots)
+        {
+            if (existingByKey.TryGetValue(key, out var slot))
+            {
+                if (!slot.IsBooked && slot.Price != price)
+                {
+                    slot.Price = price;
+                    slot.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                var parts = key.Split('|');
+                var date = DateOnly.Parse(parts[0]);
+                var timeSlot = TimeOnly.Parse(parts[1]);
+
+                newSlots.Add(new QuestSchedule
+                {
+                    Id = Guid.NewGuid(),
+                    QuestId = questId,
+                    Date = date,
+                    TimeSlot = timeSlot,
+                    Price = price,
+                    IsBooked = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        var slotsToRemove = existingSlots
+            .Where(slot =>
+            {
+                var key = $"{slot.Date:yyyy-MM-dd}|{slot.TimeSlot}";
+                return !slot.IsBooked && !desiredSlots.ContainsKey(key);
+            })
+            .ToList();
+
+        if (slotsToRemove.Any())
+        {
+            _context.QuestSchedules.RemoveRange(slotsToRemove);
+        }
+
+        if (newSlots.Any())
+        {
+            _context.QuestSchedules.AddRange(newSlots);
+        }
+
+        if (newSlots.Any() || slotsToRemove.Any() || existingSlots.Any(slot => _context.Entry(slot).State == EntityState.Modified))
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return newSlots.Count;
+    }
+
+    private async Task<int> GenerateScheduleFromPricingRulesAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
     {
         var rules = await _context.QuestPricingRules
             .Where(rule =>

@@ -322,13 +322,26 @@ public class DatabaseInitializer : IDatabaseInitializer
             _context.Quests.AddRange(questData);
         }
 
+        List<QuestPricingRule> seededRules = new();
         if (!await _context.QuestPricingRules.AnyAsync())
         {
             var questsForRules = questData.Any()
                 ? questData
                 : await _context.Quests.ToListAsync();
 
-            AddPricingRules(questsForRules, now);
+            seededRules = AddPricingRules(questsForRules, now);
+        }
+
+        if (!await _context.QuestWeeklySlots.AnyAsync())
+        {
+            var rulesForWeekly = seededRules.Any()
+                ? seededRules
+                : await _context.QuestPricingRules.ToListAsync();
+            var weeklySlots = BuildWeeklySlotsFromPricingRules(rulesForWeekly, now);
+            if (weeklySlots.Any())
+            {
+                _context.QuestWeeklySlots.AddRange(weeklySlots);
+            }
         }
 
         if (!await _context.Rules.AnyAsync())
@@ -700,6 +713,9 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.CertificateOrders.RemoveRange(await _context.CertificateOrders.ToListAsync());
         _context.QuestSchedules.RemoveRange(await _context.QuestSchedules.ToListAsync());
         _context.QuestPricingRules.RemoveRange(await _context.QuestPricingRules.ToListAsync());
+        _context.QuestWeeklySlots.RemoveRange(await _context.QuestWeeklySlots.ToListAsync());
+        _context.QuestDateOverrideSlots.RemoveRange(await _context.QuestDateOverrideSlots.ToListAsync());
+        _context.QuestDateOverrides.RemoveRange(await _context.QuestDateOverrides.ToListAsync());
         _context.Quests.RemoveRange(await _context.Quests.ToListAsync());
         _context.DurationBadges.RemoveRange(await _context.DurationBadges.ToListAsync());
         _context.Rules.RemoveRange(await _context.Rules.ToListAsync());
@@ -714,7 +730,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         await _context.SaveChangesAsync();
     }
 
-    private void AddPricingRules(IEnumerable<Quest> quests, DateTime now)
+    private List<QuestPricingRule> AddPricingRules(IEnumerable<Quest> quests, DateTime now)
     {
         var questList = quests.ToList();
         var weekDays = new[] { 1, 2, 3, 4, 5 };
@@ -823,6 +839,8 @@ public class DatabaseInitializer : IDatabaseInitializer
         {
             _context.QuestPricingRules.AddRange(rules);
         }
+
+        return rules;
     }
 
     private static IEnumerable<QuestPricingRule> BuildRulesForTimes(
@@ -884,6 +902,103 @@ public class DatabaseInitializer : IDatabaseInitializer
             .Select(time => TimeOnly.Parse(time.Trim()))
             .Order()
             .ToList();
+    }
+
+    private static List<QuestWeeklySlot> BuildWeeklySlotsFromPricingRules(
+        IEnumerable<QuestPricingRule> rules,
+        DateTime now)
+    {
+        var ruleList = rules.ToList();
+        if (!ruleList.Any())
+        {
+            return new List<QuestWeeklySlot>();
+        }
+
+        var weeklySlots = new List<QuestWeeklySlot>();
+        var groupedByQuest = ruleList.GroupBy(rule => rule.QuestId);
+
+        foreach (var questGroup in groupedByQuest)
+        {
+            var weekendPriceMap = BuildPriceMapForDays(
+                questGroup.Where(rule => rule.DaysOfWeek.Contains(0) || rule.DaysOfWeek.Contains(6)));
+
+            var existingKeys = new HashSet<string>();
+            foreach (var rule in questGroup)
+            {
+                var times = BuildTimeSlots(rule.StartTime, rule.EndTime, rule.IntervalMinutes);
+                foreach (var day in rule.DaysOfWeek)
+                {
+                    foreach (var time in times)
+                    {
+                        var key = $"{day}|{time}";
+                        if (!existingKeys.Add(key))
+                        {
+                            continue;
+                        }
+
+                        int? holidayPrice = null;
+                        if (day is >= 1 and <= 5 && weekendPriceMap.TryGetValue(time, out var weekendPrice))
+                        {
+                            holidayPrice = weekendPrice;
+                        }
+
+                        weeklySlots.Add(new QuestWeeklySlot
+                        {
+                            Id = Guid.NewGuid(),
+                            QuestId = rule.QuestId,
+                            DayOfWeek = day,
+                            TimeSlot = time,
+                            Price = rule.Price,
+                            HolidayPrice = holidayPrice,
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        });
+                    }
+                }
+            }
+        }
+
+        return weeklySlots;
+    }
+
+    private static Dictionary<TimeOnly, int> BuildPriceMapForDays(IEnumerable<QuestPricingRule> rules)
+    {
+        var map = new Dictionary<TimeOnly, int>();
+        foreach (var rule in rules)
+        {
+            var times = BuildTimeSlots(rule.StartTime, rule.EndTime, rule.IntervalMinutes);
+            foreach (var time in times)
+            {
+                map[time] = rule.Price;
+            }
+        }
+
+        return map;
+    }
+
+    private static List<TimeOnly> BuildTimeSlots(TimeOnly start, TimeOnly end, int intervalMinutes)
+    {
+        if (intervalMinutes <= 0 || end <= start)
+        {
+            return new List<TimeOnly>();
+        }
+
+        var slots = new List<TimeOnly>();
+        var time = start;
+        var guard = 0;
+        while (time < end && guard < 48)
+        {
+            slots.Add(time);
+            var next = time.AddMinutes(intervalMinutes);
+            if (next <= time)
+            {
+                break;
+            }
+            time = next;
+            guard++;
+        }
+
+        return slots;
     }
 
     private static int GetIntervalMinutes(IReadOnlyList<TimeOnly> times, int fallback)

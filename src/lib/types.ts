@@ -299,6 +299,33 @@ export type QuestSchedule = {
 
 export type QuestScheduleUpsert = Omit<QuestSchedule, 'id' | 'createdAt' | 'updatedAt'>;
 
+export type QuestWeeklySlot = {
+  id?: string;
+  dayOfWeek: number;
+  timeSlot: string;
+  price: number;
+  holidayPrice: number | null;
+};
+
+export type QuestDateOverrideSlot = {
+  id?: string;
+  timeSlot: string;
+  price: number;
+};
+
+export type QuestDateOverride = {
+  id?: string;
+  date: string;
+  isClosed: boolean;
+  slots: QuestDateOverrideSlot[];
+};
+
+export type QuestScheduleConfig = {
+  questId: string;
+  weeklySlots: QuestWeeklySlot[];
+  dateOverrides: QuestDateOverride[];
+};
+
 export type QuestPricingRule = {
   id: string;
   questIds: string[];

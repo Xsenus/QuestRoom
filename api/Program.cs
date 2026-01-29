@@ -59,6 +59,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IQuestService, QuestService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<IQuestScheduleConfigService, QuestScheduleConfigService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<ICertificateOrderService, CertificateOrderService>();
 builder.Services.AddScoped<IContentService, ContentService>();

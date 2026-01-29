@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Quest, QuestUpsert, DurationBadge } from '../../lib/types';
+import {
+  Quest,
+  QuestDateOverride,
+  QuestScheduleConfig,
+  QuestWeeklySlot,
+  QuestUpsert,
+  DurationBadge,
+} from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 
 export default function QuestsPage() {
@@ -11,6 +18,23 @@ export default function QuestsPage() {
     null
   );
   const [isCreating, setIsCreating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'schedule'>('details');
+  const [weeklySlots, setWeeklySlots] = useState<QuestWeeklySlot[]>([]);
+  const [dateOverrides, setDateOverrides] = useState<QuestDateOverride[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleMessage, setScheduleMessage] = useState<string>('');
+  const [selectedDay, setSelectedDay] = useState<number>(1);
+
+  const dayOptions = [
+    { value: 1, label: 'Пн' },
+    { value: 2, label: 'Вт' },
+    { value: 3, label: 'Ср' },
+    { value: 4, label: 'Чт' },
+    { value: 5, label: 'Пт' },
+    { value: 6, label: 'Сб' },
+    { value: 0, label: 'Вс' },
+  ];
 
   const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
     if (mainImage && !images.includes(mainImage)) {
@@ -37,6 +61,15 @@ export default function QuestsPage() {
     loadQuests();
     loadDurationBadges();
   }, []);
+
+  useEffect(() => {
+    if (editingQuest?.id) {
+      loadScheduleConfig(editingQuest.id);
+    } else {
+      setWeeklySlots([]);
+      setDateOverrides([]);
+    }
+  }, [editingQuest?.id]);
 
   const loadDurationBadges = async () => {
     try {
@@ -273,6 +306,137 @@ export default function QuestsPage() {
       videoUrl: quest.videoUrl || '',
     });
     setIsCreating(false);
+    setActiveTab('details');
+  };
+
+  const loadScheduleConfig = async (questId: string) => {
+    setScheduleLoading(true);
+    try {
+      const config = await api.getQuestScheduleConfig(questId);
+      setWeeklySlots(config.weeklySlots || []);
+      setDateOverrides(config.dateOverrides || []);
+      setScheduleMessage('');
+    } catch (error) {
+      console.error('Ошибка загрузки расписания:', error);
+      setScheduleMessage('Не удалось загрузить расписание.');
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const handleScheduleSave = async () => {
+    if (!editingQuest?.id) {
+      setScheduleMessage('Сначала сохраните карточку квеста.');
+      return;
+    }
+
+    setScheduleSaving(true);
+    setScheduleMessage('');
+    try {
+      const payload: Omit<QuestScheduleConfig, 'questId'> = {
+        weeklySlots,
+        dateOverrides,
+      };
+      await api.updateQuestScheduleConfig(editingQuest.id, payload);
+      setScheduleMessage('Расписание сохранено.');
+    } catch (error) {
+      setScheduleMessage(`Ошибка сохранения: ${(error as Error).message}`);
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  const updateWeeklySlot = (index: number, patch: Partial<QuestWeeklySlot>) => {
+    setWeeklySlots((prev) =>
+      prev.map((slot, idx) => (idx === index ? { ...slot, ...patch } : slot))
+    );
+  };
+
+  const removeWeeklySlot = (index: number) => {
+    setWeeklySlots((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const addWeeklySlot = () => {
+    setWeeklySlots((prev) => [
+      ...prev,
+      {
+        dayOfWeek: selectedDay,
+        timeSlot: '10:00',
+        price: 0,
+        holidayPrice: null,
+      },
+    ]);
+  };
+
+  const updateOverride = (index: number, patch: Partial<QuestDateOverride>) => {
+    setDateOverrides((prev) =>
+      prev.map((override, idx) => (idx === index ? { ...override, ...patch } : override))
+    );
+  };
+
+  const removeOverride = (index: number) => {
+    setDateOverrides((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const addOverride = () => {
+    const today = new Date();
+    const iso = today.toISOString().slice(0, 10);
+    setDateOverrides((prev) => [
+      ...prev,
+      {
+        date: iso,
+        isClosed: false,
+        slots: [],
+      },
+    ]);
+  };
+
+  const addOverrideSlot = (overrideIndex: number) => {
+    setDateOverrides((prev) =>
+      prev.map((override, idx) =>
+        idx === overrideIndex
+          ? {
+              ...override,
+              slots: [
+                ...override.slots,
+                {
+                  timeSlot: '10:00',
+                  price: 0,
+                },
+              ],
+            }
+          : override
+      )
+    );
+  };
+
+  const updateOverrideSlot = (
+    overrideIndex: number,
+    slotIndex: number,
+    patch: Partial<QuestDateOverride['slots'][number]>
+  ) => {
+    setDateOverrides((prev) =>
+      prev.map((override, idx) =>
+        idx === overrideIndex
+          ? {
+              ...override,
+              slots: override.slots.map((slot, sidx) =>
+                sidx === slotIndex ? { ...slot, ...patch } : slot
+              ),
+            }
+          : override
+      )
+    );
+  };
+
+  const removeOverrideSlot = (overrideIndex: number, slotIndex: number) => {
+    setDateOverrides((prev) =>
+      prev.map((override, idx) =>
+        idx === overrideIndex
+          ? { ...override, slots: override.slots.filter((_, sidx) => sidx !== slotIndex) }
+          : override
+      )
+    );
   };
 
   if (editingQuest) {
@@ -283,7 +447,33 @@ export default function QuestsPage() {
             {isCreating ? 'Создание квеста' : 'Редактирование квеста'}
           </h2>
 
-          <div className="space-y-6">
+          <div className="flex flex-wrap gap-3 mb-6">
+            <button
+              type="button"
+              onClick={() => setActiveTab('details')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                activeTab === 'details'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Карточка квеста
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('schedule')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                activeTab === 'schedule'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Время и цены
+            </button>
+          </div>
+
+          {activeTab === 'details' ? (
+            <div className="space-y-6">
             <div className="border-b border-gray-200 pb-4">
               <h3 className="text-lg font-semibold text-gray-800">Основная информация</h3>
             </div>
@@ -813,6 +1003,242 @@ export default function QuestsPage() {
               </button>
             </div>
           </div>
+          ) : (
+            <div className="space-y-8">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-gray-700 space-y-2">
+                <p className="font-semibold text-red-700">Как работает расписание</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Сначала задайте базовое расписание по дням недели: время и цена.</li>
+                  <li>Если день в календаре отмечен как праздничный, применяется цена выходного/праздничного дня.</li>
+                  <li>Для конкретной даты можно задать собственные слоты или закрыть запись.</li>
+                  <li>Расписание автоматически применяется при открытии страницы квеста.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Неделя: базовые слоты</h3>
+                  <select
+                    value={selectedDay}
+                    onChange={(e) => setSelectedDay(Number(e.target.value))}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700"
+                  >
+                    {dayOptions.map((day) => (
+                      <option key={day.value} value={day.value}>
+                        {day.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                  {(weeklySlots
+                    .map((slot, index) => ({ slot, index }))
+                    .filter(({ slot }) => slot.dayOfWeek === selectedDay)
+                    .sort((a, b) => a.slot.timeSlot.localeCompare(b.slot.timeSlot))
+                  ).length === 0 && (
+                    <p className="text-sm text-gray-500">Слоты на выбранный день пока не заданы.</p>
+                  )}
+
+                  {weeklySlots
+                    .map((slot, index) => ({ slot, index }))
+                    .filter(({ slot }) => slot.dayOfWeek === selectedDay)
+                    .sort((a, b) => a.slot.timeSlot.localeCompare(b.slot.timeSlot))
+                    .map(({ slot, index }) => (
+                      <div key={`${slot.timeSlot}-${index}`} className="grid md:grid-cols-[120px_1fr_1fr_auto] gap-3 items-center">
+                        <input
+                          type="time"
+                          value={slot.timeSlot}
+                          onChange={(e) => updateWeeklySlot(index, { timeSlot: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg"
+                        />
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">
+                            Цена буднего дня
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={slot.price}
+                            onChange={(e) =>
+                              updateWeeklySlot(index, { price: parseInt(e.target.value) || 0 })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">
+                            Цена выходного/праздника
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={slot.holidayPrice ?? ''}
+                            onChange={(e) =>
+                              updateWeeklySlot(index, {
+                                holidayPrice: e.target.value ? parseInt(e.target.value) || 0 : null,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="Не задано"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeWeeklySlot(index)}
+                          className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg"
+                          title="Удалить слот"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+
+                  <button
+                    type="button"
+                    onClick={addWeeklySlot}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Добавить время
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Исключения по датам</h3>
+                  <button
+                    type="button"
+                    onClick={addOverride}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Добавить дату
+                  </button>
+                </div>
+
+                {dateOverrides.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    Здесь можно задать индивидуальные цены или полностью закрыть запись на дату.
+                  </p>
+                )}
+
+                <div className="space-y-4">
+                  {dateOverrides
+                    .slice()
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map((override, index) => (
+                      <div key={`${override.date}-${index}`} className="rounded-lg border border-gray-200 p-4 space-y-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">
+                              Дата
+                            </label>
+                            <input
+                              type="date"
+                              value={override.date}
+                              onChange={(e) => updateOverride(index, { date: e.target.value })}
+                              className="px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+                          <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+                            <input
+                              type="checkbox"
+                              checked={override.isClosed}
+                              onChange={(e) =>
+                                updateOverride(index, {
+                                  isClosed: e.target.checked,
+                                  slots: e.target.checked ? [] : override.slots,
+                                })
+                              }
+                              className="w-4 h-4 text-red-600 rounded"
+                            />
+                            День закрыт для записи
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => removeOverride(index)}
+                            className="ml-auto p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg"
+                            title="Удалить дату"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {!override.isClosed && (
+                          <div className="space-y-3">
+                            {override.slots.length === 0 && (
+                              <p className="text-xs text-gray-500">
+                                Слоты отсутствуют — добавьте время и цену.
+                              </p>
+                            )}
+                            {override.slots.map((slot, slotIndex) => (
+                              <div
+                                key={`${slot.timeSlot}-${slotIndex}`}
+                                className="grid md:grid-cols-[120px_1fr_auto] gap-3 items-center"
+                              >
+                                <input
+                                  type="time"
+                                  value={slot.timeSlot}
+                                  onChange={(e) =>
+                                    updateOverrideSlot(index, slotIndex, { timeSlot: e.target.value })
+                                  }
+                                  className="px-3 py-2 border border-gray-300 rounded-lg"
+                                />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={slot.price}
+                                  onChange={(e) =>
+                                    updateOverrideSlot(index, slotIndex, {
+                                      price: parseInt(e.target.value) || 0,
+                                    })
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                  placeholder="Цена"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeOverrideSlot(index, slotIndex)}
+                                  className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg"
+                                  title="Удалить слот"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => addOverrideSlot(index)}
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Добавить время
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="text-sm text-gray-600">
+                  {scheduleLoading ? 'Загрузка расписания...' : scheduleMessage || ' '}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleScheduleSave}
+                  disabled={scheduleSaving || scheduleLoading}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  {scheduleSaving ? 'Сохранение...' : 'Сохранить расписание'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

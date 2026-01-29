@@ -15,6 +15,9 @@ public class AppDbContext : DbContext
     public DbSet<DurationBadge> DurationBadges { get; set; }
     public DbSet<QuestSchedule> QuestSchedules { get; set; }
     public DbSet<QuestPricingRule> QuestPricingRules { get; set; }
+    public DbSet<QuestWeeklySlot> QuestWeeklySlots { get; set; }
+    public DbSet<QuestDateOverride> QuestDateOverrides { get; set; }
+    public DbSet<QuestDateOverrideSlot> QuestDateOverrideSlots { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<BookingExtraService> BookingExtraServices { get; set; }
     public DbSet<ImageAsset> ImageAssets { get; set; }
@@ -57,6 +60,36 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(e => e.QuestId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QuestWeeklySlot>()
+            .HasOne(e => e.Quest)
+            .WithMany()
+            .HasForeignKey(e => e.QuestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QuestWeeklySlot>()
+            .HasIndex(e => new { e.QuestId, e.DayOfWeek, e.TimeSlot })
+            .IsUnique();
+
+        modelBuilder.Entity<QuestDateOverride>()
+            .HasOne(e => e.Quest)
+            .WithMany()
+            .HasForeignKey(e => e.QuestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QuestDateOverride>()
+            .HasIndex(e => new { e.QuestId, e.Date })
+            .IsUnique();
+
+        modelBuilder.Entity<QuestDateOverrideSlot>()
+            .HasOne(e => e.Override)
+            .WithMany(o => o.Slots)
+            .HasForeignKey(e => e.OverrideId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QuestDateOverrideSlot>()
+            .HasIndex(e => new { e.OverrideId, e.TimeSlot })
+            .IsUnique();
 
         modelBuilder.Entity<User>()
             .HasIndex(e => e.Email)

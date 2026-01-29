@@ -18,6 +18,7 @@ import type {
   ProductionCalendarDay,
   ProductionCalendarDayUpsert,
   Quest,
+  QuestScheduleConfig,
   QuestPricingRule,
   QuestPricingRuleUpsert,
   QuestSchedule,
@@ -233,6 +234,20 @@ class ApiClient {
     return this.request('/schedule/generate', {
       method: 'POST',
       body: JSON.stringify(request),
+    });
+  }
+
+  async getQuestScheduleConfig(questId: string): Promise<QuestScheduleConfig> {
+    return this.request(`/questscheduleconfig/${questId}`);
+  }
+
+  async updateQuestScheduleConfig(
+    questId: string,
+    config: Omit<QuestScheduleConfig, 'questId'>
+  ): Promise<QuestScheduleConfig> {
+    return this.request(`/questscheduleconfig/${questId}`, {
+      method: 'PUT',
+      body: JSON.stringify(config),
     });
   }
 
