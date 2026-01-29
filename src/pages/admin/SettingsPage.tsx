@@ -285,6 +285,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [activeTemplateTab, setActiveTemplateTab] = useState<
+    'booking-admin' | 'booking-customer' | 'certificate-admin' | 'certificate-customer'
+  >('booking-admin');
   const [notification, setNotification] = useState<{
     isOpen: boolean;
     title: string;
@@ -981,62 +984,92 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="grid gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма администратору (бронирование)
-              </label>
-              <textarea
-                value={settings.bookingEmailTemplateAdmin || ''}
-                onChange={(e) =>
-                  setSettings({ ...settings, bookingEmailTemplateAdmin: e.target.value })
-                }
-                rows={10}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {([
+                { id: 'booking-admin', label: 'Бронь → админ' },
+                { id: 'booking-customer', label: 'Бронь → клиент' },
+                { id: 'certificate-admin', label: 'Сертификат → админ' },
+                { id: 'certificate-customer', label: 'Сертификат → клиент' },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTemplateTab(tab.id)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    activeTemplateTab === tab.id
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма клиенту (бронирование)
-              </label>
-              <textarea
-                value={settings.bookingEmailTemplateCustomer || ''}
-                onChange={(e) =>
-                  setSettings({ ...settings, bookingEmailTemplateCustomer: e.target.value })
-                }
-                rows={10}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
+            {activeTemplateTab === 'booking-admin' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма администратору (бронирование)
+                </label>
+                <textarea
+                  value={settings.bookingEmailTemplateAdmin || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, bookingEmailTemplateAdmin: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма администратору (сертификат)
-              </label>
-              <textarea
-                value={settings.certificateEmailTemplateAdmin || ''}
-                onChange={(e) =>
-                  setSettings({ ...settings, certificateEmailTemplateAdmin: e.target.value })
-                }
-                rows={10}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
+            {activeTemplateTab === 'booking-customer' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма клиенту (бронирование)
+                </label>
+                <textarea
+                  value={settings.bookingEmailTemplateCustomer || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, bookingEmailTemplateCustomer: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма клиенту (сертификат)
-              </label>
-              <textarea
-                value={settings.certificateEmailTemplateCustomer || ''}
-                onChange={(e) =>
-                  setSettings({ ...settings, certificateEmailTemplateCustomer: e.target.value })
-                }
-                rows={10}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
+            {activeTemplateTab === 'certificate-admin' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма администратору (сертификат)
+                </label>
+                <textarea
+                  value={settings.certificateEmailTemplateAdmin || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, certificateEmailTemplateAdmin: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
+
+            {activeTemplateTab === 'certificate-customer' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Шаблон письма клиенту (сертификат)
+                </label>
+                <textarea
+                  value={settings.certificateEmailTemplateCustomer || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, certificateEmailTemplateCustomer: e.target.value })
+                  }
+                  rows={12}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
