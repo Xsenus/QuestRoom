@@ -93,8 +93,8 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-2">
               <input
                 type="text"
                 name="name"
@@ -102,7 +102,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 onChange={handleChange}
                 required
                 placeholder="ИМЯ"
-                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2 text-sm bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
               <input
                 type="tel"
@@ -111,7 +111,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 onChange={handleChange}
                 required
                 placeholder="ТЕЛЕФОН *"
-                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
+                className="w-full px-3 py-2 text-sm bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
               <input
                 type="email"
@@ -119,7 +119,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="E-MAIL"
-                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 sm:col-span-2"
+                className="w-full px-3 py-2 text-sm bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 sm:col-span-2"
               />
               <textarea
                 name="comments"
@@ -127,45 +127,28 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                 onChange={handleChange}
                 rows={2}
                 placeholder="КОММЕНТАРИЙ (НЕОБЯЗАТЕЛЬНО)"
-                className="w-full px-3 py-2.5 bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 resize-none sm:col-span-2"
+                className="w-full px-3 py-2 text-sm bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50 resize-none sm:col-span-2"
               />
             </div>
 
-            <div className="bg-white/10 rounded-lg p-3 space-y-1.5 text-white text-sm">
-              <div className="flex justify-between">
-                <span>Квест:</span>
-                <span className="font-bold text-right">{quest.title}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Игроков:</span>
-                <span className="font-bold">
-                  {participantsCount}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Диапазон:</span>
-                <span className="font-bold">
-                  {quest.participantsMin}-{quest.participantsMax}
-                  {quest.extraParticipantsMax > 0 ? ` (+${quest.extraParticipantsMax})` : ''}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Дата:</span>
-                <span className="font-bold">
+            <div className="bg-white/10 rounded-lg p-3 text-white text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                <span className="text-white/80">Квест:</span>
+                <span className="font-semibold text-right">{quest.title}</span>
+                <span className="text-white/80">Игроков:</span>
+                <span className="font-semibold text-right">{participantsCount}</span>
+                <span className="text-white/80">Дата:</span>
+                <span className="font-semibold text-right">
                   {new Date(`${slot.date}T00:00:00`).toLocaleDateString('ru-RU')}
                 </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Время:</span>
-                <span className="font-bold">{slot.timeSlot.substring(0, 5)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>
+                <span className="text-white/80">Время:</span>
+                <span className="font-semibold text-right">{slot.timeSlot.substring(0, 5)}</span>
+                <span className="text-white/80">
                   {formData.paymentType === 'certificate'
                     ? 'Стоимость доп. услуг:'
                     : 'Стоимость:'}
                 </span>
-                <span className="font-bold">{totalPrice} ₽</span>
+                <span className="font-semibold text-right">{totalPrice} ₽</span>
               </div>
             </div>
 
