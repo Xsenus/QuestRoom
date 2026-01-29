@@ -402,11 +402,6 @@ export default function QuestDetailPage() {
                             >
                               {slot.timeSlot.substring(0, 5)}
                             </span>
-                            {isDisabled && (
-                              <span className="mt-0.5 block text-center text-[9px] font-bold uppercase tracking-[0.1em] text-slate-900/80">
-                                Забронировано
-                              </span>
-                            )}
                           </button>
                         );
                       })}
