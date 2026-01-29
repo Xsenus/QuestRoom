@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using QuestRoomApi.Models;
 
 namespace QuestRoomApi.Data;
@@ -72,6 +73,13 @@ public class AppDbContext : DbContext
             .HasConversion(
                 permissions => System.Text.Json.JsonSerializer.Serialize(permissions, (System.Text.Json.JsonSerializerOptions?)null),
                 json => System.Text.Json.JsonSerializer.Deserialize<List<string>>(json, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>())
+            .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                (left, right) => left != null && right != null && left.SequenceEqual(right),
+                collection => collection.Aggregate(0, (hash, item) => HashCode.Combine(hash, item)),
+                collection => collection.ToList()));
+
+        modelBuilder.Entity<Role>()
+            .Property(e => e.Permissions)
             .HasColumnType("jsonb");
 
         modelBuilder.Entity<User>()
