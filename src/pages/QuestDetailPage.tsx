@@ -358,13 +358,13 @@ export default function QuestDetailPage() {
           </div>
         </div>
 
-        <div className="bg-purple-900/40 backdrop-blur-sm rounded-lg p-8 overflow-x-auto">
+        <div className="bg-purple-900/40 backdrop-blur-sm rounded-lg p-8 overflow-x-visible">
           <h2 className="text-3xl font-bold text-white text-center mb-8">
             Расписание на квест {quest.title}
           </h2>
 
           {Object.keys(groupedSchedule).length > 0 ? (
-            <div className="space-y-6 min-w-max">
+            <div className="space-y-6 min-w-0">
               {Object.entries(groupedSchedule).map(([date, slots]) => (
                 <div key={date} className="flex gap-6 items-start">
                   <div className="flex-shrink-0 w-32 sm:w-40 text-white pt-1">
@@ -372,8 +372,8 @@ export default function QuestDetailPage() {
                     <div className="text-xs sm:text-sm text-white/60">{getDayName(date)}</div>
                   </div>
 
-                  <div className="flex-1 space-y-2">
-                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex flex-wrap gap-2 pb-1 sm:flex-nowrap sm:overflow-x-auto">
                       {slots.map((slot) => {
                         const slotIsClosed = isSlotClosed(slot);
                         const isDisabled = slot.isBooked || slotIsClosed;
@@ -406,7 +406,7 @@ export default function QuestDetailPage() {
                         );
                       })}
                     </div>
-                    <div className="flex flex-nowrap gap-2 text-[11px] text-white/80">
+                    <div className="flex flex-wrap gap-2 text-[11px] text-white/80 sm:flex-nowrap">
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
@@ -414,6 +414,7 @@ export default function QuestDetailPage() {
                           style={{
                             width: `${group.slots.length * slotWidth + (group.slots.length - 1) * slotGap}px`,
                             ['--price-line-inset' as string]: `${priceLineInset}px`,
+                            maxWidth: '100%',
                           }}
                         >
                           <div className="relative h-[1px] w-[calc(100%-var(--price-line-inset))] bg-white/50">
