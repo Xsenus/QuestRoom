@@ -66,7 +66,9 @@ public class EmailNotificationService : IEmailNotificationService
             ["status"] = bookingDetails.Status,
             ["notes"] = bookingDetails.Notes ?? "нет",
             ["extraServices"] = extraServicesHtml,
-            ["extraServicesText"] = extraServicesText
+            ["extraServicesText"] = extraServicesText,
+            ["companyAddress"] = settings.Address ?? "не указан",
+            ["companyPhone"] = settings.Phone ?? "не указан"
         };
 
         var defaultBody = $"""
@@ -117,7 +119,9 @@ public class EmailNotificationService : IEmailNotificationService
             ["customerEmail"] = order.CustomerEmail ?? "не указан",
             ["deliveryType"] = order.DeliveryType ?? "не указан",
             ["status"] = order.Status,
-            ["notes"] = order.Notes ?? "нет"
+            ["notes"] = order.Notes ?? "нет",
+            ["companyAddress"] = settings.Address ?? "не указан",
+            ["companyPhone"] = settings.Phone ?? "не указан"
         };
 
         var adminDefaultBody = $"""

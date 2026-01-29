@@ -679,8 +679,91 @@ public class DatabaseInitializer : IDatabaseInitializer
                 NotifyBookingCustomer = false,
                 NotifyCertificateAdmin = false,
                 NotifyCertificateCustomer = false,
-                CertificateEmailTemplateAdmin = null,
-                CertificateEmailTemplateCustomer = null,
+                BookingEmailTemplateAdmin = """
+                                            <p><strong>Информация о квесте:</strong></p>
+                                            <p>
+                                              <strong>Квест:</strong> {{questTitle}}<br />
+                                              <strong>Дата, время:</strong> {{bookingDateTime}}<br />
+                                              <strong>Цена:</strong> {{totalPrice}} ₽
+                                            </p>
+                                            <p><strong>Данные клиента:</strong></p>
+                                            <p>
+                                              Имя: {{customerName}}<br />
+                                              Телефон: {{customerPhone}}<br />
+                                              Email: {{customerEmail}}<br />
+                                              Комментарий: {{notes}}
+                                            </p>
+                                            <p><strong>Дополнительная информация:</strong></p>
+                                            <p>
+                                              Участников: {{participantsCount}}<br />
+                                              Доп. участники: {{extraParticipantsCount}}<br />
+                                              Доп. услуги: {{extraServicesText}}
+                                            </p>
+                                            <p>
+                                              Адрес: {{companyAddress}}<br />
+                                              Телефон: {{companyPhone}}
+                                            </p>
+                                            <p>С уважением,<br />Администрация</p>
+                                            """,
+                BookingEmailTemplateCustomer = """
+                                               <p>Спасибо за бронирование!</p>
+                                               <p><strong>Информация о квесте:</strong></p>
+                                               <p>
+                                                 <strong>Квест:</strong> {{questTitle}}<br />
+                                                 <strong>Дата, время:</strong> {{bookingDateTime}}<br />
+                                                 <strong>Цена:</strong> {{totalPrice}} ₽
+                                               </p>
+                                               <p><strong>Ваши данные:</strong></p>
+                                               <p>
+                                                 Имя: {{customerName}}<br />
+                                                 Телефон: {{customerPhone}}<br />
+                                                 Email: {{customerEmail}}<br />
+                                                 Комментарий: {{notes}}
+                                               </p>
+                                               <p>
+                                                 Адрес: {{companyAddress}}<br />
+                                                 Телефон: {{companyPhone}}
+                                               </p>
+                                               <p>Мы свяжемся с вами для подтверждения бронирования.</p>
+                                               """,
+                CertificateEmailTemplateAdmin = """
+                                                <p><strong>Новая заявка на сертификат:</strong></p>
+                                                <p>
+                                                  Сертификат: {{certificateTitle}}<br />
+                                                  Тип доставки: {{deliveryType}}<br />
+                                                  Статус: {{status}}
+                                                </p>
+                                                <p><strong>Данные клиента:</strong></p>
+                                                <p>
+                                                  Имя: {{customerName}}<br />
+                                                  Телефон: {{customerPhone}}<br />
+                                                  Email: {{customerEmail}}<br />
+                                                  Комментарий: {{notes}}
+                                                </p>
+                                                <p>
+                                                  Адрес: {{companyAddress}}<br />
+                                                  Телефон: {{companyPhone}}
+                                                </p>
+                                                """,
+                CertificateEmailTemplateCustomer = """
+                                                   <p>Спасибо за оформление сертификата!</p>
+                                                   <p>
+                                                     Сертификат: {{certificateTitle}}<br />
+                                                     Тип доставки: {{deliveryType}}
+                                                   </p>
+                                                   <p><strong>Ваши данные:</strong></p>
+                                                   <p>
+                                                     Имя: {{customerName}}<br />
+                                                     Телефон: {{customerPhone}}<br />
+                                                     Email: {{customerEmail}}<br />
+                                                     Комментарий: {{notes}}
+                                                   </p>
+                                                   <p>
+                                                     Адрес: {{companyAddress}}<br />
+                                                     Телефон: {{companyPhone}}
+                                                   </p>
+                                                   <p>Мы свяжемся с вами для подтверждения заказа.</p>
+                                                   """,
                 UpdatedAt = DateTime.UtcNow
             });
         }
