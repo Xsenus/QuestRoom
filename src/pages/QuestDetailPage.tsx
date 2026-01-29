@@ -387,7 +387,7 @@ export default function QuestDetailPage() {
                             }}
                             aria-disabled={isDisabled}
                             type="button"
-                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors flex flex-col items-center ${
                               slot.isBooked || slotIsClosed
                                 ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
                                 : 'bg-green-600 text-white hover:bg-green-500'
@@ -402,11 +402,18 @@ export default function QuestDetailPage() {
                             >
                               {slot.timeSlot.substring(0, 5)}
                             </span>
+                            <span
+                              className={`mt-1 block text-[10px] font-medium normal-case tracking-normal sm:hidden ${
+                                slot.isBooked || slotIsClosed ? 'text-slate-900/70' : 'text-white/80'
+                              }`}
+                            >
+                              {slot.price} ₽
+                            </span>
                           </button>
                         );
                       })}
                     </div>
-                    <div className="flex flex-wrap gap-2 text-[11px] text-white/80 sm:flex-nowrap">
+                    <div className="hidden flex-wrap gap-2 text-[11px] text-white/80 sm:flex sm:flex-nowrap">
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
