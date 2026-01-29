@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import { Quest } from '../lib/types';
+import { Quest, Settings } from '../lib/types';
 import Hero from '../components/Hero';
 import QuestCard from '../components/QuestCard';
 
 export default function HomePage() {
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,12 +15,25 @@ export default function HomePage() {
 
   const loadQuests = async () => {
     try {
-      const data = await api.getQuests(true);
-      setQuests(data || []);
-    } catch (error) {
-      console.error('Error loading quests:', error);
+      const [questsResult, settingsResult] = await Promise.allSettled([
+        api.getQuests(true),
+        api.getSettings(),
+      ]);
+
+      if (questsResult.status === 'fulfilled') {
+        setQuests(questsResult.value || []);
+      } else {
+        console.error('Error loading quests:', questsResult.reason);
+      }
+
+      if (settingsResult.status === 'fulfilled') {
+        setSettings(settingsResult.value);
+      } else {
+        console.error('Error loading settings:', settingsResult.reason);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -33,7 +47,11 @@ export default function HomePage() {
           </div>
         ) : quests.length > 0 ? (
           quests.map((quest) => (
-            <QuestCard key={quest.id} quest={quest} />
+            <QuestCard
+              key={quest.id}
+              quest={quest}
+              useVideoModal={settings?.videoModalEnabled ?? false}
+            />
           ))
         ) : (
           <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-lg">

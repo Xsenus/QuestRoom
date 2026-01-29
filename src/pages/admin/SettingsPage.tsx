@@ -66,7 +66,10 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     try {
       const data = await api.getSettings();
-      setSettings(data);
+      setSettings({
+        ...data,
+        videoModalEnabled: data.videoModalEnabled ?? false,
+      });
     } catch (error) {
       console.error('Error loading settings:', error);
       setSettings({
@@ -112,6 +115,7 @@ export default function SettingsPage() {
         reviewsFlampEmbed: null,
         bookingDaysAhead: 10,
         promotionsPerRow: 1,
+        videoModalEnabled: false,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -165,6 +169,7 @@ export default function SettingsPage() {
       reviewsFlampEmbed: settings.reviewsFlampEmbed,
       bookingDaysAhead: settings.bookingDaysAhead,
       promotionsPerRow: settings.promotionsPerRow,
+      videoModalEnabled: settings.videoModalEnabled,
     };
 
     try {
@@ -279,6 +284,35 @@ export default function SettingsPage() {
                 onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               />
+            </div>
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Видео в модальном окне</p>
+                <p className="text-xs text-gray-500">
+                  Открывать видео квестов внутри сайта без перехода по ссылке.
+                </p>
+              </div>
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={settings.videoModalEnabled}
+                  onChange={(e) =>
+                    setSettings({ ...settings, videoModalEnabled: e.target.checked })
+                  }
+                />
+                <span
+                  className={`relative h-6 w-11 rounded-full transition ${
+                    settings.videoModalEnabled ? 'bg-red-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition ${
+                      settings.videoModalEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </span>
+              </label>
             </div>
           </div>
         </div>
