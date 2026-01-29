@@ -34,6 +34,8 @@ public class SettingsUpdateDto
     public string? BookingEmailTemplateCustomer { get; set; }
     public bool? NotifyCertificateAdmin { get; set; }
     public bool? NotifyCertificateCustomer { get; set; }
+    public string? CertificateEmailTemplateAdmin { get; set; }
+    public string? CertificateEmailTemplateCustomer { get; set; }
     public string? Phone { get; set; }
     public string? LogoUrl { get; set; }
     public string? GiftGameLabel { get; set; }

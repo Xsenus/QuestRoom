@@ -126,6 +126,8 @@ export default function SettingsPage() {
         bookingEmailTemplateCustomer: null,
         notifyCertificateAdmin: false,
         notifyCertificateCustomer: false,
+        certificateEmailTemplateAdmin: null,
+        certificateEmailTemplateCustomer: null,
         phone: null,
         logoUrl: null,
         certificatePageTitle: 'Подарочные сертификаты',
@@ -182,6 +184,8 @@ export default function SettingsPage() {
       bookingEmailTemplateCustomer: settings.bookingEmailTemplateCustomer,
       notifyCertificateAdmin: settings.notifyCertificateAdmin,
       notifyCertificateCustomer: settings.notifyCertificateCustomer,
+      certificateEmailTemplateAdmin: settings.certificateEmailTemplateAdmin,
+      certificateEmailTemplateCustomer: settings.certificateEmailTemplateCustomer,
       phone: settings.phone,
       logoUrl: settings.logoUrl,
       certificatePageTitle: settings.certificatePageTitle,
@@ -664,6 +668,26 @@ export default function SettingsPage() {
               </label>
             </div>
 
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+              <p className="font-semibold text-gray-800 mb-2">Переменные для бронирований</p>
+              <div className="grid gap-1 md:grid-cols-2">
+                <span>{'{{customerName}}'}</span>
+                <span>{'{{customerPhone}}'}</span>
+                <span>{'{{customerEmail}}'}</span>
+                <span>{'{{questTitle}}'}</span>
+                <span>{'{{bookingDate}}'}</span>
+                <span>{'{{bookingTime}}'}</span>
+                <span>{'{{bookingDateTime}}'}</span>
+                <span>{'{{participantsCount}}'}</span>
+                <span>{'{{extraParticipantsCount}}'}</span>
+                <span>{'{{extraServices}}'}</span>
+                <span>{'{{extraServicesText}}'}</span>
+                <span>{'{{totalPrice}}'}</span>
+                <span>{'{{status}}'}</span>
+                <span>{'{{notes}}'}</span>
+              </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-6">
               <label className="flex items-center gap-3 text-sm font-semibold text-gray-700">
                 <input
@@ -687,9 +711,22 @@ export default function SettingsPage() {
               </label>
             </div>
 
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+              <p className="font-semibold text-gray-800 mb-2">Переменные для сертификатов</p>
+              <div className="grid gap-1 md:grid-cols-2">
+                <span>{'{{certificateTitle}}'}</span>
+                <span>{'{{customerName}}'}</span>
+                <span>{'{{customerPhone}}'}</span>
+                <span>{'{{customerEmail}}'}</span>
+                <span>{'{{deliveryType}}'}</span>
+                <span>{'{{status}}'}</span>
+                <span>{'{{notes}}'}</span>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма администратору
+                Шаблон письма администратору (бронирование)
               </label>
               <textarea
                 value={settings.bookingEmailTemplateAdmin || ''}
@@ -703,12 +740,40 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Шаблон письма клиенту
+                Шаблон письма клиенту (бронирование)
               </label>
               <textarea
                 value={settings.bookingEmailTemplateCustomer || ''}
                 onChange={(e) =>
                   setSettings({ ...settings, bookingEmailTemplateCustomer: e.target.value })
+                }
+                rows={5}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Шаблон письма администратору (сертификат)
+              </label>
+              <textarea
+                value={settings.certificateEmailTemplateAdmin || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, certificateEmailTemplateAdmin: e.target.value })
+                }
+                rows={5}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Шаблон письма клиенту (сертификат)
+              </label>
+              <textarea
+                value={settings.certificateEmailTemplateCustomer || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, certificateEmailTemplateCustomer: e.target.value })
                 }
                 rows={5}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"

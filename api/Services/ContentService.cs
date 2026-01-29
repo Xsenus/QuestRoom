@@ -406,6 +406,8 @@ public class ContentService : IContentService
                 BookingEmailTemplateCustomer = dto.BookingEmailTemplateCustomer,
                 NotifyCertificateAdmin = dto.NotifyCertificateAdmin ?? false,
                 NotifyCertificateCustomer = dto.NotifyCertificateCustomer ?? false,
+                CertificateEmailTemplateAdmin = dto.CertificateEmailTemplateAdmin,
+                CertificateEmailTemplateCustomer = dto.CertificateEmailTemplateCustomer,
                 Phone = dto.Phone,
                 LogoUrl = dto.LogoUrl,
                 GiftGameLabel = dto.GiftGameLabel,
@@ -463,6 +465,10 @@ public class ContentService : IContentService
                 dto.NotifyCertificateAdmin ?? existing.NotifyCertificateAdmin;
             existing.NotifyCertificateCustomer =
                 dto.NotifyCertificateCustomer ?? existing.NotifyCertificateCustomer;
+            existing.CertificateEmailTemplateAdmin =
+                dto.CertificateEmailTemplateAdmin ?? existing.CertificateEmailTemplateAdmin;
+            existing.CertificateEmailTemplateCustomer =
+                dto.CertificateEmailTemplateCustomer ?? existing.CertificateEmailTemplateCustomer;
             existing.Phone = dto.Phone;
             existing.LogoUrl = dto.LogoUrl;
             existing.GiftGameLabel = dto.GiftGameLabel ?? existing.GiftGameLabel;
@@ -622,6 +628,8 @@ public class ContentService : IContentService
             BookingEmailTemplateCustomer = settings.BookingEmailTemplateCustomer,
             NotifyCertificateAdmin = settings.NotifyCertificateAdmin,
             NotifyCertificateCustomer = settings.NotifyCertificateCustomer,
+            CertificateEmailTemplateAdmin = settings.CertificateEmailTemplateAdmin,
+            CertificateEmailTemplateCustomer = settings.CertificateEmailTemplateCustomer,
             Phone = settings.Phone,
             LogoUrl = settings.LogoUrl,
             GiftGameLabel = settings.GiftGameLabel,

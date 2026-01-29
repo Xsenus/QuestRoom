@@ -679,6 +679,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 NotifyBookingCustomer = false,
                 NotifyCertificateAdmin = false,
                 NotifyCertificateCustomer = false,
+                CertificateEmailTemplateAdmin = null,
+                CertificateEmailTemplateCustomer = null,
                 UpdatedAt = DateTime.UtcNow
             });
         }
