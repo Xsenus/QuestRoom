@@ -144,12 +144,10 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                   </span>
                   <span className="text-white/80">Время:</span>
                   <span className="font-semibold text-right">{slot.timeSlot.substring(0, 5)}</span>
-                  <span className="text-white/80">
-                    {formData.paymentType === 'certificate'
-                      ? 'Стоимость доп. услуг:'
-                      : 'Стоимость:'}
+                  <span className="text-white/80">Стоимость:</span>
+                  <span className="font-semibold text-right">
+                    {formData.paymentType === 'certificate' ? 0 : totalPrice} ₽
                   </span>
-                  <span className="font-semibold text-right">{totalPrice} ₽</span>
                 </div>
               </div>
 
