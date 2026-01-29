@@ -25,6 +25,10 @@ import type {
   QuestPricingRuleUpsert,
   QuestSchedule,
   QuestScheduleUpsert,
+  QuestScheduleOverride,
+  QuestScheduleOverrideUpsert,
+  QuestWeeklySlot,
+  QuestWeeklySlotUpsert,
   ScheduleGenerateRequest,
   QuestUpsert,
   Review,
@@ -320,6 +324,77 @@ class ApiClient {
     return this.request('/schedule/generate', {
       method: 'POST',
       body: JSON.stringify(request),
+    });
+  }
+
+  async getQuestWeeklySlots(questId: string): Promise<QuestWeeklySlot[]> {
+    return this.request(`/schedule/weekly/${questId}`);
+  }
+
+  async createQuestWeeklySlot(slot: QuestWeeklySlotUpsert): Promise<QuestWeeklySlot> {
+    return this.request('/schedule/weekly', {
+      method: 'POST',
+      body: JSON.stringify(slot),
+    });
+  }
+
+  async updateQuestWeeklySlot(id: string, slot: QuestWeeklySlotUpsert) {
+    return this.request(`/schedule/weekly/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(slot),
+    });
+  }
+
+  async deleteQuestWeeklySlot(id: string) {
+    return this.request(`/schedule/weekly/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async importQuestWeeklySlots(
+    questId: string,
+    payload: { fromDate?: string; toDate?: string }
+  ): Promise<{ createdCount: number }> {
+    return this.request(`/schedule/weekly/import/${questId}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getQuestScheduleOverrides(
+    questId: string,
+    fromDate?: string,
+    toDate?: string
+  ): Promise<QuestScheduleOverride[]> {
+    let params = '';
+    if (fromDate || toDate) {
+      const urlParams = new URLSearchParams();
+      if (fromDate) urlParams.append('fromDate', fromDate);
+      if (toDate) urlParams.append('toDate', toDate);
+      params = `?${urlParams.toString()}`;
+    }
+    return this.request(`/schedule/overrides/${questId}${params}`);
+  }
+
+  async createQuestScheduleOverride(
+    payload: QuestScheduleOverrideUpsert
+  ): Promise<QuestScheduleOverride> {
+    return this.request('/schedule/overrides', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateQuestScheduleOverride(id: string, payload: QuestScheduleOverrideUpsert) {
+    return this.request(`/schedule/overrides/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteQuestScheduleOverride(id: string) {
+    return this.request(`/schedule/overrides/${id}`, {
+      method: 'DELETE',
     });
   }
 
