@@ -254,15 +254,26 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
                 className="w-full max-w-4xl rounded-lg bg-black shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
               >
-                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
                   <span className="text-sm font-semibold text-white">Видео</span>
-                  <button
-                    type="button"
-                    onClick={closeVideoModal}
-                    className="text-white/80 hover:text-white"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={quest.videoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-white/80 hover:text-white"
+                      onClick={handleLinkClick}
+                    >
+                      Смотреть на YouTube
+                    </a>
+                    <button
+                      type="button"
+                      onClick={closeVideoModal}
+                      className="text-white/80 hover:text-white"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="relative w-full overflow-hidden pb-[56.25%]">
                   <iframe
