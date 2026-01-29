@@ -87,6 +87,13 @@ export default function SettingsPage() {
         ...data,
         bookingDaysAhead: data.bookingDaysAhead ?? 10,
         bookingCutoffMinutes: data.bookingCutoffMinutes ?? 10,
+        bookingStatusColorPlanned: data.bookingStatusColorPlanned ?? '#ede9fe',
+        bookingStatusColorCreated: data.bookingStatusColorCreated ?? '#e0f2fe',
+        bookingStatusColorPending: data.bookingStatusColorPending ?? '#fef3c7',
+        bookingStatusColorNotConfirmed: data.bookingStatusColorNotConfirmed ?? '#ffedd5',
+        bookingStatusColorConfirmed: data.bookingStatusColorConfirmed ?? '#dcfce7',
+        bookingStatusColorCompleted: data.bookingStatusColorCompleted ?? '#dbeafe',
+        bookingStatusColorCancelled: data.bookingStatusColorCancelled ?? '#fee2e2',
         timeZone: data.timeZone ?? null,
         videoModalEnabled: data.videoModalEnabled ?? false,
       });
@@ -135,6 +142,13 @@ export default function SettingsPage() {
         reviewsFlampEmbed: null,
         bookingDaysAhead: 10,
         bookingCutoffMinutes: 10,
+        bookingStatusColorPlanned: '#ede9fe',
+        bookingStatusColorCreated: '#e0f2fe',
+        bookingStatusColorPending: '#fef3c7',
+        bookingStatusColorNotConfirmed: '#ffedd5',
+        bookingStatusColorConfirmed: '#dcfce7',
+        bookingStatusColorCompleted: '#dbeafe',
+        bookingStatusColorCancelled: '#fee2e2',
         timeZone: 'Asia/Krasnoyarsk',
         promotionsPerRow: 1,
         videoModalEnabled: false,
@@ -191,6 +205,13 @@ export default function SettingsPage() {
       reviewsFlampEmbed: settings.reviewsFlampEmbed,
       bookingDaysAhead: settings.bookingDaysAhead,
       bookingCutoffMinutes: settings.bookingCutoffMinutes,
+      bookingStatusColorPlanned: settings.bookingStatusColorPlanned,
+      bookingStatusColorCreated: settings.bookingStatusColorCreated,
+      bookingStatusColorPending: settings.bookingStatusColorPending,
+      bookingStatusColorNotConfirmed: settings.bookingStatusColorNotConfirmed,
+      bookingStatusColorConfirmed: settings.bookingStatusColorConfirmed,
+      bookingStatusColorCompleted: settings.bookingStatusColorCompleted,
+      bookingStatusColorCancelled: settings.bookingStatusColorCancelled,
       timeZone: settings.timeZone,
       promotionsPerRow: settings.promotionsPerRow,
       videoModalEnabled: settings.videoModalEnabled,
@@ -853,6 +874,50 @@ export default function SettingsPage() {
               <p className="mt-2 text-xs text-gray-500">
                 Используется для расчета времени закрытия слотов на публичной странице.
               </p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 p-4 space-y-4">
+            <h4 className="text-sm font-semibold text-gray-700">Цвета статусов брони</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              {(
+                [
+                  { key: 'bookingStatusColorPlanned', label: 'Запланировано' },
+                  { key: 'bookingStatusColorCreated', label: 'Создано' },
+                  { key: 'bookingStatusColorPending', label: 'Ожидает' },
+                  { key: 'bookingStatusColorNotConfirmed', label: 'Не подтверждено' },
+                  { key: 'bookingStatusColorConfirmed', label: 'Подтверждено' },
+                  { key: 'bookingStatusColorCompleted', label: 'Завершено' },
+                  { key: 'bookingStatusColorCancelled', label: 'Отменено' },
+                ] as const
+              ).map((item: { key: keyof Settings; label: string }) => {
+                const colorValue = getColorValue(settings[item.key] as string | null, '#ffffff');
+                return (
+                  <div key={item.key} className="grid gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      {item.label}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={colorValue}
+                        onChange={(e) =>
+                          setSettings({ ...settings, [item.key]: e.target.value })
+                        }
+                        className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
+                      />
+                      <input
+                        type="text"
+                        value={settings[item.key] || ''}
+                        onChange={(e) =>
+                          setSettings({ ...settings, [item.key]: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                        placeholder="Цвет статуса (#fff)"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
