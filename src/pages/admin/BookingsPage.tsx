@@ -1,7 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
 import { Booking, Quest, QuestSchedule } from '../../lib/types';
-import { Calendar, User, Phone, Mail, Users, FileText, Edit, Save, X, BadgeDollarSign } from 'lucide-react';
+import {
+  Calendar,
+  User,
+  Phone,
+  Mail,
+  Users,
+  FileText,
+  Edit,
+  Save,
+  X,
+  BadgeDollarSign,
+  Trash2,
+  Plus,
+} from 'lucide-react';
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -18,7 +31,7 @@ export default function BookingsPage() {
   const [notes, setNotes] = useState<string>('');
   const [createResult, setCreateResult] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'create' | 'list'>('list');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
     if (typeof window === 'undefined') {
       return 'cards';
@@ -28,6 +41,8 @@ export default function BookingsPage() {
   });
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'all'>('all');
   const [questFilter, setQuestFilter] = useState<string>('all');
+  const [aggregatorFilter, setAggregatorFilter] = useState<string>('all');
+  const [promoCodeFilter, setPromoCodeFilter] = useState<string>('all');
   const [listDateFrom, setListDateFrom] = useState<string>('');
   const [listDateTo, setListDateTo] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -40,6 +55,15 @@ export default function BookingsPage() {
     notes: string;
     status: Booking['status'];
   } | null>(null);
+  const listRangeStorageKey = 'admin_bookings_list_range';
+
+  const formatDate = (value: Date) => value.toISOString().split('T')[0];
+
+  const getEndOfNextMonth = (baseDate: Date) => {
+    const date = new Date(baseDate.getFullYear(), baseDate.getMonth() + 2, 0);
+    date.setHours(23, 59, 59, 999);
+    return date;
+  };
 
   useEffect(() => {
     const today = new Date();
@@ -47,11 +71,35 @@ export default function BookingsPage() {
     createRangeEnd.setDate(today.getDate() + 30);
     const listRangeEnd = new Date(today);
     listRangeEnd.setDate(today.getDate() + 14);
-    const formatDate = (value: Date) => value.toISOString().split('T')[0];
+    let storedListFrom = '';
+    let storedListTo = '';
+
+    if (typeof window !== 'undefined') {
+      const savedRange = localStorage.getItem(listRangeStorageKey);
+      if (savedRange) {
+        try {
+          const parsed = JSON.parse(savedRange) as { from?: string; to?: string };
+          storedListFrom = parsed.from || '';
+          storedListTo = parsed.to || '';
+        } catch {
+          storedListFrom = '';
+          storedListTo = '';
+        }
+      }
+    }
+
+    const todayStart = new Date(today);
+    todayStart.setHours(0, 0, 0, 0);
+    const listFrom = storedListFrom || formatDate(today);
+    let listTo = storedListTo || formatDate(listRangeEnd);
+    if (listTo && new Date(listTo) < todayStart) {
+      listTo = formatDate(getEndOfNextMonth(today));
+    }
+
     setDateFrom(formatDate(today));
     setDateTo(formatDate(createRangeEnd));
-    setListDateFrom(formatDate(today));
-    setListDateTo(formatDate(listRangeEnd));
+    setListDateFrom(listFrom);
+    setListDateTo(listTo);
     loadBookings();
     loadQuests();
   }, []);
@@ -63,8 +111,17 @@ export default function BookingsPage() {
   }, [viewMode]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        listRangeStorageKey,
+        JSON.stringify({ from: listDateFrom, to: listDateTo })
+      );
+    }
+  }, [listDateFrom, listDateTo, listRangeStorageKey]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, questFilter, listDateFrom, listDateTo, viewMode]);
+  }, [statusFilter, questFilter, aggregatorFilter, promoCodeFilter, listDateFrom, listDateTo, viewMode]);
 
   useEffect(() => {
     if (selectedQuestId && dateFrom && dateTo) {
@@ -103,6 +160,19 @@ export default function BookingsPage() {
     }
   };
 
+  const normalizeListEndDate = (value: string) => {
+    if (!value) {
+      return value;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(value);
+    if (selected < today) {
+      return formatDate(getEndOfNextMonth(today));
+    }
+    return value;
+  };
+
   const handleCreateBooking = async () => {
     if (!selectedSlotId) {
       setCreateResult('Выберите слот для брони.');
@@ -139,10 +209,29 @@ export default function BookingsPage() {
       setCustomerEmail('');
       setParticipantsCount(2);
       setNotes('');
+      setIsCreateModalOpen(false);
       loadBookings();
       loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
     } catch (error) {
       setCreateResult('Ошибка создания брони: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeleteBooking = async (booking: Booking) => {
+    const shouldDelete = window.confirm(
+      `Удалить бронь клиента ${booking.customerName}? Это действие необратимо.`
+    );
+    if (!shouldDelete) {
+      return;
+    }
+    try {
+      await api.deleteBooking(booking.id);
+      loadBookings();
+      if (selectedQuestId && dateFrom && dateTo) {
+        loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
+      }
+    } catch (error) {
+      alert('Ошибка при удалении брони: ' + (error as Error).message);
     }
   };
 
@@ -156,6 +245,15 @@ export default function BookingsPage() {
     } catch (error) {
       alert('Ошибка при обновлении статуса: ' + (error as Error).message);
     }
+  };
+
+  const openCreateModal = () => {
+    setCreateResult('');
+    setIsCreateModalOpen(true);
+  };
+
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
   };
 
   const handleEditBooking = (booking: Booking) => {
@@ -209,6 +307,12 @@ export default function BookingsPage() {
         return 'bg-red-100 text-red-800 border-red-300';
       case 'completed':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'planned':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'created':
+        return 'bg-sky-100 text-sky-800 border-sky-300';
+      case 'not_confirmed':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -224,13 +328,19 @@ export default function BookingsPage() {
         return 'Отменено';
       case 'completed':
         return 'Завершено';
+      case 'planned':
+        return 'Запланировано';
+      case 'created':
+        return 'Создано';
+      case 'not_confirmed':
+        return 'Не подтверждено';
       default:
         return status;
     }
   };
 
   const questLookup = useMemo(() => {
-    return new Map(quests.map((quest) => [quest.id, quest.title]));
+    return new Map(quests.map((quest) => [quest.id, quest]));
   }, [quests]);
 
   const statusCounts = useMemo(() => {
@@ -246,9 +356,94 @@ export default function BookingsPage() {
         confirmed: 0,
         cancelled: 0,
         completed: 0,
+        planned: 0,
+        created: 0,
+        not_confirmed: 0,
       }
     );
   }, [bookings]);
+
+  const questCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: bookings.length };
+    bookings.forEach((booking) => {
+      if (booking.questId) {
+        counts[booking.questId] = (counts[booking.questId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [bookings]);
+
+  const aggregatorOptions = useMemo(() => {
+    const values = new Set<string>();
+    bookings.forEach((booking) => {
+      if (booking.aggregator) {
+        values.add(booking.aggregator);
+      }
+    });
+    return Array.from(values);
+  }, [bookings]);
+
+  const promoCodeOptions = useMemo(() => {
+    const values = new Set<string>();
+    bookings.forEach((booking) => {
+      if (booking.promoCode) {
+        values.add(booking.promoCode);
+      }
+    });
+    return Array.from(values);
+  }, [bookings]);
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) {
+      return '—';
+    }
+    return new Date(value).toLocaleString('ru-RU', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+  };
+
+  const getQuestData = (booking: Booking) => {
+    if (!booking.questId) {
+      return null;
+    }
+    return questLookup.get(booking.questId) || null;
+  };
+
+  const getQuestTitle = (booking: Booking) => {
+    const quest = getQuestData(booking);
+    if (booking.questTitle) {
+      return booking.questTitle;
+    }
+    if (quest) {
+      return quest.title;
+    }
+    return booking.questId ? 'Квест не найден' : '—';
+  };
+
+  const getQuestPrice = (booking: Booking) => {
+    const quest = getQuestData(booking);
+    if (booking.questPrice != null) {
+      return booking.questPrice;
+    }
+    return quest?.price ?? null;
+  };
+
+  const getExtraParticipantPrice = (booking: Booking) => {
+    const quest = getQuestData(booking);
+    if (booking.extraParticipantPrice != null) {
+      return booking.extraParticipantPrice;
+    }
+    return quest?.extraParticipantPrice ?? null;
+  };
+
+  const getExtraServicesTotal = (booking: Booking) => {
+    return booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0;
+  };
+
+  const getAggregatorLabel = (booking: Booking) => {
+    return booking.aggregator || 'Наш сайт';
+  };
 
   const listItemsPerPage = viewMode === 'table' ? 10 : 9;
   const rangeStart = listDateFrom ? new Date(`${listDateFrom}T00:00:00`) : null;
@@ -261,6 +456,26 @@ export default function BookingsPage() {
 
     if (questFilter !== 'all' && booking.questId !== questFilter) {
       return false;
+    }
+
+    if (aggregatorFilter !== 'all') {
+      if (aggregatorFilter === 'site') {
+        if (booking.aggregator) {
+          return false;
+        }
+      } else if (booking.aggregator !== aggregatorFilter) {
+        return false;
+      }
+    }
+
+    if (promoCodeFilter !== 'all') {
+      if (promoCodeFilter === 'none') {
+        if (booking.promoCode) {
+          return false;
+        }
+      } else if (booking.promoCode !== promoCodeFilter) {
+        return false;
+      }
     }
 
     if (statusFilter !== 'pending' && (rangeStart || rangeEnd)) {
@@ -299,170 +514,25 @@ export default function BookingsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Управление бронированиями</h2>
-        <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
-          <button
-            onClick={() => setActiveTab('create')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-              activeTab === 'create'
-                ? 'bg-white text-gray-900 shadow'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Создать бронь
-          </button>
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-              activeTab === 'list'
-                ? 'bg-white text-gray-900 shadow'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Список брони
-          </button>
-        </div>
+        <button
+          onClick={openCreateModal}
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Создать бронь
+        </button>
       </div>
 
-      {activeTab === 'create' ? (
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h3 className="text-xl font-bold text-gray-800">Создать бронь (администратор)</h3>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Квест</label>
-              <select
-                value={selectedQuestId}
-                onChange={(e) => setSelectedQuestId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              >
-                {quests.map((quest) => (
-                  <option key={quest.id} value={quest.id}>
-                    {quest.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Дата начала
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Дата окончания
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Слот</label>
-              <select
-                value={selectedSlotId}
-                onChange={(e) => setSelectedSlotId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              >
-                <option value="">Выберите слот</option>
-                {availableSlots.map((slot) => (
-                  <option key={slot.id} value={slot.id}>
-                    {slot.date} · {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Доступно слотов: {availableSlots.length}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Имя клиента
-                </label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Телефон
-                </label>
-                <input
-                  type="text"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email (опционально)
-                </label>
-                <input
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Участников
-                </label>
-                <input
-                  type="number"
-                  value={participantsCount}
-                  onChange={(e) => setParticipantsCount(parseInt(e.target.value) || 1)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  min="1"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Примечания
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              rows={2}
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleCreateBooking}
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
-            >
-              Создать бронь
-            </button>
-            {createResult && <span className="text-sm text-gray-600">{createResult}</span>}
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
+      <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2">
               {(
                 [
                   { key: 'all', label: 'Все', count: statusCounts.all },
+                  { key: 'planned', label: 'Запланировано', count: statusCounts.planned },
+                  { key: 'created', label: 'Создано', count: statusCounts.created },
                   { key: 'pending', label: 'Ожидают', count: statusCounts.pending },
+                  { key: 'not_confirmed', label: 'Не подтверждено', count: statusCounts.not_confirmed },
                   { key: 'confirmed', label: 'Подтверждено', count: statusCounts.confirmed },
                   { key: 'completed', label: 'Завершено', count: statusCounts.completed },
                   { key: 'cancelled', label: 'Отменено', count: statusCounts.cancelled },
@@ -505,22 +575,682 @@ export default function BookingsPage() {
             </div>
           </div>
 
-          {editingBooking && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Редактирование брони</h3>
-                  <p className="text-xs text-gray-500">ID: {editingBooking.id.slice(0, 8)}</p>
-                </div>
-                <span
-                  className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                    editingBooking.status
-                  )}`}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setQuestFilter('all')}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                questFilter === 'all'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Все квесты ({questCounts.all || 0})
+            </button>
+            {quests.map((quest) => (
+              <button
+                key={quest.id}
+                onClick={() => setQuestFilter(quest.id)}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                  questFilter === quest.id
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {quest.title} ({questCounts[quest.id] || 0})
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Агрегатор
+                </label>
+                <select
+                  value={aggregatorFilter}
+                  onChange={(e) => setAggregatorFilter(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 >
-                  {getStatusText(editingBooking.status)}
-                </span>
+                  <option value="all">Все</option>
+                  <option value="site">Наш сайт</option>
+                  {aggregatorOptions.map((aggregator) => (
+                    <option key={aggregator} value={aggregator}>
+                      {aggregator}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Промокод
+                </label>
+                <select
+                  value={promoCodeFilter}
+                  onChange={(e) => setPromoCodeFilter(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                >
+                  <option value="all">Все</option>
+                  <option value="none">Без промокода</option>
+                  {promoCodeOptions.map((promo) => (
+                    <option key={promo} value={promo}>
+                      {promo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Дата начала
+                </label>
+                <input
+                  type="date"
+                  value={listDateFrom}
+                  onChange={(e) => setListDateFrom(e.target.value)}
+                  disabled={statusFilter === 'pending'}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Дата окончания
+                </label>
+                <input
+                  type="date"
+                  value={listDateTo}
+                  onChange={(e) => setListDateTo(normalizeListEndDate(e.target.value))}
+                  disabled={statusFilter === 'pending'}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Показано: <span className="font-semibold">{filteredBookings.length}</span>
+              </div>
+              <button
+                onClick={() => {
+                  setStatusFilter('all');
+                  setQuestFilter('all');
+                  setAggregatorFilter('all');
+                  setPromoCodeFilter('all');
+                }}
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Сбросить фильтры
+              </button>
+            </div>
+            {statusFilter === 'pending' && (
+              <p className="text-xs text-gray-500 mt-3">
+                Для ожидающих броней период не применяется — показываются все записи.
+              </p>
+            )}
+          </div>
+
+          {viewMode === 'table' ? (
+            <div className="bg-white rounded-lg shadow overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-gray-700">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-semibold">Статус</th>
+                    <th className="text-left px-4 py-3 font-semibold">Дата брони</th>
+                    <th className="text-left px-4 py-3 font-semibold">Создано</th>
+                    <th className="text-left px-4 py-3 font-semibold">Квест</th>
+                    <th className="text-left px-4 py-3 font-semibold">Цена квеста</th>
+                    <th className="text-left px-4 py-3 font-semibold">Участников</th>
+                    <th className="text-left px-4 py-3 font-semibold">Доп. участники</th>
+                    <th className="text-left px-4 py-3 font-semibold">Цена доп.</th>
+                    <th className="text-left px-4 py-3 font-semibold">Доп. услуги</th>
+                    <th className="text-left px-4 py-3 font-semibold">Цена доп. услуг</th>
+                    <th className="text-left px-4 py-3 font-semibold">Агрегатор</th>
+                    <th className="text-left px-4 py-3 font-semibold">Промокод</th>
+                    <th className="text-left px-4 py-3 font-semibold">Итог</th>
+                    <th className="text-left px-4 py-3 font-semibold">Клиент</th>
+                    <th className="text-left px-4 py-3 font-semibold">Комментарий</th>
+                    <th className="text-right px-4 py-3 font-semibold">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paginatedBookings.map((booking) => {
+                    const questPrice = getQuestPrice(booking);
+                    const extraParticipantPrice = getExtraParticipantPrice(booking);
+                    const extraServicesTotal = getExtraServicesTotal(booking);
+                    return (
+                      <tr key={booking.id}>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
+                              booking.status
+                            )}`}
+                          >
+                            {getStatusText(booking.status)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{formatDateTime(booking.bookingDate)}</td>
+                        <td className="px-4 py-3 text-gray-700">{formatDateTime(booking.createdAt)}</td>
+                        <td className="px-4 py-3 text-gray-700">{getQuestTitle(booking)}</td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {questPrice != null ? `${questPrice} ₽` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{booking.participantsCount}</td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {booking.extraParticipantsCount ?? 0}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {extraParticipantPrice != null ? `${extraParticipantPrice} ₽` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {booking.extraServices?.length ? (
+                            <ul className="space-y-1">
+                              {booking.extraServices.map((service) => (
+                                <li key={service.id} className="text-xs">
+                                  {service.title} · {service.price} ₽
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {extraServicesTotal ? `${extraServicesTotal} ₽` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{getAggregatorLabel(booking)}</td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {booking.promoCode ? (
+                            <div>
+                              <div className="font-semibold">{booking.promoCode}</div>
+                              {booking.promoDiscountAmount != null && (
+                                <div className="text-xs text-gray-500">
+                                  −{booking.promoDiscountAmount} ₽
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{booking.totalPrice} ₽</td>
+                        <td className="px-4 py-3 text-gray-700">
+                          <div className="font-semibold text-gray-900">{booking.customerName}</div>
+                          <div>
+                            <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
+                              {booking.customerPhone}
+                            </a>
+                          </div>
+                          {booking.customerEmail && (
+                            <div>
+                              <a
+                                href={`mailto:${booking.customerEmail}`}
+                                className="hover:text-red-600"
+                              >
+                                {booking.customerEmail}
+                              </a>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          <p className="line-clamp-2">{booking.notes || '—'}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleEditBooking(booking)}
+                              className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                              title="Редактировать"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBooking(booking)}
+                              className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                              title="Удалить"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            {booking.status === 'pending' && (
+                              <button
+                                onClick={() => updateStatus(booking, 'confirmed')}
+                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
+                              >
+                                Подтвердить
+                              </button>
+                            )}
+                            {booking.status === 'confirmed' && (
+                              <button
+                                onClick={() => updateStatus(booking, 'completed')}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition-colors"
+                              >
+                                Завершить
+                              </button>
+                            )}
+                            {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                              <button
+                                onClick={() => updateStatus(booking, 'cancelled')}
+                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
+                              >
+                                Отменить
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {paginatedBookings.map((booking) => (
+                <div key={booking.id} className="bg-white rounded-lg shadow p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
+                            booking.status
+                          )}`}
+                        >
+                          {getStatusText(booking.status)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ID: {booking.id.slice(0, 8)}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {getQuestTitle(booking)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Цена квеста:{' '}
+                        {getQuestPrice(booking) != null ? `${getQuestPrice(booking)} ₽` : '—'}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditBooking(booking)}
+                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                        title="Редактировать"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBooking(booking)}
+                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                        title="Удалить"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      {booking.status === 'pending' && (
+                        <button
+                          onClick={() => updateStatus(booking, 'confirmed')}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
+                        >
+                          Подтвердить
+                        </button>
+                      )}
+                      {booking.status === 'confirmed' && (
+                        <button
+                          onClick={() => updateStatus(booking, 'completed')}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition-colors"
+                        >
+                          Завершить
+                        </button>
+                      )}
+                      {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                        <button
+                          onClick={() => updateStatus(booking, 'cancelled')}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
+                        >
+                          Отменить
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <User className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Клиент:</span>
+                      <span>{booking.customerName}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Phone className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Телефон:</span>
+                      <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
+                        {booking.customerPhone}
+                      </a>
+                    </div>
+
+                    {booking.customerEmail && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Mail className="w-4 h-4 text-red-600" />
+                        <span className="font-semibold">Email:</span>
+                        <a
+                          href={`mailto:${booking.customerEmail}`}
+                          className="hover:text-red-600"
+                        >
+                          {booking.customerEmail}
+                        </a>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Calendar className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Дата:</span>
+                      <span>{formatDateTime(booking.bookingDate)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Calendar className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Создано:</span>
+                      <span>{formatDateTime(booking.createdAt)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Users className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Участников:</span>
+                      <span>{booking.participantsCount}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Users className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Доп. участников:</span>
+                      <span>{booking.extraParticipantsCount ?? 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <BadgeDollarSign className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Цена доп. участников:</span>
+                      <span>
+                        {getExtraParticipantPrice(booking) != null
+                          ? `${getExtraParticipantPrice(booking)} ₽`
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <BadgeDollarSign className="w-4 h-4 text-red-600" />
+                      <span className="font-semibold">Сумма:</span>
+                      <span>{booking.totalPrice} ₽</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <span className="font-semibold">Агрегатор:</span>
+                      <span>{getAggregatorLabel(booking)}</span>
+                    </div>
+                    {booking.promoCode && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="font-semibold">Промокод:</span>
+                        <span>{booking.promoCode}</span>
+                        {booking.promoDiscountAmount != null && (
+                          <span className="text-xs text-gray-500">
+                            −{booking.promoDiscountAmount} ₽
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-start gap-2 text-gray-700">
+                      <span className="font-semibold">Доп. услуги:</span>
+                      <div>
+                        {booking.extraServices?.length ? (
+                          <ul className="space-y-1">
+                            {booking.extraServices.map((service) => (
+                              <li key={service.id} className="text-xs">
+                                {service.title} · {service.price} ₽
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>—</span>
+                        )}
+                        <div className="text-xs text-gray-500 mt-1">
+                          Цена доп. услуг:{' '}
+                          {getExtraServicesTotal(booking)
+                            ? `${getExtraServicesTotal(booking)} ₽`
+                            : '—'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex items-start gap-2 text-gray-700">
+                      <FileText className="w-4 h-4 text-red-600 mt-1" />
+                      <div>
+                        <span className="font-semibold">Комментарий:</span>
+                        <p className="text-xs mt-1">{booking.notes || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {filteredBookings.length === 0 && (
+            <div className="text-center py-12 bg-white rounded-lg shadow">
+              <p className="text-gray-600 text-lg">Бронирования не найдены</p>
+            </div>
+          )}
+
+          {filteredBookings.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-sm text-gray-600">
+                Страница {safePage} из {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={safePage === 1}
+                  className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors"
+                >
+                  Назад
+                </button>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                      page === safePage
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={safePage === totalPages}
+                  className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors"
+                >
+                  Вперёд
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Создать бронь</h3>
+                <p className="text-xs text-gray-500">Заполните данные и выберите слот</p>
+              </div>
+              <button
+                onClick={closeCreateModal}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Квест</label>
+                  <select
+                    value={selectedQuestId}
+                    onChange={(e) => setSelectedQuestId(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  >
+                    {quests.map((quest) => (
+                      <option key={quest.id} value={quest.id}>
+                        {quest.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата начала
+                  </label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата окончания
+                  </label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Слот</label>
+                  <select
+                    value={selectedSlotId}
+                    onChange={(e) => setSelectedSlotId(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">Выберите слот</option>
+                    {availableSlots.map((slot) => (
+                      <option key={slot.id} value={slot.id}>
+                        {slot.date} · {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Доступно слотов: {availableSlots.length}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Имя клиента
+                    </label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Телефон
+                    </label>
+                    <input
+                      type="text"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email (опционально)
+                    </label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Участников
+                    </label>
+                    <input
+                      type="number"
+                      value={participantsCount}
+                      onChange={(e) => setParticipantsCount(parseInt(e.target.value) || 1)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      min="1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Комментарий
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  rows={2}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-gray-200">
+              {createResult && <span className="text-sm text-gray-600">{createResult}</span>}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={closeCreateModal}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleCreateBooking}
+                  className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+                >
+                  Создать бронь
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Редактирование брони</h3>
+                <p className="text-xs text-gray-500">ID: {editingBooking.id.slice(0, 8)}</p>
+              </div>
+              <button
+                onClick={() => setEditingBooking(null)}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div
+                className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
+                  editingBooking.status
+                )}`}
+              >
+                {getStatusText(editingBooking.status)}
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Имя клиента
@@ -591,15 +1321,18 @@ export default function BookingsPage() {
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   >
+                    <option value="planned">Запланировано</option>
+                    <option value="created">Создано</option>
                     <option value="pending">Ожидает</option>
+                    <option value="not_confirmed">Не подтверждено</option>
                     <option value="confirmed">Подтверждено</option>
                     <option value="completed">Завершено</option>
                     <option value="cancelled">Отменено</option>
                   </select>
                 </div>
-                <div className="lg:col-span-3">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Примечания
+                    Комментарий
                   </label>
                   <textarea
                     value={editingBooking.notes}
@@ -611,377 +1344,24 @@ export default function BookingsPage() {
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-3 mt-4">
-                <button
-                  onClick={handleUpdateBooking}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
-                >
-                  <Save className="w-4 h-4" />
-                  Сохранить изменения
-                </button>
-                <button
-                  onClick={() => setEditingBooking(null)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                  Отмена
-                </button>
-              </div>
             </div>
-          )}
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Квест</label>
-                <select
-                  value={questFilter}
-                  onChange={(e) => setQuestFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                >
-                  <option value="all">Все квесты</option>
-                  {quests.map((quest) => (
-                    <option key={quest.id} value={quest.id}>
-                      {quest.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Дата начала
-                </label>
-                <input
-                  type="date"
-                  value={listDateFrom}
-                  onChange={(e) => setListDateFrom(e.target.value)}
-                  disabled={statusFilter === 'pending'}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Дата окончания
-                </label>
-                <input
-                  type="date"
-                  value={listDateTo}
-                  onChange={(e) => setListDateTo(e.target.value)}
-                  disabled={statusFilter === 'pending'}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                />
-              </div>
-              <div className="flex items-end">
-                <div className="text-sm text-gray-500">
-                  Показано: <span className="font-semibold">{filteredBookings.length}</span>
-                </div>
-              </div>
+            <div className="flex flex-wrap gap-3 px-6 py-4 border-t border-gray-200">
+              <button
+                onClick={handleUpdateBooking}
+                className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Сохранить изменения
+              </button>
+              <button
+                onClick={() => setEditingBooking(null)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Отмена
+              </button>
             </div>
-            {statusFilter === 'pending' && (
-              <p className="text-xs text-gray-500 mt-3">
-                Для ожидающих броней период не применяется — показываются все записи.
-              </p>
-            )}
           </div>
-
-          {viewMode === 'table' ? (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 text-gray-700">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold">Статус</th>
-                    <th className="text-left px-4 py-3 font-semibold">Дата</th>
-                    <th className="text-left px-4 py-3 font-semibold">Квест</th>
-                    <th className="text-left px-4 py-3 font-semibold">Клиент</th>
-                    <th className="text-left px-4 py-3 font-semibold">Участников</th>
-                    <th className="text-left px-4 py-3 font-semibold">Сумма</th>
-                    <th className="text-left px-4 py-3 font-semibold">Промокод</th>
-                    <th className="text-left px-4 py-3 font-semibold">Примечания</th>
-                    <th className="text-right px-4 py-3 font-semibold">Действия</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {paginatedBookings.map((booking) => (
-                    <tr key={booking.id}>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                            booking.status
-                          )}`}
-                        >
-                          {getStatusText(booking.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {new Date(booking.bookingDate).toLocaleString('ru-RU', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {booking.questId
-                          ? questLookup.get(booking.questId) || 'Квест не найден'
-                          : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        <div className="font-semibold text-gray-900">
-                          {booking.customerName}
-                        </div>
-                        <div>
-                          <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
-                            {booking.customerPhone}
-                          </a>
-                        </div>
-                        {booking.customerEmail && (
-                          <div>
-                            <a
-                              href={`mailto:${booking.customerEmail}`}
-                              className="hover:text-red-600"
-                            >
-                              {booking.customerEmail}
-                            </a>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">{booking.participantsCount}</td>
-                      <td className="px-4 py-3 text-gray-700">{booking.totalPrice} ₽</td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {booking.promoCode ? (
-                          <div>
-                            <div className="font-semibold">{booking.promoCode}</div>
-                            {booking.promoDiscountAmount != null && (
-                              <div className="text-xs text-gray-500">
-                                −{booking.promoDiscountAmount} ₽
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        <p className="line-clamp-2">{booking.notes || '—'}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleEditBooking(booking)}
-                            className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                            title="Редактировать"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          {booking.status === 'pending' && (
-                            <button
-                              onClick={() => updateStatus(booking, 'confirmed')}
-                              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                            >
-                              Подтвердить
-                            </button>
-                          )}
-                          {booking.status === 'confirmed' && (
-                            <button
-                              onClick={() => updateStatus(booking, 'completed')}
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                            >
-                              Завершить
-                            </button>
-                          )}
-                          {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                            <button
-                              onClick={() => updateStatus(booking, 'cancelled')}
-                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                            >
-                              Отменить
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {paginatedBookings.map((booking) => (
-                <div key={booking.id} className="bg-white rounded-lg shadow p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                            booking.status
-                          )}`}
-                        >
-                          {getStatusText(booking.status)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          ID: {booking.id.slice(0, 8)}
-                        </span>
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {booking.questId
-                          ? questLookup.get(booking.questId) || 'Квест не найден'
-                          : 'Квест не указан'}
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditBooking(booking)}
-                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                        title="Редактировать"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      {booking.status === 'pending' && (
-                        <button
-                          onClick={() => updateStatus(booking, 'confirmed')}
-                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                        >
-                          Подтвердить
-                        </button>
-                      )}
-                      {booking.status === 'confirmed' && (
-                        <button
-                          onClick={() => updateStatus(booking, 'completed')}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                        >
-                          Завершить
-                        </button>
-                      )}
-                      {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                        <button
-                          onClick={() => updateStatus(booking, 'cancelled')}
-                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                        >
-                          Отменить
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <User className="w-4 h-4 text-red-600" />
-                      <span className="font-semibold">Клиент:</span>
-                      <span>{booking.customerName}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Phone className="w-4 h-4 text-red-600" />
-                      <span className="font-semibold">Телефон:</span>
-                      <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
-                        {booking.customerPhone}
-                      </a>
-                    </div>
-
-                    {booking.customerEmail && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Mail className="w-4 h-4 text-red-600" />
-                        <span className="font-semibold">Email:</span>
-                        <a
-                          href={`mailto:${booking.customerEmail}`}
-                          className="hover:text-red-600"
-                        >
-                          {booking.customerEmail}
-                        </a>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Calendar className="w-4 h-4 text-red-600" />
-                      <span className="font-semibold">Дата:</span>
-                      <span>
-                        {new Date(booking.bookingDate).toLocaleString('ru-RU', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Users className="w-4 h-4 text-red-600" />
-                      <span className="font-semibold">Участников:</span>
-                      <span>{booking.participantsCount}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <BadgeDollarSign className="w-4 h-4 text-red-600" />
-                      <span className="font-semibold">Сумма:</span>
-                      <span>{booking.totalPrice} ₽</span>
-                    </div>
-                    {booking.promoCode && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <span className="font-semibold">Промокод:</span>
-                        <span>{booking.promoCode}</span>
-                        {booking.promoDiscountAmount != null && (
-                          <span className="text-xs text-gray-500">
-                            −{booking.promoDiscountAmount} ₽
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {booking.notes && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <div className="flex items-start gap-2 text-gray-700">
-                        <FileText className="w-4 h-4 text-red-600 mt-1" />
-                        <div>
-                          <span className="font-semibold">Примечания:</span>
-                          <p className="text-xs mt-1">{booking.notes}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {filteredBookings.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-lg shadow">
-              <p className="text-gray-600 text-lg">Бронирования не найдены</p>
-            </div>
-          )}
-
-          {filteredBookings.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm text-gray-600">
-                Страница {safePage} из {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={safePage === 1}
-                  className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors"
-                >
-                  Назад
-                </button>
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                      page === safePage
-                        ? 'bg-red-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={safePage === totalPages}
-                  className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors"
-                >
-                  Вперёд
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

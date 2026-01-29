@@ -98,6 +98,10 @@ export type Booking = {
   id: string;
   questId: string | null;
   questScheduleId: string | null;
+  aggregator: string | null;
+  questTitle?: string | null;
+  questPrice?: number | null;
+  extraParticipantPrice?: number | null;
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
@@ -110,7 +114,14 @@ export type Booking = {
   promoDiscountType: string | null;
   promoDiscountValue: number | null;
   promoDiscountAmount: number | null;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'cancelled'
+    | 'completed'
+    | 'planned'
+    | 'created'
+    | 'not_confirmed';
   notes: string | null;
   extraServices: BookingExtraService[];
   createdAt: string;
