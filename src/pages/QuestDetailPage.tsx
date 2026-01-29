@@ -358,22 +358,22 @@ export default function QuestDetailPage() {
           </div>
         </div>
 
-        <div className="bg-purple-900/40 backdrop-blur-sm rounded-lg p-8 overflow-x-auto">
+        <div className="bg-purple-900/40 backdrop-blur-sm rounded-lg p-8 overflow-x-visible">
           <h2 className="text-3xl font-bold text-white text-center mb-8">
             Расписание на квест {quest.title}
           </h2>
 
           {Object.keys(groupedSchedule).length > 0 ? (
-            <div className="space-y-6 min-w-max">
+            <div className="space-y-6 min-w-0">
               {Object.entries(groupedSchedule).map(([date, slots]) => (
-                <div key={date} className="flex gap-6 items-start">
-                  <div className="flex-shrink-0 w-32 sm:w-40 text-white pt-1">
+                <div key={date} className="flex flex-col gap-3 sm:flex-row sm:gap-6 sm:items-start">
+                  <div className="flex w-full items-center justify-between text-white sm:w-40 sm:flex-col sm:items-start sm:pt-1">
                     <div className="text-base sm:text-lg font-bold">{getDisplayDate(date)}</div>
                     <div className="text-xs sm:text-sm text-white/60">{getDayName(date)}</div>
                   </div>
 
-                  <div className="flex-1 space-y-2">
-                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex flex-wrap gap-2 pb-1 sm:flex-nowrap sm:overflow-x-auto">
                       {slots.map((slot) => {
                         const slotIsClosed = isSlotClosed(slot);
                         const isDisabled = slot.isBooked || slotIsClosed;
@@ -387,7 +387,7 @@ export default function QuestDetailPage() {
                             }}
                             aria-disabled={isDisabled}
                             type="button"
-                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors flex flex-col items-center ${
                               slot.isBooked || slotIsClosed
                                 ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
                                 : 'bg-green-600 text-white hover:bg-green-500'
@@ -402,11 +402,18 @@ export default function QuestDetailPage() {
                             >
                               {slot.timeSlot.substring(0, 5)}
                             </span>
+                            <span
+                              className={`mt-1 block text-[10px] font-medium normal-case tracking-normal sm:hidden ${
+                                slot.isBooked || slotIsClosed ? 'text-slate-900/70' : 'text-white/80'
+                              }`}
+                            >
+                              {slot.price} ₽
+                            </span>
                           </button>
                         );
                       })}
                     </div>
-                    <div className="flex flex-nowrap gap-2 text-[11px] text-white/80">
+                    <div className="hidden flex-wrap gap-2 text-[11px] text-white/80 sm:flex sm:flex-nowrap">
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
@@ -414,6 +421,7 @@ export default function QuestDetailPage() {
                           style={{
                             width: `${group.slots.length * slotWidth + (group.slots.length - 1) * slotGap}px`,
                             ['--price-line-inset' as string]: `${priceLineInset}px`,
+                            maxWidth: '100%',
                           }}
                         >
                           <div className="relative h-[1px] w-[calc(100%-var(--price-line-inset))] bg-white/50">
