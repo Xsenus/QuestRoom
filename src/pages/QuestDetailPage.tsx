@@ -97,7 +97,7 @@ export default function QuestDetailPage() {
   }, [quest]);
 
   const handleSlotClick = (slot: QuestSchedule) => {
-    if (!slot.isBooked) {
+    if (!slot.isBooked && !isSlotClosed(slot)) {
       setSelectedSlot(slot);
       setShowBookingModal(true);
     }
@@ -151,6 +151,30 @@ export default function QuestDetailPage() {
   const getDisplayDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  };
+
+  const getNowInTimeZone = (timeZone?: string | null) => {
+    if (!timeZone) {
+      return new Date();
+    }
+    try {
+      return new Date(new Date().toLocaleString('en-US', { timeZone }));
+    } catch (error) {
+      console.warn('Invalid time zone, fallback to local time.', error);
+      return new Date();
+    }
+  };
+
+  const isSlotClosed = (slot: QuestSchedule) => {
+    const cutoffMinutes = settings?.bookingCutoffMinutes ?? 10;
+    if (cutoffMinutes <= 0) {
+      return false;
+    }
+    const timePart = slot.timeSlot.substring(0, 5);
+    const slotDate = new Date(`${slot.date}T${timePart}:00`);
+    const now = getNowInTimeZone(settings?.timeZone);
+    const minutesLeft = (slotDate.getTime() - now.getTime()) / 60000;
+    return minutesLeft <= cutoffMinutes;
   };
 
   const slotWidth = 68;
@@ -350,31 +374,37 @@ export default function QuestDetailPage() {
 
                   <div className="flex-1 space-y-2">
                     <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
-                      {slots.map((slot) => (
-                        <button
-                          key={slot.id}
-                          onClick={() => {
-                            if (!slot.isBooked) {
-                              handleSlotClick(slot);
-                            }
-                          }}
-                          aria-disabled={slot.isBooked}
-                          type="button"
-                          className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-                            slot.isBooked
-                              ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
-                              : 'bg-green-600 text-white hover:bg-green-500'
-                          }`}
-                        >
-                          <span
-                            className={`block w-full text-center ${
-                              slot.isBooked ? 'line-through decoration-2 decoration-slate-900/70' : ''
+                      {slots.map((slot) => {
+                        const slotIsClosed = isSlotClosed(slot);
+                        const isDisabled = slot.isBooked || slotIsClosed;
+                        return (
+                          <button
+                            key={slot.id}
+                            onClick={() => {
+                              if (!isDisabled) {
+                                handleSlotClick(slot);
+                              }
+                            }}
+                            aria-disabled={isDisabled}
+                            type="button"
+                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                              slot.isBooked || slotIsClosed
+                                ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
+                                : 'bg-green-600 text-white hover:bg-green-500'
                             }`}
                           >
-                            {slot.timeSlot.substring(0, 5)}
-                          </span>
-                        </button>
-                      ))}
+                            <span
+                              className={`block w-full text-center ${
+                                slot.isBooked || slotIsClosed
+                                  ? 'line-through decoration-2 decoration-slate-900/70'
+                                  : ''
+                              }`}
+                            >
+                              {slot.timeSlot.substring(0, 5)}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                     <div className="flex flex-nowrap gap-2 text-[11px] text-white/80">
                       {groupSlotsByPrice(slots).map((group) => (

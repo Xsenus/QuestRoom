@@ -136,6 +136,12 @@ public class Settings
     [Column("booking_days_ahead")]
     public int BookingDaysAhead { get; set; }
 
+    [Column("booking_cutoff_minutes")]
+    public int BookingCutoffMinutes { get; set; } = 10;
+
+    [Column("time_zone")]
+    public string? TimeZone { get; set; }
+
     [Column("promotions_per_row")]
     public int PromotionsPerRow { get; set; } = 1;
 

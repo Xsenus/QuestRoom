@@ -85,6 +85,8 @@ export type Settings = {
   reviewsMode: string | null;
   reviewsFlampEmbed: string | null;
   bookingDaysAhead: number;
+  bookingCutoffMinutes: number;
+  timeZone: string | null;
   promotionsPerRow: number | null;
   videoModalEnabled: boolean;
   updatedAt: string;
@@ -299,6 +301,57 @@ export type QuestSchedule = {
 };
 
 export type QuestScheduleUpsert = Omit<QuestSchedule, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type QuestWeeklySlot = {
+  id: string;
+  questId: string;
+  dayOfWeek: number;
+  timeSlot: string;
+  price: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuestWeeklySlotUpsert = Omit<
+  QuestWeeklySlot,
+  'id' | 'createdAt' | 'updatedAt'
+>;
+
+export type QuestScheduleOverrideSlot = {
+  id: string;
+  timeSlot: string;
+  price: number;
+};
+
+export type QuestScheduleOverride = {
+  id: string;
+  questId: string;
+  date: string;
+  isClosed: boolean;
+  slots: QuestScheduleOverrideSlot[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuestScheduleOverrideUpsert = {
+  questId: string;
+  date: string;
+  isClosed: boolean;
+  slots: Array<{ timeSlot: string; price: number }>;
+};
+
+export type QuestScheduleSettings = {
+  id: string;
+  questId: string;
+  holidayPrice: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuestScheduleSettingsUpsert = {
+  questId: string;
+  holidayPrice: number | null;
+};
 
 export type QuestPricingRule = {
   id: string;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Quest, QuestUpsert, DurationBadge } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
+import QuestScheduleEditor from '../../components/admin/QuestScheduleEditor';
 
 export default function QuestsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -11,6 +12,7 @@ export default function QuestsPage() {
     null
   );
   const [isCreating, setIsCreating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'schedule'>('details');
 
   const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
     if (mainImage && !images.includes(mainImage)) {
@@ -84,6 +86,7 @@ export default function QuestsPage() {
       extraServices: [],
     });
     setIsCreating(true);
+    setActiveTab('details');
   };
 
   const handleSave = async () => {
@@ -116,6 +119,7 @@ export default function QuestsPage() {
   const handleCancel = () => {
     setEditingQuest(null);
     setIsCreating(false);
+    setActiveTab('details');
   };
 
   const handleToggleVisibility = async (quest: Quest) => {
@@ -273,16 +277,44 @@ export default function QuestsPage() {
       videoUrl: quest.videoUrl || '',
     });
     setIsCreating(false);
+    setActiveTab('details');
   };
 
   if (editingQuest) {
+    const scheduleTabDisabled = isCreating || !editingQuest.id;
     return (
       <div className="max-w-5xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold mb-6">
             {isCreating ? 'Создание квеста' : 'Редактирование квеста'}
           </h2>
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <button
+              type="button"
+              onClick={() => setActiveTab('details')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                activeTab === 'details'
+                  ? 'bg-red-600 text-white border-red-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+              }`}
+            >
+              Основные данные
+            </button>
+            <button
+              type="button"
+              onClick={() => !scheduleTabDisabled && setActiveTab('schedule')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                activeTab === 'schedule'
+                  ? 'bg-red-600 text-white border-red-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+              } ${scheduleTabDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={scheduleTabDisabled ? 'Сначала сохраните квест' : undefined}
+            >
+              Время и цены
+            </button>
+          </div>
 
+          {activeTab === 'details' ? (
           <div className="space-y-6">
             <div className="border-b border-gray-200 pb-4">
               <h3 className="text-lg font-semibold text-gray-800">Основная информация</h3>
@@ -813,6 +845,17 @@ export default function QuestsPage() {
               </button>
             </div>
           </div>
+          ) : scheduleTabDisabled ? (
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+              <p className="font-semibold text-gray-800">Сначала сохраните квест.</p>
+              <p className="mt-2">
+                Чтобы настроить расписание, нужно сохранить карточку квеста и перейти во
+                вкладку «Время и цены».
+              </p>
+            </div>
+          ) : (
+            <QuestScheduleEditor questId={editingQuest.id!} />
+          )}
         </div>
       </div>
     );
