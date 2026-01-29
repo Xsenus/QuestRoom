@@ -106,7 +106,7 @@ export default function UsersPage() {
       name: '',
       email: '',
       phone: '',
-      roleId: defaultRole?.id ?? 'viewer',
+      roleId: defaultRole?.id ?? '',
       status: 'pending',
       notes: '',
     });
@@ -117,12 +117,13 @@ export default function UsersPage() {
   };
 
   const startEdit = (user: AdminUser) => {
+    const fallbackRoleId = roles[0]?.id ?? '';
     setEditor({
       id: user.id,
       name: user.name,
       email: user.email,
       phone: user.phone,
-      roleId: user.roleId,
+      roleId: user.roleId || fallbackRoleId,
       status: user.status,
       notes: user.notes,
     });
@@ -153,11 +154,22 @@ export default function UsersPage() {
       return;
     }
 
+    const resolvedRoleId = editor.roleId || roles[0]?.id;
+    if (!resolvedRoleId) {
+      setNotification({
+        isOpen: true,
+        title: 'Проверьте данные',
+        message: 'Выберите роль для пользователя.',
+        tone: 'error',
+      });
+      return;
+    }
+
     const payload: AdminUserUpsert = {
       name: editor.name,
       email: editor.email,
       phone: editor.phone || null,
-      roleId: editor.roleId,
+      roleId: resolvedRoleId,
       status: editor.status,
       notes: editor.notes || null,
       password: isCreating ? createPassword : undefined,
@@ -528,7 +540,7 @@ export default function UsersPage() {
                     <span>{roleMap[selectedUser.roleId]?.name || selectedUser.roleName}</span>
                   </div>
                   <select
-                    value={selectedUser.roleId}
+                    value={selectedUser.roleId || roles[0]?.id || ''}
                     onChange={(event) => updateRole(selectedUser, event.target.value)}
                     className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
                   >
