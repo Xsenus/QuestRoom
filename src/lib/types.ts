@@ -77,6 +77,8 @@ export type Settings = {
   bookingEmailTemplateCustomer: string | null;
   notifyCertificateAdmin: boolean;
   notifyCertificateCustomer: boolean;
+  certificateEmailTemplateAdmin: string | null;
+  certificateEmailTemplateCustomer: string | null;
   phone: string | null;
   logoUrl: string | null;
   certificatePageTitle: string | null;

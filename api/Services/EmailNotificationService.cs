@@ -66,7 +66,9 @@ public class EmailNotificationService : IEmailNotificationService
             ["status"] = bookingDetails.Status,
             ["notes"] = bookingDetails.Notes ?? "нет",
             ["extraServices"] = extraServicesHtml,
-            ["extraServicesText"] = extraServicesText
+            ["extraServicesText"] = extraServicesText,
+            ["companyAddress"] = settings.Address ?? "не указан",
+            ["companyPhone"] = settings.Phone ?? "не указан"
         };
 
         var defaultBody = $"""
@@ -108,17 +110,46 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         var subject = $"Заявка на сертификат: {order.CertificateTitle}";
-        var body = $"""
-                    <p>Новая заявка на сертификат.</p>
-                    <ul>
-                      <li><strong>Сертификат:</strong> {order.CertificateTitle}</li>
-                      <li><strong>Имя:</strong> {order.CustomerName}</li>
-                      <li><strong>Телефон:</strong> {order.CustomerPhone}</li>
-                      <li><strong>Email:</strong> {order.CustomerEmail ?? "не указан"}</li>
-                      <li><strong>Статус:</strong> {order.Status}</li>
-                      <li><strong>Комментарий:</strong> {order.Notes ?? "нет"}</li>
-                    </ul>
-                    """;
+
+        var tokens = new Dictionary<string, string>
+        {
+            ["certificateTitle"] = order.CertificateTitle,
+            ["customerName"] = order.CustomerName,
+            ["customerPhone"] = order.CustomerPhone,
+            ["customerEmail"] = order.CustomerEmail ?? "не указан",
+            ["deliveryType"] = order.DeliveryType ?? "не указан",
+            ["status"] = order.Status,
+            ["notes"] = order.Notes ?? "нет",
+            ["companyAddress"] = settings.Address ?? "не указан",
+            ["companyPhone"] = settings.Phone ?? "не указан"
+        };
+
+        var adminDefaultBody = $"""
+                                <p>Новая заявка на сертификат.</p>
+                                <ul>
+                                  <li><strong>Сертификат:</strong> {tokens["certificateTitle"]}</li>
+                                  <li><strong>Имя:</strong> {tokens["customerName"]}</li>
+                                  <li><strong>Телефон:</strong> {tokens["customerPhone"]}</li>
+                                  <li><strong>Email:</strong> {tokens["customerEmail"]}</li>
+                                  <li><strong>Тип доставки:</strong> {tokens["deliveryType"]}</li>
+                                  <li><strong>Статус:</strong> {tokens["status"]}</li>
+                                  <li><strong>Комментарий:</strong> {tokens["notes"]}</li>
+                                </ul>
+                                """;
+
+        var customerDefaultBody = $"""
+                                   <p>Спасибо за оформление сертификата!</p>
+                                   <p>Мы получили вашу заявку на сертификат: <strong>{tokens["certificateTitle"]}</strong>.</p>
+                                   <ul>
+                                     <li><strong>Имя:</strong> {tokens["customerName"]}</li>
+                                     <li><strong>Телефон:</strong> {tokens["customerPhone"]}</li>
+                                     <li><strong>Email:</strong> {tokens["customerEmail"]}</li>
+                                     <li><strong>Тип доставки:</strong> {tokens["deliveryType"]}</li>
+                                   </ul>
+                                   """;
+
+        var adminBody = ApplyTemplate(settings.CertificateEmailTemplateAdmin, tokens, adminDefaultBody);
+        var customerBody = ApplyTemplate(settings.CertificateEmailTemplateCustomer, tokens, customerDefaultBody);
 
         await SendConfiguredEmailsAsync(
             settings,
@@ -126,8 +157,8 @@ public class EmailNotificationService : IEmailNotificationService
             settings.NotifyCertificateCustomer,
             order.CustomerEmail,
             subject,
-            body,
-            body);
+            adminBody,
+            customerBody);
     }
 
     private async Task<Settings?> GetSettingsAsync()
