@@ -156,7 +156,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
               <div className="bg-white/10 rounded-lg p-3 space-y-3 text-white text-sm">
                 <div className="space-y-2">
                   <p className="text-white font-semibold text-sm">Оплата:</p>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex gap-2">
                     <label className="cursor-pointer">
                       <input
                         type="radio"
@@ -167,7 +167,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                         className="sr-only"
                       />
                       <span
-                        className={`px-3 py-1.5 border text-sm font-semibold transition-colors ${
+                        className={`px-2.5 py-1 border text-xs font-semibold transition-colors ${
                           formData.paymentType === 'card'
                             ? 'bg-white text-red-600 border-white'
                             : 'border-white text-white hover:bg-white/20'
@@ -186,7 +186,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                         className="sr-only"
                       />
                       <span
-                        className={`px-3 py-1.5 border text-sm font-semibold transition-colors ${
+                        className={`px-2.5 py-1 border text-xs font-semibold transition-colors ${
                           formData.paymentType === 'certificate'
                             ? 'bg-white text-red-600 border-white'
                             : 'border-white text-white hover:bg-white/20'
