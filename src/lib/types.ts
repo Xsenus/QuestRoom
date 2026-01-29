@@ -84,6 +84,13 @@ export type Settings = {
   certificatePagePricing: string | null;
   reviewsMode: string | null;
   reviewsFlampEmbed: string | null;
+  bookingStatusPlannedColor: string | null;
+  bookingStatusCreatedColor: string | null;
+  bookingStatusPendingColor: string | null;
+  bookingStatusNotConfirmedColor: string | null;
+  bookingStatusConfirmedColor: string | null;
+  bookingStatusCompletedColor: string | null;
+  bookingStatusCancelledColor: string | null;
   bookingDaysAhead: number;
   bookingCutoffMinutes: number;
   timeZone: string | null;
@@ -145,7 +152,27 @@ export type BookingCreate = {
 export type BookingUpdate = Partial<
   Pick<
     Booking,
-    'status' | 'notes' | 'customerName' | 'customerPhone' | 'customerEmail' | 'participantsCount'
+    | 'status'
+    | 'notes'
+    | 'customerName'
+    | 'customerPhone'
+    | 'customerEmail'
+    | 'participantsCount'
+    | 'extraParticipantsCount'
+    | 'bookingDate'
+    | 'totalPrice'
+    | 'paymentType'
+    | 'promoCode'
+    | 'promoDiscountType'
+    | 'promoDiscountValue'
+    | 'promoDiscountAmount'
+    | 'questId'
+    | 'questScheduleId'
+    | 'aggregator'
+    | 'questTitle'
+    | 'questPrice'
+    | 'extraParticipantPrice'
+    | 'extraServices'
   >
 >;
 

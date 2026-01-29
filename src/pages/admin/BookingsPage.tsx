@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
-import { Booking, Quest, QuestSchedule } from '../../lib/types';
+import { Booking, Quest, QuestSchedule, Settings } from '../../lib/types';
 import {
   Calendar,
   User,
@@ -14,11 +14,67 @@ import {
   BadgeDollarSign,
   Trash2,
   Plus,
+  SlidersHorizontal,
 } from 'lucide-react';
+import NotificationModal from '../../components/NotificationModal';
+
+type ActionModalState = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  tone?: 'info' | 'danger';
+  onConfirm: () => Promise<void> | void;
+};
+
+type BookingTableColumnKey =
+  | 'status'
+  | 'bookingDate'
+  | 'createdAt'
+  | 'quest'
+  | 'questPrice'
+  | 'participants'
+  | 'extraParticipants'
+  | 'extraParticipantPrice'
+  | 'extraServices'
+  | 'extraServicesPrice'
+  | 'aggregator'
+  | 'promoCode'
+  | 'totalPrice'
+  | 'customer'
+  | 'notes'
+  | 'actions';
+
+type BookingTableColumnConfig = {
+  key: BookingTableColumnKey;
+  label: string;
+  width: number;
+  visible: boolean;
+  locked?: boolean;
+};
+
+const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
+  { key: 'status', label: 'Статус', width: 140, visible: true },
+  { key: 'bookingDate', label: 'Дата брони', width: 160, visible: true },
+  { key: 'createdAt', label: 'Создано', width: 160, visible: true },
+  { key: 'quest', label: 'Квест', width: 180, visible: true },
+  { key: 'questPrice', label: 'Цена квеста', width: 140, visible: true },
+  { key: 'participants', label: 'Участников', width: 120, visible: true },
+  { key: 'extraParticipants', label: 'Доп. участники', width: 130, visible: true },
+  { key: 'extraParticipantPrice', label: 'Цена доп.', width: 120, visible: true },
+  { key: 'extraServices', label: 'Доп. услуги', width: 220, visible: true },
+  { key: 'extraServicesPrice', label: 'Цена доп. услуг', width: 150, visible: true },
+  { key: 'aggregator', label: 'Агрегатор', width: 140, visible: true },
+  { key: 'promoCode', label: 'Промокод', width: 140, visible: true },
+  { key: 'totalPrice', label: 'Итог', width: 120, visible: true },
+  { key: 'customer', label: 'Клиент', width: 220, visible: true },
+  { key: 'notes', label: 'Комментарий', width: 200, visible: true },
+  { key: 'actions', label: 'Действия', width: 200, visible: true, locked: true },
+];
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedQuestId, setSelectedQuestId] = useState<string>('');
   const [scheduleSlots, setScheduleSlots] = useState<QuestSchedule[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string>('');
@@ -46,16 +102,67 @@ export default function BookingsPage() {
   const [listDateFrom, setListDateFrom] = useState<string>('');
   const [listDateTo, setListDateTo] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
+  const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
+  });
   const [editingBooking, setEditingBooking] = useState<{
     id: string;
+    questId: string | null;
+    questScheduleId: string | null;
+    aggregator: string;
+    questTitle: string;
+    questPrice: number;
+    extraParticipantPrice: number;
     customerName: string;
     customerPhone: string;
     customerEmail: string;
+    bookingDate: string;
+    createdAt: string;
     participantsCount: number;
+    extraParticipantsCount: number;
+    totalPrice: number;
+    paymentType: string;
+    promoCode: string;
+    promoDiscountType: string;
+    promoDiscountValue: number;
+    promoDiscountAmount: number;
     notes: string;
     status: Booking['status'];
+    extraServices: Booking['extraServices'];
   } | null>(null);
   const listRangeStorageKey = 'admin_bookings_list_range';
+  const tableColumnsStorageKey = 'admin_bookings_table_columns';
+  const [tableColumns, setTableColumns] = useState<BookingTableColumnConfig[]>(() => {
+    if (typeof window === 'undefined') {
+      return bookingTableDefaultColumns;
+    }
+    const saved = localStorage.getItem(tableColumnsStorageKey);
+    if (!saved) {
+      return bookingTableDefaultColumns;
+    }
+    try {
+      const parsed = JSON.parse(saved) as BookingTableColumnConfig[];
+      const parsedMap = new Map(parsed.map((col) => [col.key, col]));
+      return bookingTableDefaultColumns.map((col) => ({
+        ...col,
+        ...parsedMap.get(col.key),
+        locked: col.locked,
+      }));
+    } catch {
+      return bookingTableDefaultColumns;
+    }
+  });
 
   const formatDate = (value: Date) => value.toISOString().split('T')[0];
 
@@ -102,6 +209,7 @@ export default function BookingsPage() {
     setListDateTo(listTo);
     loadBookings();
     loadQuests();
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -118,6 +226,12 @@ export default function BookingsPage() {
       );
     }
   }, [listDateFrom, listDateTo, listRangeStorageKey]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(tableColumnsStorageKey, JSON.stringify(tableColumns));
+    }
+  }, [tableColumns, tableColumnsStorageKey]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -137,6 +251,16 @@ export default function BookingsPage() {
       console.error('Error loading bookings:', error);
     }
     setLoading(false);
+  };
+
+  const loadSettings = async () => {
+    try {
+      const data = await api.getSettings();
+      setSettings(data);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      setSettings(null);
+    }
   };
 
   const loadQuests = async () => {
@@ -217,34 +341,73 @@ export default function BookingsPage() {
     }
   };
 
-  const handleDeleteBooking = async (booking: Booking) => {
-    const shouldDelete = window.confirm(
-      `Удалить бронь клиента ${booking.customerName}? Это действие необратимо.`
-    );
-    if (!shouldDelete) {
-      return;
-    }
+  const closeActionModal = () => {
+    setActionModal(null);
+  };
+
+  const openActionModal = (modal: ActionModalState) => {
+    setActionModal(modal);
+  };
+
+  const performAction = async (action: () => Promise<void> | void) => {
+    setActionLoading(true);
     try {
-      await api.deleteBooking(booking.id);
-      loadBookings();
-      if (selectedQuestId && dateFrom && dateTo) {
-        loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
-      }
+      await action();
+      closeActionModal();
     } catch (error) {
-      alert('Ошибка при удалении брони: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось выполнить действие',
+        message: (error as Error).message,
+        tone: 'error',
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const updateStatus = async (booking: Booking, status: Booking['status']) => {
-    try {
-      await api.updateBooking(booking.id, { status, notes: booking.notes });
-      loadBookings();
-      if (selectedQuestId && dateFrom && dateTo) {
-        loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
-      }
-    } catch (error) {
-      alert('Ошибка при обновлении статуса: ' + (error as Error).message);
-    }
+  const handleDeleteBooking = (booking: Booking) => {
+    openActionModal({
+      title: 'Удалить бронь',
+      message: `Удалить бронь клиента ${booking.customerName}? Это действие необратимо.`,
+      confirmLabel: 'Удалить',
+      tone: 'danger',
+      onConfirm: async () => {
+        await api.deleteBooking(booking.id);
+        await loadBookings();
+        if (selectedQuestId && dateFrom && dateTo) {
+          await loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
+        }
+        setNotification({
+          isOpen: true,
+          title: 'Бронь удалена',
+          message: `Бронь клиента ${booking.customerName} удалена.`,
+          tone: 'success',
+        });
+      },
+    });
+  };
+
+  const updateStatus = (booking: Booking, status: Booking['status']) => {
+    const statusLabel = getStatusText(status);
+    openActionModal({
+      title: `Изменить статус`,
+      message: `Подтвердите действие: установить статус «${statusLabel}» для брони клиента ${booking.customerName}.`,
+      confirmLabel: 'Подтвердить',
+      onConfirm: async () => {
+        await api.updateBooking(booking.id, { status, notes: booking.notes });
+        await loadBookings();
+        if (selectedQuestId && dateFrom && dateTo) {
+          await loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
+        }
+        setNotification({
+          isOpen: true,
+          title: 'Статус обновлён',
+          message: `Бронь клиента ${booking.customerName} теперь «${statusLabel}».`,
+          tone: 'success',
+        });
+      },
+    });
   };
 
   const openCreateModal = () => {
@@ -259,12 +422,28 @@ export default function BookingsPage() {
   const handleEditBooking = (booking: Booking) => {
     setEditingBooking({
       id: booking.id,
+      questId: booking.questId,
+      questScheduleId: booking.questScheduleId,
+      aggregator: booking.aggregator || '',
+      questTitle: booking.questTitle || getQuestTitle(booking),
+      questPrice: getQuestPrice(booking) ?? 0,
+      extraParticipantPrice: getExtraParticipantPrice(booking) ?? 0,
       customerName: booking.customerName,
       customerPhone: booking.customerPhone,
       customerEmail: booking.customerEmail || '',
+      bookingDate: formatDateTimeLocal(booking.bookingDate),
+      createdAt: booking.createdAt,
       participantsCount: booking.participantsCount,
+      extraParticipantsCount: booking.extraParticipantsCount ?? 0,
+      totalPrice: booking.totalPrice,
+      paymentType: booking.paymentType || '',
+      promoCode: booking.promoCode || '',
+      promoDiscountType: booking.promoDiscountType || '',
+      promoDiscountValue: booking.promoDiscountValue ?? 0,
+      promoDiscountAmount: booking.promoDiscountAmount ?? 0,
       notes: booking.notes || '',
       status: booking.status,
+      extraServices: booking.extraServices || [],
     });
   };
 
@@ -280,42 +459,126 @@ export default function BookingsPage() {
 
     try {
       await api.updateBooking(editingBooking.id, {
+        questId: editingBooking.questId,
+        questScheduleId: editingBooking.questScheduleId,
+        aggregator: editingBooking.aggregator || null,
+        questTitle: editingBooking.questTitle || null,
+        questPrice: editingBooking.questPrice,
+        extraParticipantPrice: editingBooking.extraParticipantPrice,
         customerName: editingBooking.customerName,
         customerPhone: editingBooking.customerPhone,
         customerEmail: editingBooking.customerEmail || null,
+        bookingDate: normalizeDateTimeForApi(editingBooking.bookingDate),
         participantsCount: editingBooking.participantsCount,
+        extraParticipantsCount: editingBooking.extraParticipantsCount,
+        totalPrice: editingBooking.totalPrice,
+        paymentType: editingBooking.paymentType || null,
+        promoCode: editingBooking.promoCode || null,
+        promoDiscountType: editingBooking.promoDiscountType || null,
+        promoDiscountValue: editingBooking.promoDiscountValue,
+        promoDiscountAmount: editingBooking.promoDiscountAmount,
         notes: editingBooking.notes || null,
         status: editingBooking.status,
+        extraServices: editingBooking.extraServices,
       });
       setEditingBooking(null);
       loadBookings();
       if (selectedQuestId && dateFrom && dateTo) {
         loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
       }
+      setNotification({
+        isOpen: true,
+        title: 'Бронь обновлена',
+        message: 'Изменения успешно сохранены.',
+        tone: 'success',
+      });
     } catch (error) {
-      alert('Ошибка при обновлении брони: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка обновления',
+        message: (error as Error).message,
+        tone: 'error',
+      });
     }
   };
 
-  const getStatusColor = (status: Booking['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'planned':
-        return 'bg-purple-100 text-purple-800 border-purple-300';
-      case 'created':
-        return 'bg-sky-100 text-sky-800 border-sky-300';
-      case 'not_confirmed':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+  const addExtraService = () => {
+    if (!editingBooking) {
+      return;
     }
+    setEditingBooking({
+      ...editingBooking,
+      extraServices: [
+        ...editingBooking.extraServices,
+        { id: crypto.randomUUID(), title: '', price: 0 },
+      ],
+    });
+  };
+
+  const updateExtraService = (index: number, field: 'title' | 'price', value: string) => {
+    if (!editingBooking) {
+      return;
+    }
+    const nextServices = editingBooking.extraServices.map((service, serviceIndex) =>
+      serviceIndex === index
+        ? {
+            ...service,
+            [field]: field === 'price' ? Number(value) || 0 : value,
+          }
+        : service
+    );
+    setEditingBooking({ ...editingBooking, extraServices: nextServices });
+  };
+
+  const removeExtraService = (index: number) => {
+    if (!editingBooking) {
+      return;
+    }
+    setEditingBooking({
+      ...editingBooking,
+      extraServices: editingBooking.extraServices.filter((_, i) => i !== index),
+    });
+  };
+
+  const defaultStatusColors: Record<Booking['status'], string> = {
+    pending: '#f59e0b',
+    confirmed: '#22c55e',
+    cancelled: '#ef4444',
+    completed: '#3b82f6',
+    planned: '#7c3aed',
+    created: '#0ea5e9',
+    not_confirmed: '#f97316',
+  };
+
+  const getStatusColorValue = (status: Booking['status']) => {
+    if (!settings) {
+      return defaultStatusColors[status];
+    }
+    const mapping: Partial<Record<Booking['status'], string | null | undefined>> = {
+      planned: settings.bookingStatusPlannedColor,
+      created: settings.bookingStatusCreatedColor,
+      pending: settings.bookingStatusPendingColor,
+      not_confirmed: settings.bookingStatusNotConfirmedColor,
+      confirmed: settings.bookingStatusConfirmedColor,
+      completed: settings.bookingStatusCompletedColor,
+      cancelled: settings.bookingStatusCancelledColor,
+    };
+    return mapping[status] || defaultStatusColors[status];
+  };
+
+  const hexToRgba = (color: string, alpha: number) => {
+    const normalized = color.replace('#', '');
+    const isShort = normalized.length === 3;
+    const hex = isShort
+      ? normalized
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : normalized;
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
   const getStatusText = (status: Booking['status']) => {
@@ -338,6 +601,19 @@ export default function BookingsPage() {
         return status;
     }
   };
+
+  const getStatusBadgeStyle = (status: Booking['status']) => {
+    const color = getStatusColorValue(status);
+    return {
+      backgroundColor: hexToRgba(color, 0.12),
+      color,
+      borderColor: hexToRgba(color, 0.4),
+    };
+  };
+
+  const getRowStyle = (status: Booking['status']) => ({
+    backgroundColor: hexToRgba(getStatusColorValue(status), 0.08),
+  });
 
   const questLookup = useMemo(() => {
     return new Map(quests.map((quest) => [quest.id, quest]));
@@ -403,6 +679,28 @@ export default function BookingsPage() {
     });
   };
 
+  const formatDateTimeLocal = (value?: string | null) => {
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    const pad = (num: number) => String(num).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const normalizeDateTimeForApi = (value: string) => {
+    if (!value) {
+      return value;
+    }
+    const date = new Date(value);
+    return date.toISOString();
+  };
+
   const getQuestData = (booking: Booking) => {
     if (!booking.questId) {
       return null;
@@ -443,6 +741,22 @@ export default function BookingsPage() {
 
   const getAggregatorLabel = (booking: Booking) => {
     return booking.aggregator || 'Наш сайт';
+  };
+
+  const visibleTableColumns = useMemo(
+    () => tableColumns.filter((column) => column.visible),
+    [tableColumns]
+  );
+
+  const totalTableWidth = useMemo(
+    () => visibleTableColumns.reduce((sum, column) => sum + column.width, 0),
+    [visibleTableColumns]
+  );
+
+  const updateTableColumn = (key: BookingTableColumnKey, updates: Partial<BookingTableColumnConfig>) => {
+    setTableColumns((prev) =>
+      prev.map((column) => (column.key === key ? { ...column, ...updates } : column))
+    );
   };
 
   const listItemsPerPage = viewMode === 'table' ? 10 : 9;
@@ -509,9 +823,136 @@ export default function BookingsPage() {
   }
 
   const availableSlots = scheduleSlots.filter((slot) => !slot.isBooked);
+  const renderActionButtons = (booking: Booking) => (
+    <>
+      <button
+        onClick={() => handleEditBooking(booking)}
+        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+        title="Редактировать"
+      >
+        <Edit className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => handleDeleteBooking(booking)}
+        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+        title="Удалить"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+      {(booking.status === 'pending' || booking.status === 'not_confirmed') && (
+        <button
+          onClick={() => updateStatus(booking, 'confirmed')}
+          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
+        >
+          Подтвердить
+        </button>
+      )}
+      {(booking.status === 'pending' ||
+        booking.status === 'confirmed' ||
+        booking.status === 'not_confirmed') && (
+        <button
+          onClick={() => updateStatus(booking, 'cancelled')}
+          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
+        >
+          Отменить
+        </button>
+      )}
+    </>
+  );
+
+  const renderTableCell = (booking: Booking, columnKey: BookingTableColumnKey) => {
+    const questPrice = getQuestPrice(booking);
+    const extraParticipantPrice = getExtraParticipantPrice(booking);
+    const extraServicesTotal = getExtraServicesTotal(booking);
+    switch (columnKey) {
+      case 'status':
+        return (
+          <span
+            className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
+            style={getStatusBadgeStyle(booking.status)}
+          >
+            {getStatusText(booking.status)}
+          </span>
+        );
+      case 'bookingDate':
+        return <span>{formatDateTime(booking.bookingDate)}</span>;
+      case 'createdAt':
+        return <span>{formatDateTime(booking.createdAt)}</span>;
+      case 'quest':
+        return <span>{getQuestTitle(booking)}</span>;
+      case 'questPrice':
+        return <span>{questPrice != null ? `${questPrice} ₽` : '—'}</span>;
+      case 'participants':
+        return <span>{booking.participantsCount}</span>;
+      case 'extraParticipants':
+        return <span>{booking.extraParticipantsCount ?? 0}</span>;
+      case 'extraParticipantPrice':
+        return <span>{extraParticipantPrice != null ? `${extraParticipantPrice} ₽` : '—'}</span>;
+      case 'extraServices':
+        return booking.extraServices?.length ? (
+          <ul className="space-y-1">
+            {booking.extraServices.map((service) => (
+              <li key={service.id} className="text-xs">
+                {service.title} · {service.price} ₽
+              </li>
+            ))}
+          </ul>
+        ) : (
+          '—'
+        );
+      case 'extraServicesPrice':
+        return <span>{extraServicesTotal ? `${extraServicesTotal} ₽` : '—'}</span>;
+      case 'aggregator':
+        return <span>{getAggregatorLabel(booking)}</span>;
+      case 'promoCode':
+        return booking.promoCode ? (
+          <div>
+            <div className="font-semibold">{booking.promoCode}</div>
+            {booking.promoDiscountAmount != null && (
+              <div className="text-xs text-gray-500">−{booking.promoDiscountAmount} ₽</div>
+            )}
+          </div>
+        ) : (
+          '—'
+        );
+      case 'totalPrice':
+        return <span>{booking.totalPrice} ₽</span>;
+      case 'customer':
+        return (
+          <div>
+            <div className="font-semibold text-gray-900">{booking.customerName}</div>
+            <div>
+              <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
+                {booking.customerPhone}
+              </a>
+            </div>
+            {booking.customerEmail && (
+              <div>
+                <a href={`mailto:${booking.customerEmail}`} className="hover:text-red-600">
+                  {booking.customerEmail}
+                </a>
+              </div>
+            )}
+          </div>
+        );
+      case 'notes':
+        return <p className="line-clamp-2">{booking.notes || '—'}</p>;
+      case 'actions':
+        return <div className="flex justify-end gap-2">{renderActionButtons(booking)}</div>;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+      />
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Управление бронированиями</h2>
         <button
@@ -573,6 +1014,15 @@ export default function BookingsPage() {
                 Таблица
               </button>
             </div>
+            {viewMode === 'table' && (
+              <button
+                onClick={() => setIsColumnsModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Колонки
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -688,155 +1138,38 @@ export default function BookingsPage() {
           </div>
 
           {viewMode === 'table' ? (
-            <div className="bg-white rounded-lg shadow overflow-auto">
-              <table className="min-w-full text-sm">
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <table
+                className="text-sm table-fixed"
+                style={{ width: totalTableWidth || '100%' }}
+              >
                 <thead className="bg-gray-50 text-gray-700">
                   <tr>
-                    <th className="text-left px-4 py-3 font-semibold">Статус</th>
-                    <th className="text-left px-4 py-3 font-semibold">Дата брони</th>
-                    <th className="text-left px-4 py-3 font-semibold">Создано</th>
-                    <th className="text-left px-4 py-3 font-semibold">Квест</th>
-                    <th className="text-left px-4 py-3 font-semibold">Цена квеста</th>
-                    <th className="text-left px-4 py-3 font-semibold">Участников</th>
-                    <th className="text-left px-4 py-3 font-semibold">Доп. участники</th>
-                    <th className="text-left px-4 py-3 font-semibold">Цена доп.</th>
-                    <th className="text-left px-4 py-3 font-semibold">Доп. услуги</th>
-                    <th className="text-left px-4 py-3 font-semibold">Цена доп. услуг</th>
-                    <th className="text-left px-4 py-3 font-semibold">Агрегатор</th>
-                    <th className="text-left px-4 py-3 font-semibold">Промокод</th>
-                    <th className="text-left px-4 py-3 font-semibold">Итог</th>
-                    <th className="text-left px-4 py-3 font-semibold">Клиент</th>
-                    <th className="text-left px-4 py-3 font-semibold">Комментарий</th>
-                    <th className="text-right px-4 py-3 font-semibold">Действия</th>
+                    {visibleTableColumns.map((column) => (
+                      <th
+                        key={column.key}
+                        className={`px-4 py-3 font-semibold ${column.key === 'actions' ? 'text-right' : 'text-left'}`}
+                        style={{ width: column.width }}
+                      >
+                        {column.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {paginatedBookings.map((booking) => {
-                    const questPrice = getQuestPrice(booking);
-                    const extraParticipantPrice = getExtraParticipantPrice(booking);
-                    const extraServicesTotal = getExtraServicesTotal(booking);
-                    return (
-                      <tr key={booking.id}>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                              booking.status
-                            )}`}
-                          >
-                            {getStatusText(booking.status)}
-                          </span>
+                  {paginatedBookings.map((booking) => (
+                    <tr key={booking.id} style={getRowStyle(booking.status)}>
+                      {visibleTableColumns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={`px-4 py-3 ${column.key === 'actions' ? 'text-right' : 'text-gray-700'}`}
+                          style={{ width: column.width }}
+                        >
+                          {renderTableCell(booking, column.key)}
                         </td>
-                        <td className="px-4 py-3 text-gray-700">{formatDateTime(booking.bookingDate)}</td>
-                        <td className="px-4 py-3 text-gray-700">{formatDateTime(booking.createdAt)}</td>
-                        <td className="px-4 py-3 text-gray-700">{getQuestTitle(booking)}</td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {questPrice != null ? `${questPrice} ₽` : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{booking.participantsCount}</td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {booking.extraParticipantsCount ?? 0}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {extraParticipantPrice != null ? `${extraParticipantPrice} ₽` : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {booking.extraServices?.length ? (
-                            <ul className="space-y-1">
-                              {booking.extraServices.map((service) => (
-                                <li key={service.id} className="text-xs">
-                                  {service.title} · {service.price} ₽
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {extraServicesTotal ? `${extraServicesTotal} ₽` : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{getAggregatorLabel(booking)}</td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {booking.promoCode ? (
-                            <div>
-                              <div className="font-semibold">{booking.promoCode}</div>
-                              {booking.promoDiscountAmount != null && (
-                                <div className="text-xs text-gray-500">
-                                  −{booking.promoDiscountAmount} ₽
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{booking.totalPrice} ₽</td>
-                        <td className="px-4 py-3 text-gray-700">
-                          <div className="font-semibold text-gray-900">{booking.customerName}</div>
-                          <div>
-                            <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
-                              {booking.customerPhone}
-                            </a>
-                          </div>
-                          {booking.customerEmail && (
-                            <div>
-                              <a
-                                href={`mailto:${booking.customerEmail}`}
-                                className="hover:text-red-600"
-                              >
-                                {booking.customerEmail}
-                              </a>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          <p className="line-clamp-2">{booking.notes || '—'}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => handleEditBooking(booking)}
-                              className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                              title="Редактировать"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteBooking(booking)}
-                              className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                              title="Удалить"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                            {booking.status === 'pending' && (
-                              <button
-                                onClick={() => updateStatus(booking, 'confirmed')}
-                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                              >
-                                Подтвердить
-                              </button>
-                            )}
-                            {booking.status === 'confirmed' && (
-                              <button
-                                onClick={() => updateStatus(booking, 'completed')}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                              >
-                                Завершить
-                              </button>
-                            )}
-                            {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                              <button
-                                onClick={() => updateStatus(booking, 'cancelled')}
-                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                              >
-                                Отменить
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -848,9 +1181,8 @@ export default function BookingsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                            booking.status
-                          )}`}
+                          className="px-3 py-1 rounded-full text-xs font-bold border"
+                          style={getStatusBadgeStyle(booking.status)}
                         >
                           {getStatusText(booking.status)}
                         </span>
@@ -867,49 +1199,10 @@ export default function BookingsPage() {
                       </p>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditBooking(booking)}
-                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                        title="Редактировать"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteBooking(booking)}
-                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                        title="Удалить"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      {booking.status === 'pending' && (
-                        <button
-                          onClick={() => updateStatus(booking, 'confirmed')}
-                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                        >
-                          Подтвердить
-                        </button>
-                      )}
-                      {booking.status === 'confirmed' && (
-                        <button
-                          onClick={() => updateStatus(booking, 'completed')}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                        >
-                          Завершить
-                        </button>
-                      )}
-                      {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                        <button
-                          onClick={() => updateStatus(booking, 'cancelled')}
-                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
-                        >
-                          Отменить
-                        </button>
-                      )}
-                    </div>
+                    <div className="flex flex-wrap gap-2">{renderActionButtons(booking)}</div>
                   </div>
 
-                  <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div className="flex items-center gap-2 text-gray-700">
                       <User className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Клиент:</span>
@@ -923,19 +1216,6 @@ export default function BookingsPage() {
                         {booking.customerPhone}
                       </a>
                     </div>
-
-                    {booking.customerEmail && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Mail className="w-4 h-4 text-red-600" />
-                        <span className="font-semibold">Email:</span>
-                        <a
-                          href={`mailto:${booking.customerEmail}`}
-                          className="hover:text-red-600"
-                        >
-                          {booking.customerEmail}
-                        </a>
-                      </div>
-                    )}
 
                     <div className="flex items-center gap-2 text-gray-700">
                       <Calendar className="w-4 h-4 text-red-600" />
@@ -987,7 +1267,19 @@ export default function BookingsPage() {
                         )}
                       </div>
                     )}
-                    <div className="flex items-start gap-2 text-gray-700">
+                    {booking.customerEmail && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Mail className="w-4 h-4 text-red-600" />
+                        <span className="font-semibold">Email:</span>
+                        <a
+                          href={`mailto:${booking.customerEmail}`}
+                          className="hover:text-red-600"
+                        >
+                          {booking.customerEmail}
+                        </a>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-2 text-gray-700 sm:col-span-2">
                       <span className="font-semibold">Доп. услуги:</span>
                       <div>
                         {booking.extraServices?.length ? (
@@ -1244,13 +1536,117 @@ export default function BookingsPage() {
             </div>
             <div className="p-6 space-y-4">
               <div
-                className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                  editingBooking.status
-                )}`}
+                className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
+                style={getStatusBadgeStyle(editingBooking.status)}
               >
                 {getStatusText(editingBooking.status)}
               </div>
               <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Квест
+                  </label>
+                  <select
+                    value={editingBooking.questId || ''}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        questId: e.target.value || null,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">Без квеста</option>
+                    {quests.map((quest) => (
+                      <option key={quest.id} value={quest.id}>
+                        {quest.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    ID слота
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.questScheduleId || ''}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        questScheduleId: e.target.value || null,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Название квеста
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.questTitle}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, questTitle: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Цена квеста
+                  </label>
+                  <input
+                    type="number"
+                    value={editingBooking.questPrice}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        questPrice: Number(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Агрегатор
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.aggregator}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, aggregator: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="Наш сайт"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата и время брони
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={editingBooking.bookingDate}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, bookingDate: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата создания
+                  </label>
+                  <input
+                    type="text"
+                    value={formatDateTime(editingBooking.createdAt)}
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Имя клиента
@@ -1279,7 +1675,7 @@ export default function BookingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email (опционально)
+                    Email
                   </label>
                   <input
                     type="email"
@@ -1302,6 +1698,133 @@ export default function BookingsPage() {
                       setEditingBooking({
                         ...editingBooking,
                         participantsCount: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Доп. участников
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingBooking.extraParticipantsCount}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        extraParticipantsCount: parseInt(e.target.value, 10) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Цена доп. участников
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingBooking.extraParticipantPrice}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        extraParticipantPrice: Number(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Итоговая сумма
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingBooking.totalPrice}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        totalPrice: Number(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Тип оплаты
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.paymentType}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, paymentType: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Промокод
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.promoCode}
+                    onChange={(e) =>
+                      setEditingBooking({ ...editingBooking, promoCode: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Тип скидки
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBooking.promoDiscountType}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        promoDiscountType: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Значение скидки
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingBooking.promoDiscountValue}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        promoDiscountValue: Number(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Сумма скидки
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingBooking.promoDiscountAmount}
+                    onChange={(e) =>
+                      setEditingBooking({
+                        ...editingBooking,
+                        promoDiscountAmount: Number(e.target.value) || 0,
                       })
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
@@ -1332,6 +1855,46 @@ export default function BookingsPage() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дополнительные услуги
+                  </label>
+                  <div className="space-y-3">
+                    {editingBooking.extraServices.map((service, index) => (
+                      <div key={service.id} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <input
+                          type="text"
+                          value={service.title}
+                          onChange={(e) => updateExtraService(index, 'title', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          placeholder="Название услуги"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          value={service.price}
+                          onChange={(e) => updateExtraService(index, 'price', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          placeholder="Цена"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExtraService(index)}
+                          className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addExtraService}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
+                    >
+                      Добавить услугу
+                    </button>
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Комментарий
                   </label>
                   <textarea
@@ -1359,6 +1922,116 @@ export default function BookingsPage() {
               >
                 <X className="w-4 h-4" />
                 Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isColumnsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Настройка таблицы</h3>
+                <p className="text-xs text-gray-500">Выберите колонки и их ширину</p>
+              </div>
+              <button
+                onClick={() => setIsColumnsModalOpen(false)}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {tableColumns.map((column) => (
+                  <div key={column.key} className="rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={column.visible}
+                          disabled={column.locked}
+                          onChange={(e) =>
+                            updateTableColumn(column.key, { visible: e.target.checked })
+                          }
+                          className="h-4 w-4 accent-red-600"
+                        />
+                        {column.label}
+                      </label>
+                    </div>
+                    <div className="mt-3">
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                        Ширина (px)
+                      </label>
+                      <input
+                        type="number"
+                        min={80}
+                        value={column.width}
+                        onChange={(e) =>
+                          updateTableColumn(column.key, {
+                            width: Math.max(80, Number(e.target.value) || column.width),
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setTableColumns(bookingTableDefaultColumns)}
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Сбросить настройки
+                </button>
+                <button
+                  onClick={() => setIsColumnsModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                >
+                  Готово
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {actionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">{actionModal.title}</h3>
+              <button
+                onClick={closeActionModal}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5 text-sm text-gray-700">{actionModal.message}</div>
+            <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <button
+                onClick={closeActionModal}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                disabled={actionLoading}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => performAction(actionModal.onConfirm)}
+                className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors ${
+                  actionModal.tone === 'danger'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-gray-900 hover:bg-gray-800'
+                }`}
+                disabled={actionLoading}
+              >
+                {actionModal.confirmLabel || 'Да'}
               </button>
             </div>
           </div>
