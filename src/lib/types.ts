@@ -84,6 +84,13 @@ export type Settings = {
   certificatePagePricing: string | null;
   reviewsMode: string | null;
   reviewsFlampEmbed: string | null;
+  bookingStatusPlannedColor: string | null;
+  bookingStatusCreatedColor: string | null;
+  bookingStatusPendingColor: string | null;
+  bookingStatusNotConfirmedColor: string | null;
+  bookingStatusConfirmedColor: string | null;
+  bookingStatusCompletedColor: string | null;
+  bookingStatusCancelledColor: string | null;
   bookingDaysAhead: number;
   bookingCutoffMinutes: number;
   timeZone: string | null;
@@ -98,6 +105,10 @@ export type Booking = {
   id: string;
   questId: string | null;
   questScheduleId: string | null;
+  aggregator: string | null;
+  questTitle?: string | null;
+  questPrice?: number | null;
+  extraParticipantPrice?: number | null;
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
@@ -110,7 +121,14 @@ export type Booking = {
   promoDiscountType: string | null;
   promoDiscountValue: number | null;
   promoDiscountAmount: number | null;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'cancelled'
+    | 'completed'
+    | 'planned'
+    | 'created'
+    | 'not_confirmed';
   notes: string | null;
   extraServices: BookingExtraService[];
   createdAt: string;
@@ -134,7 +152,27 @@ export type BookingCreate = {
 export type BookingUpdate = Partial<
   Pick<
     Booking,
-    'status' | 'notes' | 'customerName' | 'customerPhone' | 'customerEmail' | 'participantsCount'
+    | 'status'
+    | 'notes'
+    | 'customerName'
+    | 'customerPhone'
+    | 'customerEmail'
+    | 'participantsCount'
+    | 'extraParticipantsCount'
+    | 'bookingDate'
+    | 'totalPrice'
+    | 'paymentType'
+    | 'promoCode'
+    | 'promoDiscountType'
+    | 'promoDiscountValue'
+    | 'promoDiscountAmount'
+    | 'questId'
+    | 'questScheduleId'
+    | 'aggregator'
+    | 'questTitle'
+    | 'questPrice'
+    | 'extraParticipantPrice'
+    | 'extraServices'
   >
 >;
 
