@@ -19,6 +19,28 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
   const giftLabel = quest.giftGameLabel || 'Подарить игру';
   const giftUrl = quest.giftGameUrl || '/certificate';
   const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const getVideoEmbedUrl = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.replace('www.', '');
+      if (hostname === 'youtube.com') {
+        const videoId = parsed.searchParams.get('v');
+        if (videoId) {
+          return `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+      if (hostname === 'youtu.be') {
+        const videoId = parsed.pathname.replace('/', '');
+        if (videoId) {
+          return `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+  const videoEmbedUrl = quest.videoUrl ? getVideoEmbedUrl(quest.videoUrl) : null;
   const formatAgeRating = (value?: string | null) => {
     const trimmed = value?.trim() ?? '';
     const match = trimmed.match(/^(\d+)\s*\+$/);
@@ -223,7 +245,7 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
               ))}
           </div>
 
-          {quest.videoUrl && useVideoModal && isVideoOpen && (
+          {quest.videoUrl && useVideoModal && isVideoOpen && videoEmbedUrl && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
               onClick={closeVideoModal}
@@ -245,7 +267,7 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
                 <div className="relative w-full overflow-hidden pb-[56.25%]">
                   <iframe
                     className="absolute inset-0 h-full w-full"
-                    src={quest.videoUrl}
+                    src={videoEmbedUrl}
                     title={`Видео квеста ${quest.title}`}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
