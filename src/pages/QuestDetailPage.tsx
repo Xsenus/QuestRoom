@@ -177,8 +177,6 @@ export default function QuestDetailPage() {
     return minutesLeft <= cutoffMinutes;
   };
 
-  const slotWidth = 68;
-  const slotGap = 8;
   const priceLineInset = 10;
 
   if (loading) {
@@ -358,13 +356,13 @@ export default function QuestDetailPage() {
           </div>
         </div>
 
-        <div className="bg-purple-900/40 backdrop-blur-sm rounded-lg p-8 overflow-x-auto">
+        <div className="bg-purple-900/40 backdrop-blur-sm rounded-lg p-8 overflow-x-hidden sm:overflow-x-auto">
           <h2 className="text-3xl font-bold text-white text-center mb-8">
             Расписание на квест {quest.title}
           </h2>
 
           {Object.keys(groupedSchedule).length > 0 ? (
-            <div className="space-y-6 min-w-max">
+            <div className="space-y-6 sm:min-w-max [--slot-width:56px] [--slot-gap:8px] sm:[--slot-width:68px]">
               {Object.entries(groupedSchedule).map(([date, slots]) => (
                 <div key={date} className="flex gap-6 items-start">
                   <div className="flex-shrink-0 w-32 sm:w-40 text-white pt-1">
@@ -373,7 +371,7 @@ export default function QuestDetailPage() {
                   </div>
 
                   <div className="flex-1 space-y-2">
-                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                    <div className="flex flex-wrap gap-2 overflow-x-hidden pb-1 sm:flex-nowrap sm:overflow-x-auto">
                       {slots.map((slot) => {
                         const slotIsClosed = isSlotClosed(slot);
                         const isDisabled = slot.isBooked || slotIsClosed;
@@ -387,7 +385,7 @@ export default function QuestDetailPage() {
                             }}
                             aria-disabled={isDisabled}
                             type="button"
-                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                            className={`w-[var(--slot-width)] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
                               slot.isBooked || slotIsClosed
                                 ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
                                 : 'bg-green-600 text-white hover:bg-green-500'
@@ -406,13 +404,13 @@ export default function QuestDetailPage() {
                         );
                       })}
                     </div>
-                    <div className="flex flex-nowrap gap-2 text-[11px] text-white/80">
+                    <div className="flex flex-wrap gap-2 text-[11px] text-white/80 sm:flex-nowrap">
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
-                          className="relative flex flex-col items-center gap-1"
+                          className="relative flex max-w-full flex-col items-center gap-1"
                           style={{
-                            width: `${group.slots.length * slotWidth + (group.slots.length - 1) * slotGap}px`,
+                            width: `calc(${group.slots.length} * var(--slot-width) + (${group.slots.length} - 1) * var(--slot-gap))`,
                             ['--price-line-inset' as string]: `${priceLineInset}px`,
                           }}
                         >
