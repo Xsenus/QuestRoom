@@ -415,6 +415,13 @@ public class ContentService : IContentService
                 CertificatePagePricing = dto.CertificatePagePricing,
                 ReviewsMode = dto.ReviewsMode,
                 ReviewsFlampEmbed = dto.ReviewsFlampEmbed,
+                BookingStatusPlannedColor = dto.BookingStatusPlannedColor,
+                BookingStatusCreatedColor = dto.BookingStatusCreatedColor,
+                BookingStatusPendingColor = dto.BookingStatusPendingColor,
+                BookingStatusNotConfirmedColor = dto.BookingStatusNotConfirmedColor,
+                BookingStatusConfirmedColor = dto.BookingStatusConfirmedColor,
+                BookingStatusCompletedColor = dto.BookingStatusCompletedColor,
+                BookingStatusCancelledColor = dto.BookingStatusCancelledColor,
                 BookingDaysAhead = dto.BookingDaysAhead > 0 ? dto.BookingDaysAhead : 10,
                 BookingCutoffMinutes = dto.BookingCutoffMinutes > 0 ? dto.BookingCutoffMinutes : 10,
                 TimeZone = dto.TimeZone,
@@ -475,6 +482,20 @@ public class ContentService : IContentService
                 dto.CertificatePagePricing ?? existing.CertificatePagePricing;
             existing.ReviewsMode = dto.ReviewsMode ?? existing.ReviewsMode;
             existing.ReviewsFlampEmbed = dto.ReviewsFlampEmbed ?? existing.ReviewsFlampEmbed;
+            existing.BookingStatusPlannedColor =
+                dto.BookingStatusPlannedColor ?? existing.BookingStatusPlannedColor;
+            existing.BookingStatusCreatedColor =
+                dto.BookingStatusCreatedColor ?? existing.BookingStatusCreatedColor;
+            existing.BookingStatusPendingColor =
+                dto.BookingStatusPendingColor ?? existing.BookingStatusPendingColor;
+            existing.BookingStatusNotConfirmedColor =
+                dto.BookingStatusNotConfirmedColor ?? existing.BookingStatusNotConfirmedColor;
+            existing.BookingStatusConfirmedColor =
+                dto.BookingStatusConfirmedColor ?? existing.BookingStatusConfirmedColor;
+            existing.BookingStatusCompletedColor =
+                dto.BookingStatusCompletedColor ?? existing.BookingStatusCompletedColor;
+            existing.BookingStatusCancelledColor =
+                dto.BookingStatusCancelledColor ?? existing.BookingStatusCancelledColor;
             if (dto.BookingDaysAhead > 0)
             {
                 existing.BookingDaysAhead = dto.BookingDaysAhead;
@@ -631,6 +652,13 @@ public class ContentService : IContentService
             CertificatePagePricing = settings.CertificatePagePricing,
             ReviewsMode = settings.ReviewsMode,
             ReviewsFlampEmbed = settings.ReviewsFlampEmbed,
+            BookingStatusPlannedColor = settings.BookingStatusPlannedColor,
+            BookingStatusCreatedColor = settings.BookingStatusCreatedColor,
+            BookingStatusPendingColor = settings.BookingStatusPendingColor,
+            BookingStatusNotConfirmedColor = settings.BookingStatusNotConfirmedColor,
+            BookingStatusConfirmedColor = settings.BookingStatusConfirmedColor,
+            BookingStatusCompletedColor = settings.BookingStatusCompletedColor,
+            BookingStatusCancelledColor = settings.BookingStatusCancelledColor,
             BookingDaysAhead = settings.BookingDaysAhead,
             BookingCutoffMinutes = settings.BookingCutoffMinutes,
             TimeZone = settings.TimeZone,

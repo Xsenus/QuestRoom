@@ -44,6 +44,13 @@ public class SettingsDto
     public string? CertificatePagePricing { get; set; }
     public string? ReviewsMode { get; set; }
     public string? ReviewsFlampEmbed { get; set; }
+    public string? BookingStatusPlannedColor { get; set; }
+    public string? BookingStatusCreatedColor { get; set; }
+    public string? BookingStatusPendingColor { get; set; }
+    public string? BookingStatusNotConfirmedColor { get; set; }
+    public string? BookingStatusConfirmedColor { get; set; }
+    public string? BookingStatusCompletedColor { get; set; }
+    public string? BookingStatusCancelledColor { get; set; }
     public int BookingDaysAhead { get; set; }
     public int BookingCutoffMinutes { get; set; }
     public string? TimeZone { get; set; }
