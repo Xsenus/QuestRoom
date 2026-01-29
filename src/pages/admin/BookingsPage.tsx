@@ -17,6 +17,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 type ActionModalState = {
   title: string;
@@ -72,6 +73,7 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
 ];
 
 export default function BookingsPage() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -142,27 +144,14 @@ export default function BookingsPage() {
     extraServices: Booking['extraServices'];
   } | null>(null);
   const listRangeStorageKey = 'admin_bookings_list_range';
-  const tableColumnsStorageKey = 'admin_bookings_table_columns';
-  const [tableColumns, setTableColumns] = useState<BookingTableColumnConfig[]>(() => {
-    if (typeof window === 'undefined') {
-      return bookingTableDefaultColumns;
-    }
-    const saved = localStorage.getItem(tableColumnsStorageKey);
-    if (!saved) {
-      return bookingTableDefaultColumns;
-    }
-    try {
-      const parsed = JSON.parse(saved) as BookingTableColumnConfig[];
-      const parsedMap = new Map(parsed.map((col) => [col.key, col]));
-      return bookingTableDefaultColumns.map((col) => ({
-        ...col,
-        ...parsedMap.get(col.key),
-        locked: col.locked,
-      }));
-    } catch {
-      return bookingTableDefaultColumns;
-    }
-  });
+  const tableColumnsStorageKey = useMemo(
+    () => `admin_bookings_table_columns_${user?.email ?? 'guest'}`,
+    [user?.email]
+  );
+  const [tableColumns, setTableColumns] = useState<BookingTableColumnConfig[]>(
+    bookingTableDefaultColumns
+  );
+  const [columnsLoadedKey, setColumnsLoadedKey] = useState<string | null>(null);
 
   const formatDate = (value: Date) => value.toISOString().split('T')[0];
 
@@ -229,9 +218,39 @@ export default function BookingsPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      if (columnsLoadedKey !== tableColumnsStorageKey) {
+        return;
+      }
       localStorage.setItem(tableColumnsStorageKey, JSON.stringify(tableColumns));
     }
-  }, [tableColumns, tableColumnsStorageKey]);
+  }, [tableColumns, tableColumnsStorageKey, columnsLoadedKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const saved = localStorage.getItem(tableColumnsStorageKey);
+    if (!saved) {
+      setTableColumns(bookingTableDefaultColumns);
+      setColumnsLoadedKey(tableColumnsStorageKey);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(saved) as BookingTableColumnConfig[];
+      const parsedMap = new Map(parsed.map((col) => [col.key, col]));
+      setTableColumns(
+        bookingTableDefaultColumns.map((col) => ({
+          ...col,
+          ...parsedMap.get(col.key),
+          locked: col.locked,
+        }))
+      );
+    } catch {
+      setTableColumns(bookingTableDefaultColumns);
+      setColumnsLoadedKey(tableColumnsStorageKey);
+    }
+    setColumnsLoadedKey(tableColumnsStorageKey);
+  }, [tableColumnsStorageKey]);
 
   useEffect(() => {
     setCurrentPage(1);

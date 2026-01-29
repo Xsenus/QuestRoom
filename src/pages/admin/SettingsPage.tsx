@@ -69,7 +69,6 @@ export default function SettingsPage() {
     { key: 'bookingStatusCompletedColor', label: 'Завершено', fallback: '#3b82f6' },
     { key: 'bookingStatusCancelledColor', label: 'Отменено', fallback: '#ef4444' },
   ] as const;
-  const bookingStatusColorsStorageKey = 'admin_booking_status_colors';
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,40 +92,19 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     try {
       const data = await api.getSettings();
-      let storedColors: Partial<Record<(typeof bookingStatusColorOptions)[number]['key'], string>> =
-        {};
-      if (typeof window !== 'undefined') {
-        const savedColors = localStorage.getItem(bookingStatusColorsStorageKey);
-        if (savedColors) {
-          try {
-            storedColors = JSON.parse(savedColors);
-          } catch {
-            storedColors = {};
-          }
-        }
-      }
       setSettings({
         ...data,
         bookingDaysAhead: data.bookingDaysAhead ?? 10,
         bookingCutoffMinutes: data.bookingCutoffMinutes ?? 10,
         timeZone: data.timeZone ?? null,
         videoModalEnabled: data.videoModalEnabled ?? false,
-        bookingStatusPlannedColor:
-          data.bookingStatusPlannedColor ?? storedColors.bookingStatusPlannedColor ?? null,
-        bookingStatusCreatedColor:
-          data.bookingStatusCreatedColor ?? storedColors.bookingStatusCreatedColor ?? null,
-        bookingStatusPendingColor:
-          data.bookingStatusPendingColor ?? storedColors.bookingStatusPendingColor ?? null,
-        bookingStatusNotConfirmedColor:
-          data.bookingStatusNotConfirmedColor ??
-          storedColors.bookingStatusNotConfirmedColor ??
-          null,
-        bookingStatusConfirmedColor:
-          data.bookingStatusConfirmedColor ?? storedColors.bookingStatusConfirmedColor ?? null,
-        bookingStatusCompletedColor:
-          data.bookingStatusCompletedColor ?? storedColors.bookingStatusCompletedColor ?? null,
-        bookingStatusCancelledColor:
-          data.bookingStatusCancelledColor ?? storedColors.bookingStatusCancelledColor ?? null,
+        bookingStatusPlannedColor: data.bookingStatusPlannedColor ?? null,
+        bookingStatusCreatedColor: data.bookingStatusCreatedColor ?? null,
+        bookingStatusPendingColor: data.bookingStatusPendingColor ?? null,
+        bookingStatusNotConfirmedColor: data.bookingStatusNotConfirmedColor ?? null,
+        bookingStatusConfirmedColor: data.bookingStatusConfirmedColor ?? null,
+        bookingStatusCompletedColor: data.bookingStatusCompletedColor ?? null,
+        bookingStatusCancelledColor: data.bookingStatusCancelledColor ?? null,
       });
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -250,18 +228,6 @@ export default function SettingsPage() {
 
     try {
       await api.updateSettings(payload);
-      if (typeof window !== 'undefined') {
-        const colorPayload: Record<string, string | null> = {
-          bookingStatusPlannedColor: settings.bookingStatusPlannedColor,
-          bookingStatusCreatedColor: settings.bookingStatusCreatedColor,
-          bookingStatusPendingColor: settings.bookingStatusPendingColor,
-          bookingStatusNotConfirmedColor: settings.bookingStatusNotConfirmedColor,
-          bookingStatusConfirmedColor: settings.bookingStatusConfirmedColor,
-          bookingStatusCompletedColor: settings.bookingStatusCompletedColor,
-          bookingStatusCancelledColor: settings.bookingStatusCancelledColor,
-        };
-        localStorage.setItem(bookingStatusColorsStorageKey, JSON.stringify(colorPayload));
-      }
       setNotification({
         isOpen: true,
         title: 'Настройки сохранены',
