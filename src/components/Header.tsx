@@ -38,14 +38,14 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
           </Link>
 
           <nav className="w-full bg-[#1c1438]/70 backdrop-blur-sm py-2 md:py-3">
-            <div className="grid grid-cols-3 gap-2 md:flex md:flex-wrap md:justify-center md:gap-4 px-2 md:px-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-3 lg:grid-cols-6 px-2 md:px-4">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.id}
                     to={item.path}
-                    className={`flex flex-col items-center gap-1 px-1 py-2 md:flex-1 md:basis-[120px] md:space-y-2 md:px-3 md:py-3 md:rounded-lg transition-all md:hover:scale-[1.02] ${
+                    className={`flex flex-col items-center gap-1 px-1 py-2 md:space-y-2 md:px-3 md:py-3 md:rounded-lg transition-all md:hover:scale-[1.02] ${
                       isActive(item.path)
                         ? 'text-white md:bg-slate-800/80'
                         : 'text-white/80 md:hover:text-white md:hover:bg-slate-800/40'
