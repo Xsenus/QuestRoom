@@ -142,7 +142,7 @@ export default function AdminLayout() {
             )}
             <NavLink to="/adm/rules" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <FileText className="w-5 h-5" />
-              {!isMenuCollapsed && 'Парвила'}
+              {!isMenuCollapsed && 'Правила'}
             </NavLink>
             <NavLink to="/adm/about" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Info className="w-5 h-5" />
