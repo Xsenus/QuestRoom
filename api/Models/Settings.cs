@@ -106,6 +106,12 @@ public class Settings
     [Column("notify_certificate_customer")]
     public bool NotifyCertificateCustomer { get; set; }
 
+    [Column("certificate_email_template_admin")]
+    public string? CertificateEmailTemplateAdmin { get; set; }
+
+    [Column("certificate_email_template_customer")]
+    public string? CertificateEmailTemplateCustomer { get; set; }
+
     [Column("phone")]
     public string? Phone { get; set; }
 
