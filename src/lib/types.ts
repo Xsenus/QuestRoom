@@ -86,6 +86,7 @@ export type Settings = {
   reviewsFlampEmbed: string | null;
   bookingDaysAhead: number;
   promotionsPerRow: number | null;
+  videoModalEnabled: boolean;
   updatedAt: string;
 };
 

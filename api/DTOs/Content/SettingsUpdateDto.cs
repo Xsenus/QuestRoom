@@ -45,4 +45,5 @@ public class SettingsUpdateDto
     public string? ReviewsFlampEmbed { get; set; }
     public int BookingDaysAhead { get; set; }
     public int PromotionsPerRow { get; set; }
+    public bool? VideoModalEnabled { get; set; }
 }

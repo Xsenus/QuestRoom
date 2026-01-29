@@ -1,13 +1,14 @@
-import type { MouseEvent } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key, Youtube } from 'lucide-react';
+import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key, Youtube, X } from 'lucide-react';
 import { Quest } from '../lib/types';
 
 interface QuestCardProps {
   quest: Quest;
+  useVideoModal?: boolean;
 }
 
-export default function QuestCard({ quest }: QuestCardProps) {
+export default function QuestCard({ quest, useVideoModal = false }: QuestCardProps) {
   const navigate = useNavigate();
   const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
   const additionalImages = quest.images?.slice(0, 4) || [];
@@ -17,6 +18,29 @@ export default function QuestCard({ quest }: QuestCardProps) {
   const filledKeys = Math.min(difficultyValue, difficultyMax);
   const giftLabel = quest.giftGameLabel || 'Подарить игру';
   const giftUrl = quest.giftGameUrl || '/certificate';
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const getVideoEmbedUrl = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.replace('www.', '');
+      if (hostname === 'youtube.com') {
+        const videoId = parsed.searchParams.get('v');
+        if (videoId) {
+          return `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+      if (hostname === 'youtu.be') {
+        const videoId = parsed.pathname.replace('/', '');
+        if (videoId) {
+          return `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+  const videoEmbedUrl = quest.videoUrl ? getVideoEmbedUrl(quest.videoUrl) : null;
   const formatAgeRating = (value?: string | null) => {
     const trimmed = value?.trim() ?? '';
     const match = trimmed.match(/^(\d+)\s*\+$/);
@@ -43,6 +67,22 @@ export default function QuestCard({ quest }: QuestCardProps) {
     event.preventDefault();
     event.stopPropagation();
     handleNavigate(targetUrl);
+  };
+
+  const handleLinkClick = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
+
+  const handleVideoClick = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (quest.videoUrl && useVideoModal) {
+      setIsVideoOpen(true);
+    }
+  };
+
+  const closeVideoModal = () => {
+    setIsVideoOpen(false);
   };
 
   return (
@@ -95,19 +135,36 @@ export default function QuestCard({ quest }: QuestCardProps) {
                         {giftLabel}
                       </button>
                     </div>
-                    {quest.videoUrl && (
-                      <button
-                        className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
-                        onClick={(event) => handleActionClick(event, quest.videoUrl)}
-                      >
-                        <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
-                          <Youtube className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                        </span>
-                        <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
-                          Видео
-                        </span>
-                      </button>
-                    )}
+                    {quest.videoUrl &&
+                      (useVideoModal ? (
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
+                          onClick={handleVideoClick}
+                        >
+                          <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                            <Youtube className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                          </span>
+                          <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
+                            Видео
+                          </span>
+                        </button>
+                      ) : (
+                        <a
+                          className="flex items-center gap-2 text-white/90 hover:text-white transition-all"
+                          href={quest.videoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="w-6 h-6 md:w-8 md:h-8 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                            <Youtube className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                          </span>
+                          <span className="font-semibold text-[10px] md:text-sm tracking-wide uppercase font-display">
+                            Видео
+                          </span>
+                        </a>
+                      ))}
                   </div>
                 </div>
               </div>
@@ -156,20 +213,80 @@ export default function QuestCard({ quest }: QuestCardProps) {
             >
               {giftLabel}
             </button>
-            {quest.videoUrl && (
-              <button
-                className="flex items-center justify-center gap-2 text-white/90 hover:text-white transition-all"
-                onClick={(event) => handleActionClick(event, quest.videoUrl)}
-              >
-                <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
-                  <Youtube className="w-4 h-4 text-white" />
-                </span>
-                <span className="font-semibold text-[10px] tracking-wide uppercase font-display">
-                  Видео
-                </span>
-              </button>
-            )}
+            {quest.videoUrl &&
+              (useVideoModal ? (
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-2 text-white/90 hover:text-white transition-all"
+                  onClick={handleVideoClick}
+                >
+                  <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                    <Youtube className="w-4 h-4 text-white" />
+                  </span>
+                  <span className="font-semibold text-[10px] tracking-wide uppercase font-display">
+                    Видео
+                  </span>
+                </button>
+              ) : (
+                <a
+                  className="flex items-center justify-center gap-2 text-white/90 hover:text-white transition-all"
+                  href={quest.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={handleLinkClick}
+                >
+                  <span className="w-6 h-6 bg-[#c51f2e] rounded-full flex items-center justify-center">
+                    <Youtube className="w-4 h-4 text-white" />
+                  </span>
+                  <span className="font-semibold text-[10px] tracking-wide uppercase font-display">
+                    Видео
+                  </span>
+                </a>
+              ))}
           </div>
+
+          {quest.videoUrl && useVideoModal && isVideoOpen && videoEmbedUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+              onClick={closeVideoModal}
+            >
+              <div
+                className="w-full max-w-4xl rounded-lg bg-black shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+                  <span className="text-sm font-semibold text-white">Видео</span>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={quest.videoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-white/80 hover:text-white"
+                      onClick={handleLinkClick}
+                    >
+                      Смотреть на YouTube
+                    </a>
+                    <button
+                      type="button"
+                      onClick={closeVideoModal}
+                      className="text-white/80 hover:text-white"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="relative w-full overflow-hidden pb-[56.25%]">
+                  <iframe
+                    className="absolute inset-0 h-full w-full"
+                    src={videoEmbedUrl}
+                    title={`Видео квеста ${quest.title}`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="absolute -top-3 -right-3 md:-top-6 md:-right-6 z-30">
             <img

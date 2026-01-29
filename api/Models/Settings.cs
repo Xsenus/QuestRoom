@@ -139,6 +139,9 @@ public class Settings
     [Column("promotions_per_row")]
     public int PromotionsPerRow { get; set; } = 1;
 
+    [Column("video_modal_enabled")]
+    public bool VideoModalEnabled { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }
