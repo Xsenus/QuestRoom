@@ -366,16 +366,15 @@ export default function QuestDetailPage() {
           {Object.keys(groupedSchedule).length > 0 ? (
             <div className="space-y-6 min-w-0">
               {Object.entries(groupedSchedule).map(([date, slots]) => (
-                <div key={date} className="flex flex-col gap-3 sm:flex-row sm:gap-6 sm:items-start">
-                  <div className="flex-shrink-0 w-full sm:w-40 text-white pt-1">
-                    <div className="flex items-baseline justify-between sm:flex-col sm:items-start sm:gap-1">
-                      <div className="text-base sm:text-lg font-bold">{getDisplayDate(date)}</div>
-                      <div className="text-xs sm:text-sm text-white/60">{getDayName(date)}</div>
+                <div key={date} className="flex flex-col gap-3 lg:flex-row lg:gap-6 lg:items-start">
+                  <div className="flex-shrink-0 w-full lg:w-40 text-white pt-1">
+                    <div className="text-base lg:text-lg font-bold">
+                      {getDisplayDate(date)} ({getDayName(date)})
                     </div>
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex flex-wrap gap-2 pb-1 sm:flex-nowrap sm:overflow-x-auto">
+                    <div className="flex flex-wrap gap-2 pb-1 lg:flex-nowrap lg:overflow-x-auto">
                       {slots.map((slot) => {
                         const slotIsClosed = isSlotClosed(slot);
                         const isDisabled = slot.isBooked || slotIsClosed;
@@ -405,7 +404,7 @@ export default function QuestDetailPage() {
                               {slot.timeSlot.substring(0, 5)}
                             </span>
                             <span
-                              className={`mt-1 block text-[10px] font-medium normal-case tracking-normal sm:hidden ${
+                              className={`mt-1 block text-[10px] font-medium normal-case tracking-normal lg:hidden ${
                                 slot.isBooked || slotIsClosed ? 'text-slate-900/70' : 'text-white/80'
                               }`}
                             >
@@ -415,7 +414,7 @@ export default function QuestDetailPage() {
                         );
                       })}
                     </div>
-                    <div className="hidden flex-wrap gap-2 text-[11px] text-white/80 sm:flex sm:flex-nowrap">
+                    <div className="hidden flex-wrap gap-2 text-[11px] text-white/80 lg:flex lg:flex-nowrap">
                       {groupSlotsByPrice(slots).map((group) => (
                         <div
                           key={`${date}-${group.price}-${group.slots[0].id}`}
