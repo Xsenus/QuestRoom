@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Plus, ShieldCheck, Trash2, Lock, Unlock, KeyRound, Search, RefreshCw } from 'lucide-react';
+import { Plus, ShieldCheck, Trash2, Lock, Unlock, KeyRound, Search, RefreshCw, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { AdminUser, AdminUserUpsert, RoleDefinition } from '../../lib/types';
+import NotificationModal from '../../components/NotificationModal';
 
 interface EditableUser {
   id: string;
@@ -26,6 +27,7 @@ const statusBadgeStyles: Record<AdminUser['status'], string> = {
 };
 
 export default function UsersPage() {
+  const protectedAdminEmail = 'admin@questroom.local';
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -40,6 +42,12 @@ export default function UsersPage() {
   const [createPassword, setCreatePassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({ isOpen: false, title: '', message: '', tone: 'info' });
 
   useEffect(() => {
     loadData();
@@ -94,7 +102,7 @@ export default function UsersPage() {
   const startCreate = () => {
     const defaultRole = roles[0];
     setEditor({
-      id: `u-${Date.now()}`,
+      id: '',
       name: '',
       email: '',
       phone: '',
@@ -127,11 +135,21 @@ export default function UsersPage() {
   const saveEditor = async () => {
     if (!editor) return;
     if (!editor.name.trim() || !editor.email.trim()) {
-      alert('Заполните имя и email пользователя.');
+      setNotification({
+        isOpen: true,
+        title: 'Проверьте данные',
+        message: 'Заполните имя и email пользователя.',
+        tone: 'error',
+      });
       return;
     }
     if (isCreating && !createPassword.trim()) {
-      alert('Введите пароль для нового пользователя.');
+      setNotification({
+        isOpen: true,
+        title: 'Проверьте данные',
+        message: 'Введите пароль для нового пользователя.',
+        tone: 'error',
+      });
       return;
     }
 
@@ -150,16 +168,33 @@ export default function UsersPage() {
         const created = await api.createAdminUser(payload);
         setUsers((prev) => [created, ...prev]);
         setSelectedId(created.id);
+        setNotification({
+          isOpen: true,
+          title: 'Пользователь создан',
+          message: `Пользователь ${created.name} успешно добавлен.`,
+          tone: 'success',
+        });
       } else {
         const updated = await api.updateAdminUser(editor.id, payload);
         setUsers((prev) => prev.map((user) => (user.id === updated.id ? updated : user)));
+        setNotification({
+          isOpen: true,
+          title: 'Изменения сохранены',
+          message: `Данные пользователя ${updated.name} обновлены.`,
+          tone: 'success',
+        });
       }
       setEditor(null);
       setIsCreating(false);
       setCreatePassword('');
       setError(null);
     } catch (saveError) {
-      alert(`Ошибка при сохранении пользователя: ${(saveError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка сохранения',
+        message: (saveError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
@@ -174,11 +209,25 @@ export default function UsersPage() {
       const updated = await api.updateAdminUserStatus(user.id, nextStatus);
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (blockError) {
-      alert(`Ошибка при изменении статуса: ${(blockError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка изменения статуса',
+        message: (blockError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
   const deleteUser = async (user: AdminUser) => {
+    if (user.email.toLowerCase() === protectedAdminEmail) {
+      setNotification({
+        isOpen: true,
+        title: 'Удаление запрещено',
+        message: 'Нельзя удалить основного администратора.',
+        tone: 'error',
+      });
+      return;
+    }
     if (!confirm(`Удалить пользователя ${user.name}?`)) return;
     try {
       await api.deleteAdminUser(user.id);
@@ -188,7 +237,12 @@ export default function UsersPage() {
         setSelectedId(remaining[0]?.id ?? null);
       }
     } catch (deleteError) {
-      alert(`Ошибка при удалении пользователя: ${(deleteError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка удаления',
+        message: (deleteError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
@@ -204,7 +258,12 @@ export default function UsersPage() {
       });
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (updateError) {
-      alert(`Ошибка при обновлении роли: ${(updateError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка обновления роли',
+        message: (updateError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
@@ -213,7 +272,12 @@ export default function UsersPage() {
       const updated = await api.updateAdminUserStatus(user.id, status);
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (updateError) {
-      alert(`Ошибка при обновлении статуса: ${(updateError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка обновления статуса',
+        message: (updateError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
@@ -227,8 +291,20 @@ export default function UsersPage() {
       await api.updateAdminUserPassword(selectedUser.id, passwordDraft);
       setPasswordStatus('Пароль обновлен.');
       setPasswordDraft('');
+      setNotification({
+        isOpen: true,
+        title: 'Пароль обновлен',
+        message: 'Новый пароль сохранен.',
+        tone: 'success',
+      });
     } catch (resetError) {
       setPasswordStatus(`Ошибка: ${(resetError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка смены пароля',
+        message: (resetError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
@@ -244,36 +320,49 @@ export default function UsersPage() {
         notes: noteDraft,
       });
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setNotification({
+        isOpen: true,
+        title: 'Заметки сохранены',
+        message: 'Комментарий пользователя обновлен.',
+        tone: 'success',
+      });
     } catch (notesError) {
-      alert(`Ошибка при сохранении заметок: ${(notesError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка сохранения заметок',
+        message: (notesError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Пользователи</h2>
           <p className="text-sm text-gray-500">
             Управляйте доступом, статусом и ролями пользователей админ-панели.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={startCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-semibold shadow hover:bg-red-700"
-        >
-          <Plus className="h-4 w-4" />
-          Добавить пользователя
-        </button>
-        <button
-          type="button"
-          onClick={loadData}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Обновить
-        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Обновить
+          </button>
+          <button
+            type="button"
+            onClick={startCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-semibold shadow hover:bg-red-700"
+          >
+            <Plus className="h-4 w-4" />
+            Добавить пользователя
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -414,111 +503,6 @@ export default function UsersPage() {
             </table>
           </div>
 
-          {editor && (
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {isCreating ? 'Новый пользователь' : 'Редактирование пользователя'}
-              </h3>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Имя</label>
-                  <input
-                    type="text"
-                    value={editor.name}
-                    onChange={(event) => setEditor({ ...editor, name: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                    placeholder="Иван Иванов"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    value={editor.email}
-                    onChange={(event) => setEditor({ ...editor, email: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                    placeholder="admin@questroom.ru"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Телефон</label>
-                  <input
-                    type="tel"
-                    value={editor.phone || ''}
-                    onChange={(event) => setEditor({ ...editor, phone: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                    placeholder="+7 (999) 999-99-99"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Роль</label>
-                  <select
-                    value={editor.roleId}
-                    onChange={(event) => setEditor({ ...editor, roleId: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                  >
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Статус</label>
-                  <select
-                    value={editor.status}
-                    onChange={(event) =>
-                      setEditor({ ...editor, status: event.target.value as AdminUser['status'] })
-                    }
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="active">Активен</option>
-                    <option value="pending">Ожидает доступа</option>
-                    <option value="blocked">Заблокирован</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Заметки</label>
-                  <input
-                    type="text"
-                    value={editor.notes || ''}
-                    onChange={(event) => setEditor({ ...editor, notes: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                    placeholder="Ответственный менеджер, роль согласована"
-                  />
-                </div>
-                {isCreating && (
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700">Пароль</label>
-                    <input
-                      type="password"
-                      value={createPassword}
-                      onChange={(event) => setCreatePassword(event.target.value)}
-                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                      placeholder="Минимум 6 символов"
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={saveEditor}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-                >
-                  Сохранить
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelEditor}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  Отмена
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         <aside className="space-y-4">
@@ -647,7 +631,8 @@ export default function UsersPage() {
                   <button
                     type="button"
                     onClick={() => deleteUser(selectedUser)}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    disabled={selectedUser.email.toLowerCase() === protectedAdminEmail}
+                    className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Trash2 className="h-4 w-4" />
                     Удалить пользователя
@@ -676,6 +661,138 @@ export default function UsersPage() {
           </div>
         </aside>
       </div>
+
+      {editor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isCreating ? 'Новый пользователь' : 'Редактирование пользователя'}
+              </h3>
+              <button
+                type="button"
+                onClick={cancelEditor}
+                className="inline-flex items-center justify-center rounded-full p-1 text-gray-500 hover:bg-gray-100"
+                aria-label="Закрыть"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Имя</label>
+                <input
+                  type="text"
+                  value={editor.name}
+                  onChange={(event) => setEditor({ ...editor, name: event.target.value })}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  placeholder="Иван Иванов"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Email</label>
+                <input
+                  type="email"
+                  value={editor.email}
+                  onChange={(event) => setEditor({ ...editor, email: event.target.value })}
+                  disabled={!isCreating && editor.email.toLowerCase() === protectedAdminEmail}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:bg-gray-100"
+                  placeholder="admin@questroom.ru"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Телефон</label>
+                <input
+                  type="tel"
+                  value={editor.phone || ''}
+                  onChange={(event) => setEditor({ ...editor, phone: event.target.value })}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  placeholder="+7 (999) 999-99-99"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Роль</label>
+                <select
+                  value={editor.roleId}
+                  onChange={(event) => setEditor({ ...editor, roleId: event.target.value })}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                >
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Статус</label>
+                <select
+                  value={editor.status}
+                  onChange={(event) =>
+                    setEditor({ ...editor, status: event.target.value as AdminUser['status'] })
+                  }
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                >
+                  <option value="active">Активен</option>
+                  <option value="pending">Ожидает доступа</option>
+                  <option value="blocked">Заблокирован</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Заметки</label>
+                <input
+                  type="text"
+                  value={editor.notes || ''}
+                  onChange={(event) => setEditor({ ...editor, notes: event.target.value })}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  placeholder="Ответственный менеджер, роль согласована"
+                />
+              </div>
+              {isCreating && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Пароль</label>
+                  <input
+                    type="password"
+                    value={createPassword}
+                    onChange={(event) => setCreatePassword(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    placeholder="Минимум 6 символов"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={cancelEditor}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={saveEditor}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() =>
+          setNotification((prev) => ({
+            ...prev,
+            isOpen: false,
+          }))
+        }
+      />
     </div>
   );
 }

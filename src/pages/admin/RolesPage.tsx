@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Check, Shield, Plus, Trash2, Pencil, RefreshCw } from 'lucide-react';
+import { Check, Shield, Plus, Trash2, Pencil, RefreshCw, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { PermissionGroup, RoleDefinition } from '../../lib/types';
+import NotificationModal from '../../components/NotificationModal';
 
 interface EditableRole {
   id: string;
@@ -19,6 +20,12 @@ export default function RolesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({ isOpen: false, title: '', message: '', tone: 'info' });
 
   useEffect(() => {
     loadData();
@@ -77,7 +84,12 @@ export default function RolesPage() {
   const saveEditor = async () => {
     if (!editor) return;
     if (!editor.name.trim()) {
-      alert('Название роли обязательно.');
+      setNotification({
+        isOpen: true,
+        title: 'Проверьте данные',
+        message: 'Название роли обязательно.',
+        tone: 'error',
+      });
       return;
     }
     try {
@@ -89,6 +101,12 @@ export default function RolesPage() {
         });
         setRoles((prev) => [created, ...prev]);
         setSelectedId(created.id);
+        setNotification({
+          isOpen: true,
+          title: 'Роль создана',
+          message: `Роль "${created.name}" успешно добавлена.`,
+          tone: 'success',
+        });
       } else {
         const updated = await api.updateRole(editor.id, {
           name: editor.name,
@@ -96,18 +114,34 @@ export default function RolesPage() {
           permissions: editor.permissions,
         });
         setRoles((prev) => prev.map((role) => (role.id === updated.id ? updated : role)));
+        setNotification({
+          isOpen: true,
+          title: 'Роль обновлена',
+          message: `Роль "${updated.name}" успешно обновлена.`,
+          tone: 'success',
+        });
       }
       setEditor(null);
       setIsCreating(false);
       setError(null);
     } catch (saveError) {
-      alert(`Ошибка при сохранении роли: ${(saveError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка сохранения',
+        message: (saveError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
   const deleteRole = async (role: RoleDefinition) => {
     if (role.isSystem) {
-      alert('Системные роли удалить нельзя.');
+      setNotification({
+        isOpen: true,
+        title: 'Удаление запрещено',
+        message: 'Системные роли удалить нельзя.',
+        tone: 'error',
+      });
       return;
     }
     if (!confirm(`Удалить роль ${role.name}?`)) return;
@@ -119,7 +153,12 @@ export default function RolesPage() {
         setSelectedId(remaining[0]?.id ?? null);
       }
     } catch (deleteError) {
-      alert(`Ошибка при удалении роли: ${(deleteError as Error).message}`);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка удаления',
+        message: (deleteError as Error).message,
+        tone: 'error',
+      });
     }
   };
 
@@ -144,19 +183,19 @@ export default function RolesPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={startCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-semibold shadow hover:bg-red-700"
-          >
-            <Plus className="h-4 w-4" />
-            Создать роль
-          </button>
-          <button
-            type="button"
             onClick={loadData}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
           >
             <RefreshCw className="h-4 w-4" />
             Обновить
+          </button>
+          <button
+            type="button"
+            onClick={startCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-semibold shadow hover:bg-red-700"
+          >
+            <Plus className="h-4 w-4" />
+            Создать роль
           </button>
         </div>
       </div>
@@ -249,98 +288,6 @@ export default function RolesPage() {
             </table>
           </div>
 
-          {editor && (
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {isCreating ? 'Новая роль' : 'Редактирование роли'}
-                </h3>
-                {editor.system && (
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-                    Системная роль
-                  </span>
-                )}
-              </div>
-              <div className="mt-4 grid gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Название</label>
-                  <input
-                    type="text"
-                    value={editor.name}
-                    onChange={(event) => setEditor({ ...editor, name: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                    placeholder="Например: Старший менеджер"
-                    disabled={editor.system}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Описание</label>
-                  <textarea
-                    value={editor.description}
-                    onChange={(event) => setEditor({ ...editor, description: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                    rows={3}
-                    placeholder="Опишите, за что отвечает роль"
-                    disabled={editor.system}
-                  />
-                </div>
-              </div>
-              <div className="mt-6 space-y-4">
-                <h4 className="text-sm font-semibold text-gray-700">Права доступа</h4>
-                <div className="grid gap-4">
-                  {permissionGroups.map((group) => (
-                    <div key={group.id} className="rounded-lg border border-gray-200 p-4">
-                      <div className="mb-3">
-                        <div className="text-sm font-semibold text-gray-900">{group.title}</div>
-                        <div className="text-xs text-gray-500">{group.description}</div>
-                      </div>
-                      <div className="grid gap-2 md:grid-cols-2">
-                        {group.permissions.map((permission) => (
-                          <label
-                            key={permission.id}
-                            className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={editor.permissions.includes(permission.id)}
-                              onChange={() => togglePermission(permission.id)}
-                              className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                              disabled={editor.system}
-                            />
-                            <span>
-                              <span className="font-semibold text-gray-800">{permission.title}</span>
-                              <span className="block text-xs text-gray-500">
-                                {permission.description}
-                              </span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={saveEditor}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-                >
-                  Сохранить роль
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditor(null);
-                    setIsCreating(false);
-                  }}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  Отмена
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         <aside className="space-y-4">
@@ -403,6 +350,127 @@ export default function RolesPage() {
           </div>
         </aside>
       </div>
+
+      {editor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isCreating ? 'Новая роль' : 'Редактирование роли'}
+              </h3>
+              <div className="flex items-center gap-2">
+                {editor.system && (
+                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                    Системная роль
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditor(null);
+                    setIsCreating(false);
+                  }}
+                  className="inline-flex items-center justify-center rounded-full p-1 text-gray-500 hover:bg-gray-100"
+                  aria-label="Закрыть"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4">
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Название</label>
+                <input
+                  type="text"
+                  value={editor.name}
+                  onChange={(event) => setEditor({ ...editor, name: event.target.value })}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  placeholder="Например: Старший менеджер"
+                  disabled={editor.system}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700">Описание</label>
+                <textarea
+                  value={editor.description}
+                  onChange={(event) => setEditor({ ...editor, description: event.target.value })}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  rows={3}
+                  placeholder="Опишите, за что отвечает роль"
+                  disabled={editor.system}
+                />
+              </div>
+            </div>
+            <div className="mt-6 space-y-4">
+              <h4 className="text-sm font-semibold text-gray-700">Права доступа</h4>
+              <div className="grid gap-4">
+                {permissionGroups.map((group) => (
+                  <div key={group.id} className="rounded-lg border border-gray-200 p-4">
+                    <div className="mb-3">
+                      <div className="text-sm font-semibold text-gray-900">{group.title}</div>
+                      <div className="text-xs text-gray-500">{group.description}</div>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {group.permissions.map((permission) => (
+                        <label
+                          key={permission.id}
+                          className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={editor.permissions.includes(permission.id)}
+                            onChange={() => togglePermission(permission.id)}
+                            className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            disabled={editor.system}
+                          />
+                          <span>
+                            <span className="font-semibold text-gray-800">{permission.title}</span>
+                            <span className="block text-xs text-gray-500">
+                              {permission.description}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditor(null);
+                  setIsCreating(false);
+                }}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={saveEditor}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Сохранить роль
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() =>
+          setNotification((prev) => ({
+            ...prev,
+            isOpen: false,
+          }))
+        }
+      />
     </div>
   );
 }

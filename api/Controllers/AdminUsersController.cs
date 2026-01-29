@@ -19,6 +19,7 @@ public class AdminUsersController : ControllerBase
         "blocked",
         "pending"
     };
+    private const string ProtectedAdminEmail = "admin@questroom.local";
 
     private readonly AppDbContext _context;
     private readonly IAuthService _authService;
@@ -126,6 +127,12 @@ public class AdminUsersController : ControllerBase
             return BadRequest("Пользователь с таким email уже существует.");
         }
 
+        if (string.Equals(user.Email, ProtectedAdminEmail, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(user.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Нельзя изменить email основного администратора.");
+        }
+
         var role = await _context.Roles.FindAsync(dto.RoleId);
         if (role == null)
         {
@@ -196,6 +203,11 @@ public class AdminUsersController : ControllerBase
         if (user == null)
         {
             return NotFound();
+        }
+
+        if (string.Equals(user.Email, ProtectedAdminEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Нельзя удалить основного администратора.");
         }
 
         _context.Users.Remove(user);
