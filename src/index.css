@@ -17,6 +17,20 @@
   scrollbar-width: none;
 }
 
+.quest-schedule {
+  --slot-width: 68px;
+  --slot-gap: 8px;
+  --price-line-inset: 10px;
+}
+
+@media (max-width: 640px) {
+  .quest-schedule {
+    --slot-width: 44px;
+    --slot-gap: 6px;
+    --price-line-inset: 8px;
+  }
+}
+
 .modal-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
