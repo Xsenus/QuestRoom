@@ -727,11 +727,15 @@ public class DatabaseInitializer : IDatabaseInitializer
             }
         }
 
-        if (adminRole != null && !await _context.Users.AnyAsync(u => u.RoleId == adminRole.Id))
+        if (adminRole != null)
         {
             var adminPassword = _configuration["AdminUser:Password"];
+            var adminExists = !string.IsNullOrWhiteSpace(adminEmail)
+                && await _context.Users.AnyAsync(u => u.Email.ToLower() == adminEmail.ToLower());
 
-            if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
+            if (!adminExists &&
+                !string.IsNullOrWhiteSpace(adminEmail) &&
+                !string.IsNullOrWhiteSpace(adminPassword))
             {
                 _context.Users.Add(new User
                 {

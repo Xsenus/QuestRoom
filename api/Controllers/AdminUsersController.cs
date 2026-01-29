@@ -69,7 +69,8 @@ public class AdminUsersController : ControllerBase
             return BadRequest("Пароль обязателен при создании пользователя.");
         }
 
-        var exists = await _context.Users.AnyAsync(user => user.Email == dto.Email);
+        var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
+        var exists = await _context.Users.AnyAsync(user => user.Email.ToLower() == normalizedEmail);
         if (exists)
         {
             return BadRequest("Пользователь с таким email уже существует.");
@@ -85,7 +86,7 @@ public class AdminUsersController : ControllerBase
         {
             Id = Guid.NewGuid(),
             Name = dto.Name.Trim(),
-            Email = dto.Email.Trim(),
+            Email = dto.Email.Trim().ToLowerInvariant(),
             Phone = dto.Phone,
             Status = dto.Status.ToLowerInvariant(),
             RoleId = dto.RoleId,
@@ -117,7 +118,9 @@ public class AdminUsersController : ControllerBase
             return NotFound();
         }
 
-        var emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != id);
+        var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
+        var emailExists = await _context.Users.AnyAsync(
+            u => u.Email.ToLower() == normalizedEmail && u.Id != id);
         if (emailExists)
         {
             return BadRequest("Пользователь с таким email уже существует.");
@@ -130,7 +133,7 @@ public class AdminUsersController : ControllerBase
         }
 
         user.Name = dto.Name.Trim();
-        user.Email = dto.Email.Trim();
+        user.Email = normalizedEmail;
         user.Phone = dto.Phone;
         user.Status = dto.Status.ToLowerInvariant();
         user.RoleId = dto.RoleId;
