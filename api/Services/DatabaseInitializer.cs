@@ -667,19 +667,84 @@ public class DatabaseInitializer : IDatabaseInitializer
             });
         }
 
-        if (!await _context.Users.AnyAsync(u => u.Role == "admin"))
-        {
-            var adminEmail = _configuration["AdminUser:Email"];
-            var adminPassword = _configuration["AdminUser:Password"];
+        var roleSeeds = PermissionCatalog.DefaultRoles;
+        var existingRoles = await _context.Roles.ToDictionaryAsync(role => role.Code);
 
-            if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
+        foreach (var seed in roleSeeds)
+        {
+            if (existingRoles.ContainsKey(seed.Code))
+            {
+                continue;
+            }
+
+            var role = new Role
+            {
+                Id = Guid.NewGuid(),
+                Code = seed.Code,
+                Name = seed.Name,
+                Description = seed.Description,
+                Permissions = seed.Permissions.ToList(),
+                IsSystem = seed.IsSystem,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Roles.Add(role);
+            existingRoles[seed.Code] = role;
+        }
+
+        var adminRole = existingRoles.TryGetValue("admin", out var roleEntry)
+            ? roleEntry
+            : null;
+        var viewerRole = existingRoles.TryGetValue("viewer", out var viewerEntry)
+            ? viewerEntry
+            : adminRole;
+
+        var adminEmail = _configuration["AdminUser:Email"];
+        var usersWithoutRole = await _context.Users
+            .Where(user => user.RoleId == null || user.RoleId == Guid.Empty)
+            .ToListAsync();
+
+        if (usersWithoutRole.Count > 0 && (adminRole != null || viewerRole != null))
+        {
+            foreach (var user in usersWithoutRole)
+            {
+                if (!string.IsNullOrWhiteSpace(adminEmail) &&
+                    adminRole != null &&
+                    string.Equals(user.Email, adminEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    user.RoleId = adminRole.Id;
+                }
+                else if (viewerRole != null)
+                {
+                    user.RoleId = viewerRole.Id;
+                }
+                else if (adminRole != null)
+                {
+                    user.RoleId = adminRole.Id;
+                }
+
+                user.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        if (adminRole != null)
+        {
+            var adminPassword = _configuration["AdminUser:Password"];
+            var adminExists = !string.IsNullOrWhiteSpace(adminEmail)
+                && await _context.Users.AnyAsync(u => u.Email.ToLower() == adminEmail.ToLower());
+
+            if (!adminExists &&
+                !string.IsNullOrWhiteSpace(adminEmail) &&
+                !string.IsNullOrWhiteSpace(adminPassword))
             {
                 _context.Users.Add(new User
                 {
                     Id = Guid.NewGuid(),
+                    Name = "Администратор",
                     Email = adminEmail,
                     PasswordHash = _authService.HashPassword(adminPassword),
-                    Role = "admin",
+                    Status = "active",
+                    RoleId = adminRole.Id,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 });
@@ -710,6 +775,8 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.ProductionCalendarDays.RemoveRange(await _context.ProductionCalendarDays.ToListAsync());
         _context.AboutInfos.RemoveRange(await _context.AboutInfos.ToListAsync());
         _context.Settings.RemoveRange(await _context.Settings.ToListAsync());
+        _context.Users.RemoveRange(await _context.Users.ToListAsync());
+        _context.Roles.RemoveRange(await _context.Roles.ToListAsync());
 
         await _context.SaveChangesAsync();
     }

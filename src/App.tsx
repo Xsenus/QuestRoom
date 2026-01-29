@@ -21,6 +21,8 @@ import CertificateOrdersAdminPage from './pages/admin/CertificateOrdersPage';
 import ReviewsAdminPage from './pages/admin/ReviewsAdminPage';
 import PromotionsAdminPage from './pages/admin/PromotionsAdminPage';
 import PromoCodesPage from './pages/admin/PromoCodesPage';
+import UsersPage from './pages/admin/UsersPage';
+import RolesPage from './pages/admin/RolesPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PricingRulesPage from './pages/admin/PricingRulesPage';
 import ScrollToTopButton from './components/ScrollToTopButton';
@@ -57,6 +59,8 @@ function App() {
                 <Route path="reviews" element={<ReviewsAdminPage />} />
                 <Route path="promotions" element={<PromotionsAdminPage />} />
                 <Route path="promo-codes" element={<PromoCodesPage />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="roles" element={<RolesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Routes>

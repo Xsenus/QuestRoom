@@ -336,3 +336,44 @@ export type ImageAsset = {
   url: string;
   createdAt: string;
 };
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  status: 'active' | 'blocked' | 'pending';
+  roleId: string;
+  roleName: string;
+  createdAt: string;
+  lastLoginAt?: string | null;
+  notes?: string | null;
+};
+
+export type AdminUserUpsert = {
+  name: string;
+  email: string;
+  phone?: string | null;
+  status: 'active' | 'blocked' | 'pending';
+  roleId: string;
+  notes?: string | null;
+  password?: string | null;
+};
+
+export type RoleDefinition = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  permissions: string[];
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PermissionGroup = {
+  id: string;
+  title: string;
+  description: string;
+  permissions: { id: string; title: string; description: string }[];
+};

@@ -1,6 +1,8 @@
 import type {
   AboutInfo,
   AboutInfoUpdate,
+  AdminUser,
+  AdminUserUpsert,
   Booking,
   BookingCreate,
   BookingUpdate,
@@ -11,6 +13,7 @@ import type {
   CertificateUpsert,
   DurationBadge,
   ImageAsset,
+  PermissionGroup,
   Promotion,
   PromotionUpsert,
   PromoCode,
@@ -28,6 +31,7 @@ import type {
   ReviewUpsert,
   Rule,
   RuleUpsert,
+  RoleDefinition,
   Settings,
   SettingsUpdate,
 } from './types';
@@ -112,8 +116,16 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const rawText = await response.text();
+      try {
+        const error = rawText ? JSON.parse(rawText) : { message: 'Request failed' };
+        if (typeof error === 'string') {
+          throw new Error(error);
+        }
+        throw new Error(error.message || `HTTP ${response.status}`);
+      } catch (parseError) {
+        throw new Error(rawText || `HTTP ${response.status}`);
+      }
     }
 
     if (response.status === 204) {
@@ -163,6 +175,81 @@ class ApiClient {
 
   getUserRole() {
     return localStorage.getItem('user_role') || '';
+  }
+
+  // Admin users & roles
+  async getAdminUsers(): Promise<AdminUser[]> {
+    return this.request('/admin/users');
+  }
+
+  async getAdminUser(id: string): Promise<AdminUser> {
+    return this.request(`/admin/users/${id}`);
+  }
+
+  async createAdminUser(payload: AdminUserUpsert): Promise<AdminUser> {
+    return this.request('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateAdminUser(id: string, payload: AdminUserUpsert): Promise<AdminUser> {
+    return this.request(`/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateAdminUserStatus(id: string, status: AdminUser['status']): Promise<AdminUser> {
+    return this.request(`/admin/users/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async updateAdminUserPassword(id: string, password: string) {
+    return this.request(`/admin/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
+    });
+  }
+
+  async deleteAdminUser(id: string) {
+    return this.request(`/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getRoles(): Promise<RoleDefinition[]> {
+    return this.request('/roles');
+  }
+
+  async getRole(id: string): Promise<RoleDefinition> {
+    return this.request(`/roles/${id}`);
+  }
+
+  async createRole(payload: Pick<RoleDefinition, 'name' | 'description' | 'permissions'>) {
+    return this.request('/roles', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateRole(id: string, payload: Pick<RoleDefinition, 'name' | 'description' | 'permissions'>) {
+    return this.request(`/roles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteRole(id: string) {
+    return this.request(`/roles/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getPermissionGroups(): Promise<PermissionGroup[]> {
+    return this.request('/roles/permission-groups');
   }
 
   // Quests
