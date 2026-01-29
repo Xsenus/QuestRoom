@@ -350,7 +350,9 @@ public class ScheduleService : IScheduleService
             .Select(day => day.Date)
             .ToListAsync();
 
-        var holidaySet = holidayDates.ToHashSet();
+        var holidaySet = holidayDates
+            .Where(date => date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
+            .ToHashSet();
 
         var existingSlots = await _context.QuestSchedules
             .Where(slot => slot.QuestId == questId && slot.Date >= fromDate && slot.Date <= toDate)
