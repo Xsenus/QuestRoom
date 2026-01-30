@@ -432,6 +432,7 @@ public class ContentService : IContentService
                 BackgroundGradientFrom = dto.BackgroundGradientFrom,
                 BackgroundGradientVia = dto.BackgroundGradientVia,
                 BackgroundGradientTo = dto.BackgroundGradientTo,
+                ScheduleBackground = dto.ScheduleBackground,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -528,6 +529,7 @@ public class ContentService : IContentService
             existing.BackgroundGradientFrom = dto.BackgroundGradientFrom;
             existing.BackgroundGradientVia = dto.BackgroundGradientVia;
             existing.BackgroundGradientTo = dto.BackgroundGradientTo;
+            existing.ScheduleBackground = dto.ScheduleBackground;
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -681,6 +683,7 @@ public class ContentService : IContentService
             BackgroundGradientFrom = settings.BackgroundGradientFrom,
             BackgroundGradientVia = settings.BackgroundGradientVia,
             BackgroundGradientTo = settings.BackgroundGradientTo,
+            ScheduleBackground = settings.ScheduleBackground,
             UpdatedAt = settings.UpdatedAt
         };
     }
