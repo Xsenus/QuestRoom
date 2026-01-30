@@ -314,19 +314,19 @@ export default function CertificateOrdersAdminPage() {
                       <button
                         type="button"
                         onClick={() => handleEdit(order)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                        className="inline-flex items-center rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50"
+                        title="Редактировать"
                       >
                         <Edit className="h-4 w-4" />
-                        Редактировать
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(order.id)}
                         disabled={isDeleting}
-                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                        className="inline-flex items-center rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                        title="Удалить"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Удалить
                       </button>
                     </div>
                   </td>
@@ -341,6 +341,7 @@ export default function CertificateOrdersAdminPage() {
             <article
               key={order.id}
               className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+              style={getRowStyle(order.status)}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -399,19 +400,19 @@ export default function CertificateOrdersAdminPage() {
                 <button
                   type="button"
                   onClick={() => handleEdit(order)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                  className="inline-flex items-center rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50"
+                  title="Редактировать"
                 >
                   <Edit className="h-4 w-4" />
-                  Редактировать
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(order.id)}
                   disabled={isDeleting}
-                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                  className="inline-flex items-center rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                  title="Удалить"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Удалить
                 </button>
               </div>
             </article>
