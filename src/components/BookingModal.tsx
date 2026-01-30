@@ -8,10 +8,17 @@ interface BookingModalProps {
   slot: QuestSchedule;
   quest: Quest;
   onClose: () => void;
+  onBookingCreated?: (slotId: string) => void;
   onBookingComplete: () => void;
 }
 
-export default function BookingModal({ slot, quest, onClose, onBookingComplete }: BookingModalProps) {
+export default function BookingModal({
+  slot,
+  quest,
+  onClose,
+  onBookingCreated,
+  onBookingComplete,
+}: BookingModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -28,11 +35,13 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     title: string;
     message: ReactNode;
     tone: 'success' | 'error' | 'info';
+    action?: 'success' | 'conflict' | 'error';
   }>({
     isOpen: false,
     title: '',
     message: '',
     tone: 'info',
+    action: undefined,
   });
 
   const questExtraServices = quest.extraServices || [];
@@ -90,10 +99,13 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
       const discountAmount = createdBooking.promoDiscountAmount ?? 0;
       const totalLabel = `${createdBooking.totalPrice} ₽`;
 
+      onBookingCreated?.(slot.id);
+
       setNotification({
         isOpen: true,
         title: 'Бронирование принято',
         tone: 'success',
+        action: 'success',
         message: (
           <div className="space-y-3">
             <p className="text-base font-semibold text-gray-900">
@@ -136,11 +148,17 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
       });
     } catch (error) {
       console.error('Error creating booking:', error);
+      const errorMessage = (error as Error).message || '';
+      const isSlotBooked = errorMessage.toLowerCase().includes('уже забронировано');
+
       setNotification({
         isOpen: true,
-        title: 'Не удалось создать бронь',
-        tone: 'error',
-        message: 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
+        title: isSlotBooked ? 'Это время уже занято' : 'Не удалось создать бронь',
+        tone: isSlotBooked ? 'info' : 'error',
+        action: isSlotBooked ? 'conflict' : 'error',
+        message: isSlotBooked
+          ? 'Похоже, другой пользователь уже забронировал выбранное время. Пожалуйста, выберите другой слот.'
+          : 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
       });
     } finally {
       setSubmitting(false);
@@ -374,7 +392,11 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
         showToneLabel={false}
         onClose={() => {
           setNotification({ ...notification, isOpen: false });
-          if (notification.tone === 'success') {
+          if (notification.action === 'success') {
+            onBookingComplete();
+            return;
+          }
+          if (notification.action === 'conflict') {
             onBookingComplete();
           }
         }}

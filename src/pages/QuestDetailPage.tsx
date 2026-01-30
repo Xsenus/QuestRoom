@@ -120,6 +120,12 @@ export default function QuestDetailPage() {
     }
   };
 
+  const handleBookingCreated = (slotId: string) => {
+    setSchedule((prev) =>
+      prev.map((slot) => (slot.id === slotId ? { ...slot, isBooked: true } : slot))
+    );
+  };
+
   const groupScheduleByDate = () => {
     const grouped: { [date: string]: QuestSchedule[] } = {};
     schedule.forEach((slot) => {
@@ -479,6 +485,7 @@ export default function QuestDetailPage() {
           slot={selectedSlot}
           quest={quest}
           onClose={() => setShowBookingModal(false)}
+          onBookingCreated={handleBookingCreated}
           onBookingComplete={handleBookingComplete}
         />
       )}
