@@ -33,6 +33,7 @@ export type QuestUpsert = Omit<
   'id' | 'createdAt' | 'updatedAt' | 'slug' | 'extraServices'
 > & {
   extraServices: QuestExtraServiceUpsert[];
+  slug?: string | null;
 };
 
 export type DurationBadge = {

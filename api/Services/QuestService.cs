@@ -94,7 +94,8 @@ public class QuestService : IQuestService
             UpdatedAt = DateTime.UtcNow
         };
 
-        quest.Slug = await BuildUniqueSlugAsync(quest.Title, quest.Id);
+        var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? quest.Title : dto.Slug;
+        quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
         quest.ExtraServices = dto.ExtraServices
             .Where(service => !string.IsNullOrWhiteSpace(service.Title))
             .Select(service => new QuestExtraService
@@ -126,7 +127,8 @@ public class QuestService : IQuestService
 
         quest.Title = dto.Title;
         quest.Description = dto.Description;
-        quest.Slug = await BuildUniqueSlugAsync(dto.Title, quest.Id);
+        var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? dto.Title : dto.Slug;
+        quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
         quest.Addresses = dto.Addresses;
         quest.Phones = dto.Phones;
         quest.ParticipantsMin = dto.ParticipantsMin;
