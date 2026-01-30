@@ -387,6 +387,7 @@ dotnet publish -c Release
 ## Дополнительная документация
 
 - [API Documentation](./api/README.md) - Подробная документация по C# API
+- [Deploy на VPS (RU)](./docs/DEPLOYMENT.md) - Автоматический деплой на Ubuntu 22+
 
 ## Технологический стек
 
