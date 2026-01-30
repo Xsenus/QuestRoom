@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Certificate, CertificateUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
+import NotificationModal from '../../components/NotificationModal';
+
+type DeleteModalState = {
+  id: string;
+  title: string;
+};
+
+type NotificationState = {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  tone: 'success' | 'error' | 'info';
+};
 
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -10,6 +23,14 @@ export default function CertificatesPage() {
     (CertificateUpsert & { id?: string }) | null
   >(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<DeleteModalState | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [notification, setNotification] = useState<NotificationState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
+  });
 
   useEffect(() => {
     loadCertificates();
@@ -73,14 +94,36 @@ export default function CertificatesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить этот сертификат?')) return;
+  const handleDelete = (cert: Certificate) => {
+    setDeleteModal({ id: cert.id, title: cert.title });
+  };
 
+  const closeDeleteModal = () => {
+    setDeleteModal(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal) return;
+    setIsDeleting(true);
     try {
-      await api.deleteCertificate(id);
-      loadCertificates();
+      await api.deleteCertificate(deleteModal.id);
+      await loadCertificates();
+      setNotification({
+        isOpen: true,
+        title: 'Сертификат удалён',
+        message: `Сертификат «${deleteModal.title}» удалён.`,
+        tone: 'success',
+      });
+      closeDeleteModal();
     } catch (error) {
-      alert('Ошибка при удалении сертификата: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка удаления',
+        message: (error as Error).message,
+        tone: 'error',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -160,7 +203,7 @@ export default function CertificatesPage() {
                 )}
               </button>
               <button
-                onClick={() => handleDelete(cert.id)}
+                onClick={() => handleDelete(cert)}
                 className="flex-1 p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                 title="Удалить"
               >
@@ -316,6 +359,56 @@ export default function CertificatesPage() {
           </div>
         </div>
       )}
+
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Удалить сертификат</h3>
+              <button
+                onClick={closeDeleteModal}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                aria-label="Закрыть"
+                disabled={isDeleting}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5 text-sm text-gray-700">
+              Удалить сертификат «{deleteModal.title}»? Это действие необратимо.
+            </div>
+            <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <button
+                onClick={closeDeleteModal}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                disabled={isDeleting}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg font-semibold text-white transition-colors bg-red-600 hover:bg-red-700"
+                disabled={isDeleting}
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() =>
+          setNotification((prev) => ({
+            ...prev,
+            isOpen: false,
+          }))
+        }
+      />
     </div>
   );
 }
