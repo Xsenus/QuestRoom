@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Bookings;
 using QuestRoomApi.Models;
@@ -17,11 +18,16 @@ public class BookingService : IBookingService
 {
     private readonly AppDbContext _context;
     private readonly IEmailNotificationService _emailNotificationService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public BookingService(AppDbContext context, IEmailNotificationService emailNotificationService)
+    public BookingService(
+        AppDbContext context,
+        IEmailNotificationService emailNotificationService,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _emailNotificationService = emailNotificationService;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync()
@@ -177,7 +183,9 @@ public class BookingService : IBookingService
             {
                 try
                 {
-                    await _emailNotificationService.SendBookingNotificationsAsync(booking);
+                    using var scope = _scopeFactory.CreateScope();
+                    var scopedNotificationService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
+                    await scopedNotificationService.SendBookingNotificationsAsync(booking);
                 }
                 catch
                 {
