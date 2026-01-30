@@ -9,6 +9,7 @@ interface NotificationModalProps {
   message: ReactNode;
   tone?: NotificationTone;
   showToneLabel?: boolean;
+  actions?: ReactNode;
   onClose: () => void;
 }
 
@@ -33,6 +34,7 @@ export default function NotificationModal({
   message,
   tone = 'info',
   showToneLabel = true,
+  actions,
   onClose,
 }: NotificationModalProps) {
   if (!isOpen) {
@@ -65,13 +67,17 @@ export default function NotificationModal({
               {tone === 'success' ? 'Успешно' : tone === 'error' ? 'Ошибка' : 'Информация'}
             </span>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
-          >
-            Понятно
-          </button>
+          {actions ? (
+            actions
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+            >
+              Понятно
+            </button>
+          )}
         </div>
       </div>
     </div>

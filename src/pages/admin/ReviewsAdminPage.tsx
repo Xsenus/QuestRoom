@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { api } from '../../lib/api';
 import { Review, ReviewUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Star } from 'lucide-react';
+import NotificationModal from '../../components/NotificationModal';
 
 export default function ReviewsAdminPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -16,6 +17,19 @@ export default function ReviewsAdminPage() {
     }
     const saved = localStorage.getItem('admin_reviews_view');
     return saved === 'table' ? 'table' : 'cards';
+  });
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: ReactNode;
+    tone: 'success' | 'error' | 'info';
+    showToneLabel?: boolean;
+    actions?: ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
   });
 
   useEffect(() => {
@@ -97,15 +111,63 @@ export default function ReviewsAdminPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить этот отзыв?')) return;
+  const closeNotification = () => {
+    setNotification((prev) => ({ ...prev, isOpen: false }));
+  };
 
+  const confirmDelete = async (review: Review) => {
     try {
-      await api.deleteReview(id);
+      await api.deleteReview(review.id);
+      setNotification({
+        isOpen: true,
+        title: 'Отзыв удален',
+        message: `Отзыв от ${review.customerName} удален.`,
+        tone: 'success',
+      });
       loadReviews();
     } catch (error) {
-      alert('Ошибка при удалении отзыва: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка удаления',
+        message: (error as Error).message,
+        tone: 'error',
+      });
     }
+  };
+
+  const handleDelete = (review: Review) => {
+    setNotification({
+      isOpen: true,
+      title: 'Удалить отзыв?',
+      message: (
+        <div className="space-y-2">
+          <p>Вы действительно хотите удалить этот отзыв?</p>
+          <p className="text-xs text-gray-500">
+            {review.customerName} • {review.questTitle}
+          </p>
+        </div>
+      ),
+      tone: 'info',
+      showToneLabel: false,
+      actions: (
+        <>
+          <button
+            type="button"
+            onClick={closeNotification}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={() => confirmDelete(review)}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+          >
+            Удалить
+          </button>
+        </>
+      ),
+    });
   };
 
   if (loading) {
@@ -387,7 +449,7 @@ export default function ReviewsAdminPage() {
                         )}
                       </button>
                       <button
-                        onClick={() => handleDelete(review.id)}
+                        onClick={() => handleDelete(review)}
                         className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                         title="Удалить"
                       >
@@ -487,7 +549,7 @@ export default function ReviewsAdminPage() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleDelete(review.id)}
+                    onClick={() => handleDelete(review)}
                     className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                     title="Удалить"
                   >
@@ -506,6 +568,16 @@ export default function ReviewsAdminPage() {
           <p className="text-gray-500 mt-2">Добавьте первый отзыв</p>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        showToneLabel={notification.showToneLabel}
+        actions={notification.actions}
+        onClose={closeNotification}
+      />
     </div>
   );
 }
