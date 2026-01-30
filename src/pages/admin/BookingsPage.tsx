@@ -829,9 +829,13 @@ export default function BookingsPage() {
     };
   };
 
-  const getRowStyle = (status: Booking['status']) => ({
-    backgroundColor: hexToRgba(getStatusColorValue(status), 0.08),
-  });
+  const getRowStyle = (status: Booking['status']) => {
+    const color = getStatusColorValue(status);
+    return {
+      backgroundColor: hexToRgba(color, 0.18),
+      boxShadow: `inset 4px 0 0 ${hexToRgba(color, 0.7)}`,
+    };
+  };
 
   const questLookup = useMemo(() => {
     return new Map(quests.map((quest) => [quest.id, quest]));
@@ -1643,7 +1647,7 @@ export default function BookingsPage() {
 
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Создать бронь</h3>
@@ -1658,7 +1662,13 @@ export default function BookingsPage() {
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto">
-              <div className="grid md:grid-cols-3 gap-4">
+              <div
+                className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
+                style={getStatusBadgeStyle('created')}
+              >
+                Новая бронь
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Квест</label>
                   <select
@@ -1672,6 +1682,26 @@ export default function BookingsPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Слот
+                  </label>
+                  <select
+                    value={selectedSlotId}
+                    onChange={(e) => setSelectedSlotId(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">Выберите слот</option>
+                    {availableSlots.map((slot) => (
+                      <option key={slot.id} value={slot.id}>
+                        {slot.date} · {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Доступно слотов: {availableSlots.length}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1695,86 +1725,62 @@ export default function BookingsPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
                 </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Слот</label>
-                  <select
-                    value={selectedSlotId}
-                    onChange={(e) => setSelectedSlotId(e.target.value)}
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Имя клиента
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  >
-                    <option value="">Выберите слот</option>
-                    {availableSlots.map((slot) => (
-                      <option key={slot.id} value={slot.id}>
-                        {slot.date} · {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Доступно слотов: {availableSlots.length}
-                  </p>
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Имя клиента
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Телефон
-                    </label>
-                    <input
-                      type="text"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email (опционально)
-                    </label>
-                    <input
-                      type="email"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Участников
-                    </label>
-                    <input
-                      type="number"
-                      value={participantsCount}
-                      onChange={(e) => setParticipantsCount(parseInt(e.target.value) || 1)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      min="1"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Телефон
+                  </label>
+                  <input
+                    type="text"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Комментарий
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  rows={2}
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email (опционально)
+                  </label>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Участников
+                  </label>
+                  <input
+                    type="number"
+                    value={participantsCount}
+                    onChange={(e) => setParticipantsCount(parseInt(e.target.value) || 1)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    min="1"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Комментарий
+                  </label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    rows={2}
+                  />
+                </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-gray-200">
