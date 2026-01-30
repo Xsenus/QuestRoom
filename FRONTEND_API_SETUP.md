@@ -12,12 +12,14 @@
 
 ```env
 VITE_API_URL=http://localhost:5000/api
+VITE_API_PROXY_TARGET=http://localhost:3001
 ```
 
 Для production:
 
 ```env
 VITE_API_URL=https://your-api-domain.com/api
+VITE_API_PROXY_TARGET=https://your-api-domain.com
 ```
 
 Также можно использовать разные файлы окружения:
@@ -38,6 +40,12 @@ npm install
 ```bash
 npm run dev
 ```
+
+## Прокси для /api во время разработки
+
+Vite dev server настроен проксировать запросы `GET/POST /api/*` в API, чтобы при открытии
+`http://<frontend-host>/api/...` не возвращался HTML фронтенда. Настройка выполняется
+через переменную `VITE_API_PROXY_TARGET` (по умолчанию `http://localhost:3001`).
 
 ## Изменения в коде
 
