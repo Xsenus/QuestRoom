@@ -85,19 +85,11 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [selectedQuestId, setSelectedQuestId] = useState<string>('');
+  const [defaultQuestId, setDefaultQuestId] = useState<string>('');
   const [scheduleSlots, setScheduleSlots] = useState<QuestSchedule[]>([]);
-  const [selectedSlotId, setSelectedSlotId] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
-  const [customerName, setCustomerName] = useState<string>('');
-  const [customerPhone, setCustomerPhone] = useState<string>('');
-  const [customerEmail, setCustomerEmail] = useState<string>('');
-  const [participantsCount, setParticipantsCount] = useState<number>(2);
-  const [notes, setNotes] = useState<string>('');
   const [createResult, setCreateResult] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [bookingFormMode, setBookingFormMode] = useState<'create' | 'edit' | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
     if (typeof window === 'undefined') {
       return 'cards';
@@ -138,6 +130,7 @@ export default function BookingsPage() {
     customerPhone: string;
     customerEmail: string;
     bookingDate: string;
+    bookingTime: string;
     createdAt: string;
     participantsCount: number;
     extraParticipantsCount: number;
@@ -295,8 +288,6 @@ export default function BookingsPage() {
 
   useEffect(() => {
     const today = new Date();
-    const createRangeEnd = new Date(today);
-    createRangeEnd.setDate(today.getDate() + 30);
     const listRangeEnd = new Date(today);
     listRangeEnd.setDate(today.getDate() + 14);
     let storedListFrom = '';
@@ -324,8 +315,6 @@ export default function BookingsPage() {
       listTo = formatDate(getEndOfNextMonth(today));
     }
 
-    setDateFrom(formatDate(today));
-    setDateTo(formatDate(createRangeEnd));
     setListDateFrom(listFrom);
     setListDateTo(listTo);
     loadBookings();
@@ -430,12 +419,6 @@ export default function BookingsPage() {
   }, [statusFilter, questFilter, aggregatorFilter, promoCodeFilter, listDateFrom, listDateTo, viewMode]);
 
   useEffect(() => {
-    if (selectedQuestId && dateFrom && dateTo) {
-      loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
-    }
-  }, [selectedQuestId, dateFrom, dateTo]);
-
-  useEffect(() => {
     if (!resizeState) {
       return;
     }
@@ -457,6 +440,32 @@ export default function BookingsPage() {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [resizeState, updateTableColumn]);
+
+  useEffect(() => {
+    if (!editingBooking?.questId || !editingBooking.bookingDate) {
+      return;
+    }
+    loadScheduleSlots(editingBooking.questId, editingBooking.bookingDate, editingBooking.bookingDate);
+  }, [editingBooking?.questId, editingBooking?.bookingDate]);
+
+  useEffect(() => {
+    if (!editingBooking?.bookingDate || !editingBooking.bookingTime) {
+      return;
+    }
+    if (editingBooking.questScheduleId) {
+      return;
+    }
+    const matchingSlot = scheduleSlots.find(
+      (slot) =>
+        slot.date === editingBooking.bookingDate &&
+        slot.timeSlot.startsWith(editingBooking.bookingTime)
+    );
+    if (matchingSlot) {
+      setEditingBooking((prev) =>
+        prev ? { ...prev, questScheduleId: matchingSlot.id } : prev
+      );
+    }
+  }, [editingBooking?.bookingDate, editingBooking?.bookingTime, editingBooking?.questScheduleId, scheduleSlots]);
 
   const loadBookings = async () => {
     try {
@@ -483,7 +492,7 @@ export default function BookingsPage() {
       const data = await api.getQuests();
       setQuests(data || []);
       if (data?.length) {
-        setSelectedQuestId(data[0].id);
+        setDefaultQuestId(data[0].id);
       }
     } catch (error) {
       console.error('Error loading quests:', error);
@@ -513,44 +522,43 @@ export default function BookingsPage() {
   };
 
   const handleCreateBooking = async () => {
-    if (!selectedSlotId) {
-      setCreateResult('Выберите слот для брони.');
+    if (!editingBooking) {
+      return;
+    }
+    if (!editingBooking.questScheduleId) {
+      setCreateResult('Выберите свободное время для брони.');
       return;
     }
 
-    const slot = scheduleSlots.find((s) => s.id === selectedSlotId);
+    const slot = scheduleSlots.find((s) => s.id === editingBooking.questScheduleId);
     if (!slot) {
       setCreateResult('Слот не найден.');
       return;
     }
 
-    if (!customerName || !customerPhone) {
+    if (!editingBooking.customerName || !editingBooking.customerPhone) {
       setCreateResult('Укажите имя и телефон клиента.');
       return;
     }
 
     try {
       await api.createBooking({
-        questId: selectedQuestId,
+        questId: editingBooking.questId,
         questScheduleId: slot.id,
-        customerName,
-        customerPhone,
-        customerEmail: customerEmail || null,
+        customerName: editingBooking.customerName,
+        customerPhone: editingBooking.customerPhone,
+        customerEmail: editingBooking.customerEmail || null,
         bookingDate: slot.date,
-        participantsCount,
-        notes: notes || null,
+        participantsCount: editingBooking.participantsCount,
+        notes: editingBooking.notes || null,
         extraServiceIds: [],
+        paymentType: editingBooking.paymentType || null,
+        promoCode: editingBooking.promoCode || null,
       });
       setCreateResult('Бронь создана.');
-      setSelectedSlotId('');
-      setCustomerName('');
-      setCustomerPhone('');
-      setCustomerEmail('');
-      setParticipantsCount(2);
-      setNotes('');
-      setIsCreateModalOpen(false);
+      setEditingBooking(null);
+      setBookingFormMode(null);
       loadBookings();
-      loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
     } catch (error) {
       setCreateResult('Ошибка создания брони: ' + (error as Error).message);
     }
@@ -590,9 +598,6 @@ export default function BookingsPage() {
       onConfirm: async () => {
         await api.deleteBooking(booking.id);
         await loadBookings();
-        if (selectedQuestId && dateFrom && dateTo) {
-          await loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
-        }
         setNotification({
           isOpen: true,
           title: 'Бронь удалена',
@@ -612,9 +617,6 @@ export default function BookingsPage() {
       onConfirm: async () => {
         await api.updateBooking(booking.id, { status, notes: booking.notes });
         await loadBookings();
-        if (selectedQuestId && dateFrom && dateTo) {
-          await loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
-        }
         setNotification({
           isOpen: true,
           title: 'Статус обновлён',
@@ -626,15 +628,52 @@ export default function BookingsPage() {
   };
 
   const openCreateModal = () => {
+    const quest = quests.find((item) => item.id === defaultQuestId) || quests[0];
+    const today = formatDate(new Date());
     setCreateResult('');
-    setIsCreateModalOpen(true);
+    setBookingFormMode('create');
+    setEditingBooking({
+      id: 'new',
+      questId: quest?.id ?? null,
+      questScheduleId: null,
+      aggregator: '',
+      questTitle: quest?.title ?? '',
+      questPrice: quest?.price ?? 0,
+      extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
+      customerName: '',
+      customerPhone: '',
+      customerEmail: '',
+      bookingDate: today,
+      bookingTime: '',
+      createdAt: new Date().toISOString(),
+      participantsCount: 2,
+      extraParticipantsCount: 0,
+      totalPrice: quest?.price ?? 0,
+      paymentType: 'cash',
+      promoCode: '',
+      promoDiscountType: '',
+      promoDiscountValue: 0,
+      promoDiscountAmount: 0,
+      notes: '',
+      status: 'created',
+      extraServices: [],
+    });
   };
 
-  const closeCreateModal = () => {
-    setIsCreateModalOpen(false);
+  const closeBookingForm = () => {
+    setEditingBooking(null);
+    setBookingFormMode(null);
   };
 
   const handleEditBooking = (booking: Booking) => {
+    const bookingDateParts = booking.bookingDateTime
+      ? splitDateTimeLocal(booking.bookingDateTime)
+      : booking.bookingTime
+      ? { date: booking.bookingDate, time: booking.bookingTime }
+      : { date: booking.bookingDate, time: '' };
+
+    setCreateResult('');
+    setBookingFormMode('edit');
     setEditingBooking({
       id: booking.id,
       questId: booking.questId,
@@ -646,7 +685,8 @@ export default function BookingsPage() {
       customerName: booking.customerName,
       customerPhone: booking.customerPhone,
       customerEmail: booking.customerEmail || '',
-      bookingDate: formatBookingDateTimeLocal(booking),
+      bookingDate: bookingDateParts.date,
+      bookingTime: bookingDateParts.time,
       createdAt: booking.createdAt,
       participantsCount: booking.participantsCount,
       extraParticipantsCount: booking.extraParticipantsCount ?? 0,
@@ -676,6 +716,10 @@ export default function BookingsPage() {
     }
 
     try {
+      const bookingDateTimeValue = buildDateTimeValue(
+        editingBooking.bookingDate,
+        editingBooking.bookingTime
+      );
       await api.updateBooking(editingBooking.id, {
         questId: editingBooking.questId,
         questScheduleId: editingBooking.questScheduleId,
@@ -686,7 +730,7 @@ export default function BookingsPage() {
         customerName: editingBooking.customerName,
         customerPhone: editingBooking.customerPhone,
         customerEmail: editingBooking.customerEmail || null,
-        bookingDate: normalizeDateTimeForApi(editingBooking.bookingDate),
+        bookingDate: normalizeDateTimeForApi(bookingDateTimeValue),
         participantsCount: editingBooking.participantsCount,
         extraParticipantsCount: editingBooking.extraParticipantsCount,
         totalPrice: editingBooking.totalPrice,
@@ -699,11 +743,8 @@ export default function BookingsPage() {
         status: editingBooking.status,
         extraServices: editingBooking.extraServices,
       });
-      setEditingBooking(null);
+      closeBookingForm();
       loadBookings();
-      if (selectedQuestId && dateFrom && dateTo) {
-        loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
-      }
       setNotification({
         isOpen: true,
         title: 'Бронь обновлена',
@@ -837,6 +878,14 @@ export default function BookingsPage() {
     };
   };
 
+  const getCardStyle = (status: Booking['status']) => {
+    const color = getStatusColorValue(status);
+    return {
+      backgroundColor: hexToRgba(color, 0.08),
+      borderColor: hexToRgba(color, 0.2),
+    };
+  };
+
   const questLookup = useMemo(() => {
     return new Map(quests.map((quest) => [quest.id, quest]));
   }, [quests]);
@@ -928,17 +977,23 @@ export default function BookingsPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const formatBookingDateTimeLocal = (booking: Booking) => {
-    if (booking.bookingDateTime) {
-      return formatDateTimeLocal(booking.bookingDateTime);
+  const splitDateTimeLocal = (value?: string | null) => {
+    if (!value) {
+      return { date: '', time: '' };
     }
-    if (booking.bookingTime) {
-      return formatDateTimeLocal(`${booking.bookingDate}T${booking.bookingTime}`);
+    const local = formatDateTimeLocal(value);
+    const [date, time] = local.split('T');
+    return { date: date || '', time: time || '' };
+  };
+
+  const buildDateTimeValue = (date: string, time: string) => {
+    if (!date) {
+      return '';
     }
-    if (booking.bookingDate) {
-      return `${booking.bookingDate}T00:00`;
+    if (!time) {
+      return date;
     }
-    return '';
+    return `${date}T${time}`;
   };
 
   const normalizeDateTimeForApi = (value: string) => {
@@ -993,6 +1048,25 @@ export default function BookingsPage() {
   const visibleTableColumns = useMemo(
     () => tableColumns.filter((column) => column.visible),
     [tableColumns]
+  );
+
+  const availableSlots = useMemo(() => {
+    if (!editingBooking?.bookingDate) {
+      return [];
+    }
+    return scheduleSlots.filter(
+      (slot) =>
+        slot.date === editingBooking.bookingDate &&
+        (!slot.isBooked || slot.id === editingBooking.questScheduleId)
+    );
+  }, [editingBooking?.bookingDate, editingBooking?.questScheduleId, scheduleSlots]);
+
+  const selectedSlot = useMemo(
+    () =>
+      editingBooking?.questScheduleId
+        ? scheduleSlots.find((slot) => slot.id === editingBooking.questScheduleId) || null
+        : null,
+    [editingBooking?.questScheduleId, scheduleSlots]
   );
 
   const totalTableWidth = useMemo(
@@ -1079,7 +1153,6 @@ export default function BookingsPage() {
     return <div className="text-center py-12">Загрузка...</div>;
   }
 
-  const availableSlots = scheduleSlots.filter((slot) => !slot.isBooked);
   const renderActionButtons = (booking: Booking) => (
     <>
       <button
@@ -1460,7 +1533,11 @@ export default function BookingsPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {paginatedBookings.map((booking) => (
-                <div key={booking.id} className="bg-white rounded-lg shadow p-4">
+                <div
+                  key={booking.id}
+                  className="rounded-lg shadow p-4 border border-transparent"
+                  style={getCardStyle(booking.status)}
+                >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -1645,16 +1722,22 @@ export default function BookingsPage() {
           )}
         </div>
 
-      {isCreateModalOpen && (
+      {editingBooking && bookingFormMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Создать бронь</h3>
-                <p className="text-xs text-gray-500">Заполните данные и выберите слот</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {bookingFormMode === 'create' ? 'Создать бронь' : 'Редактирование брони'}
+                </h3>
+                {bookingFormMode === 'create' ? (
+                  <p className="text-xs text-gray-500">Заполните данные и выберите время</p>
+                ) : (
+                  <p className="text-xs text-gray-500">ID: {editingBooking.id.slice(0, 8)}</p>
+                )}
               </div>
               <button
-                onClick={closeCreateModal}
+                onClick={closeBookingForm}
                 className="p-2 text-gray-500 hover:text-gray-700"
                 aria-label="Закрыть"
               >
@@ -1664,168 +1747,11 @@ export default function BookingsPage() {
             <div className="p-6 space-y-4 overflow-y-auto">
               <div
                 className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
-                style={getStatusBadgeStyle('created')}
+                style={getStatusBadgeStyle(
+                  bookingFormMode === 'create' ? 'created' : editingBooking.status
+                )}
               >
-                Новая бронь
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Квест</label>
-                  <select
-                    value={selectedQuestId}
-                    onChange={(e) => setSelectedQuestId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  >
-                    {quests.map((quest) => (
-                      <option key={quest.id} value={quest.id}>
-                        {quest.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Слот
-                  </label>
-                  <select
-                    value={selectedSlotId}
-                    onChange={(e) => setSelectedSlotId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  >
-                    <option value="">Выберите слот</option>
-                    {availableSlots.map((slot) => (
-                      <option key={slot.id} value={slot.id}>
-                        {slot.date} · {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Доступно слотов: {availableSlots.length}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Дата начала
-                  </label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Дата окончания
-                  </label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Имя клиента
-                  </label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Телефон
-                  </label>
-                  <input
-                    type="text"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email (опционально)
-                  </label>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Участников
-                  </label>
-                  <input
-                    type="number"
-                    value={participantsCount}
-                    onChange={(e) => setParticipantsCount(parseInt(e.target.value) || 1)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    min="1"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Комментарий
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    rows={2}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-gray-200">
-              {createResult && <span className="text-sm text-gray-600">{createResult}</span>}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={closeCreateModal}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={handleCreateBooking}
-                  className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
-                >
-                  Создать бронь
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Редактирование брони</h3>
-                <p className="text-xs text-gray-500">ID: {editingBooking.id.slice(0, 8)}</p>
-              </div>
-              <button
-                onClick={() => setEditingBooking(null)}
-                className="p-2 text-gray-500 hover:text-gray-700"
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <div
-                className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
-                style={getStatusBadgeStyle(editingBooking.status)}
-              >
-                {getStatusText(editingBooking.status)}
+                {bookingFormMode === 'create' ? 'Новая бронь' : getStatusText(editingBooking.status)}
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -1834,12 +1760,19 @@ export default function BookingsPage() {
                   </label>
                   <select
                     value={editingBooking.questId || ''}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const questId = e.target.value || null;
+                      const quest = quests.find((item) => item.id === questId);
                       setEditingBooking({
                         ...editingBooking,
-                        questId: e.target.value || null,
-                      })
-                    }
+                        questId,
+                        questTitle: quest?.title ?? '',
+                        questPrice: quest?.price ?? 0,
+                        extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
+                        questScheduleId: null,
+                        bookingTime: '',
+                      });
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   >
                     <option value="">Без квеста</option>
@@ -1895,16 +1828,56 @@ export default function BookingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Дата и время брони
+                    Дата брони
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={editingBooking.bookingDate}
                     onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, bookingDate: e.target.value })
+                      setEditingBooking({
+                        ...editingBooking,
+                        bookingDate: e.target.value,
+                        questScheduleId: null,
+                        bookingTime: '',
+                      })
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Время брони
+                  </label>
+                  <select
+                    value={editingBooking.questScheduleId || ''}
+                    onChange={(e) => {
+                      const slotId = e.target.value || null;
+                      const slot = scheduleSlots.find((item) => item.id === slotId) || null;
+                      setEditingBooking({
+                        ...editingBooking,
+                        questScheduleId: slotId,
+                        bookingTime: slot ? slot.timeSlot.slice(0, 5) : '',
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    disabled={!editingBooking.bookingDate}
+                  >
+                    <option value="">
+                      {editingBooking.bookingDate
+                        ? availableSlots.length
+                          ? 'Выберите время'
+                          : 'Нет свободного времени'
+                        : 'Сначала выберите дату'}
+                    </option>
+                    {availableSlots.map((slot) => (
+                      <option key={slot.id} value={slot.id}>
+                        {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedSlot ? `Цена слота: ${selectedSlot.price} ₽` : 'Выберите время'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2181,15 +2154,18 @@ export default function BookingsPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3 px-6 py-4 border-t border-gray-200">
+              {bookingFormMode === 'create' && createResult && (
+                <span className="text-sm text-gray-600">{createResult}</span>
+              )}
               <button
-                onClick={handleUpdateBooking}
+                onClick={bookingFormMode === 'create' ? handleCreateBooking : handleUpdateBooking}
                 className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
               >
                 <Save className="w-4 h-4" />
-                Сохранить изменения
+                {bookingFormMode === 'create' ? 'Создать бронь' : 'Сохранить изменения'}
               </button>
               <button
-                onClick={() => setEditingBooking(null)}
+                onClick={closeBookingForm}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
               >
                 <X className="w-4 h-4" />
