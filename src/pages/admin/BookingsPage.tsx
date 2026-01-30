@@ -21,6 +21,7 @@ import {
   X,
   BadgeDollarSign,
   Trash2,
+  RefreshCw,
   Plus,
   SlidersHorizontal,
   GripVertical,
@@ -84,6 +85,7 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
 export default function BookingsPage() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [defaultQuestId, setDefaultQuestId] = useState<string>('');
@@ -514,6 +516,15 @@ export default function BookingsPage() {
       console.error('Error loading bookings:', error);
     }
     setLoading(false);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadBookings();
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const loadSettings = async () => {
@@ -1501,13 +1512,23 @@ export default function BookingsPage() {
       />
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Управление бронированиями</h2>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Создать бронь
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Обновить
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Создать бронь
+          </button>
+        </div>
       </div>
 
       <div className="space-y-6">
