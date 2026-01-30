@@ -166,6 +166,18 @@ public class Settings
     [Column("booking_status_cancelled_color")]
     public string? BookingStatusCancelledColor { get; set; }
 
+    [Column("certificate_status_pending_color")]
+    public string? CertificateStatusPendingColor { get; set; }
+
+    [Column("certificate_status_processed_color")]
+    public string? CertificateStatusProcessedColor { get; set; }
+
+    [Column("certificate_status_completed_color")]
+    public string? CertificateStatusCompletedColor { get; set; }
+
+    [Column("certificate_status_canceled_color")]
+    public string? CertificateStatusCanceledColor { get; set; }
+
     [Column("time_zone")]
     public string? TimeZone { get; set; }
 

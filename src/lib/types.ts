@@ -93,6 +93,10 @@ export type Settings = {
   bookingStatusConfirmedColor: string | null;
   bookingStatusCompletedColor: string | null;
   bookingStatusCancelledColor: string | null;
+  certificateStatusPendingColor: string | null;
+  certificateStatusProcessedColor: string | null;
+  certificateStatusCompletedColor: string | null;
+  certificateStatusCanceledColor: string | null;
   bookingDaysAhead: number;
   bookingCutoffMinutes: number;
   timeZone: string | null;

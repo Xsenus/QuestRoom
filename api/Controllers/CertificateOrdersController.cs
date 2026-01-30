@@ -39,4 +39,12 @@ public class CertificateOrdersController : ControllerBase
         var updated = await _service.UpdateCertificateOrderAsync(id, order);
         return updated ? NoContent() : NotFound();
     }
+
+    [Authorize(Roles = "admin")]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteCertificateOrder(Guid id)
+    {
+        var deleted = await _service.DeleteCertificateOrderAsync(id);
+        return deleted ? NoContent() : NotFound();
+    }
 }

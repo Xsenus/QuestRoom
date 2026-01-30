@@ -88,138 +88,6 @@ export default function CertificatesPage() {
     return <div className="text-center py-12">Загрузка...</div>;
   }
 
-  if (editingCert) {
-    return (
-      <div className="max-w-4xl">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold mb-6">
-            {isCreating ? 'Добавление сертификата' : 'Редактирование сертификата'}
-          </h2>
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Название сертификата
-              </label>
-              <input
-                type="text"
-                value={editingCert.title || ''}
-                onChange={(e) =>
-                  setEditingCert({ ...editingCert, title: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="Сертификат ISO 9001"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Описание
-              </label>
-              <textarea
-                value={editingCert.description || ''}
-                onChange={(e) =>
-                  setEditingCert({ ...editingCert, description: e.target.value })
-                }
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="Описание сертификата..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                URL изображения
-              </label>
-              <input
-                type="text"
-                value={editingCert.imageUrl || ''}
-                onChange={(e) =>
-                  setEditingCert({ ...editingCert, imageUrl: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="/images/certificates/cert1.jpg"
-              />
-              {editingCert.imageUrl && (
-                <img
-                  src={editingCert.imageUrl}
-                  alt="Preview"
-                  className="mt-3 max-w-xs rounded-lg border"
-                />
-              )}
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Дата выдачи
-                </label>
-                <input
-                  type="date"
-                  value={editingCert.issuedDate || ''}
-                  onChange={(e) =>
-                    setEditingCert({ ...editingCert, issuedDate: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Порядок сортировки
-                </label>
-                <input
-                  type="number"
-                  value={editingCert.sortOrder || 0}
-                  onChange={(e) =>
-                    setEditingCert({
-                      ...editingCert,
-                      sortOrder: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={editingCert.isVisible !== false}
-                  onChange={(e) =>
-                    setEditingCert({ ...editingCert, isVisible: e.target.checked })
-                  }
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
-                />
-                <span className="text-sm font-semibold text-gray-700">
-                  Показывать на сайте
-                </span>
-              </label>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                <Save className="w-5 h-5" />
-                Сохранить
-              </button>
-              <button
-                onClick={handleCancel}
-                className="flex items-center gap-2 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                <X className="w-5 h-5" />
-                Отмена
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -263,7 +131,18 @@ export default function CertificatesPage() {
 
             <div className="flex gap-2">
               <button
-                onClick={() => setEditingCert(cert)}
+                onClick={() => {
+                  setEditingCert({
+                    id: cert.id,
+                    title: cert.title,
+                    description: cert.description,
+                    imageUrl: cert.imageUrl,
+                    issuedDate: cert.issuedDate,
+                    sortOrder: cert.sortOrder,
+                    isVisible: cert.isVisible,
+                  });
+                  setIsCreating(false);
+                }}
                 className="flex-1 p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
                 title="Редактировать"
               >
@@ -298,6 +177,145 @@ export default function CertificatesPage() {
           </div>
         )}
       </div>
+
+      {editingCert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-4xl rounded-2xl bg-white p-8 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {isCreating ? 'Добавление сертификата' : 'Редактирование сертификата'}
+              </h2>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="rounded-full p-2 text-gray-400 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6 mt-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Название сертификата
+                </label>
+                <input
+                  type="text"
+                  value={editingCert.title || ''}
+                  onChange={(e) =>
+                    setEditingCert({ ...editingCert, title: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="Сертификат ISO 9001"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Описание
+                </label>
+                <textarea
+                  value={editingCert.description || ''}
+                  onChange={(e) =>
+                    setEditingCert({ ...editingCert, description: e.target.value })
+                  }
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="Описание сертификата..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  URL изображения
+                </label>
+                <input
+                  type="text"
+                  value={editingCert.imageUrl || ''}
+                  onChange={(e) =>
+                    setEditingCert({ ...editingCert, imageUrl: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="/images/certificates/cert1.jpg"
+                />
+                {editingCert.imageUrl && (
+                  <img
+                    src={editingCert.imageUrl}
+                    alt="Preview"
+                    className="mt-3 max-w-xs rounded-lg border"
+                  />
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дата выдачи
+                  </label>
+                  <input
+                    type="date"
+                    value={editingCert.issuedDate || ''}
+                    onChange={(e) =>
+                      setEditingCert({ ...editingCert, issuedDate: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Порядок сортировки
+                  </label>
+                  <input
+                    type="number"
+                    value={editingCert.sortOrder || 0}
+                    onChange={(e) =>
+                      setEditingCert({
+                        ...editingCert,
+                        sortOrder: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingCert.isVisible !== false}
+                    onChange={(e) =>
+                      setEditingCert({ ...editingCert, isVisible: e.target.checked })
+                    }
+                    className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">
+                    Показывать на сайте
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-2 justify-end">
+                <button
+                  onClick={handleCancel}
+                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                  Отмена
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <Save className="w-5 h-5" />
+                  Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
