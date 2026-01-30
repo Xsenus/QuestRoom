@@ -63,6 +63,7 @@ export default function QuestsPage() {
     setEditingQuest({
       title: '',
       description: '',
+      slug: '',
       addresses: [],
       phones: [],
       participantsMin: 2,
@@ -95,6 +96,7 @@ export default function QuestsPage() {
     const { id, ...payload } = editingQuest;
     const normalizedPayload: QuestUpsert = {
       ...payload,
+      slug: normalizeOptional(payload.slug),
       giftGameLabel: normalizeOptional(payload.giftGameLabel) || 'Подарить игру',
       giftGameUrl: normalizeOptional(payload.giftGameUrl) || '/certificate',
       videoUrl: normalizeOptional(payload.videoUrl),
@@ -127,6 +129,7 @@ export default function QuestsPage() {
       const payload: QuestUpsert = {
         title: quest.title,
         description: quest.description,
+        slug: quest.slug,
         addresses: quest.addresses || [],
         phones: quest.phones || [],
         participantsMin: quest.participantsMin,
@@ -332,6 +335,24 @@ export default function QuestsPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="ШЕРЛОК"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Slug (URL-идентификатор)
+              </label>
+              <input
+                type="text"
+                value={editingQuest.slug || ''}
+                onChange={(e) =>
+                  setEditingQuest({ ...editingQuest, slug: e.target.value })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                placeholder="sherlock"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Используется в ссылке: /quest/{editingQuest.slug || 'sherlock'}
+              </p>
             </div>
 
             <div>
