@@ -700,6 +700,12 @@ class ApiClient {
       body: JSON.stringify(settings),
     });
   }
+
+  async sendTestEmail(): Promise<{ message: string }> {
+    return this.request('/settings/test-email', {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiClient();

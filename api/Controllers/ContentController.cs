@@ -151,7 +151,15 @@ public class AboutController : ControllerBase
 public class SettingsController : ControllerBase
 {
     private readonly IContentService _contentService;
-    public SettingsController(IContentService contentService) => _contentService = contentService;
+    private readonly IEmailNotificationService _emailNotificationService;
+
+    public SettingsController(
+        IContentService contentService,
+        IEmailNotificationService emailNotificationService)
+    {
+        _contentService = contentService;
+        _emailNotificationService = emailNotificationService;
+    }
 
     [HttpGet]
     public async Task<ActionResult<SettingsDto>> GetSettings()
@@ -167,5 +175,18 @@ public class SettingsController : ControllerBase
     {
         await _contentService.UpdateSettingsAsync(settings);
         return NoContent();
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPost("test-email")]
+    public async Task<IActionResult> SendTestEmail()
+    {
+        var result = await _emailNotificationService.SendTestEmailAsync();
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(new { message = result.Message });
     }
 }

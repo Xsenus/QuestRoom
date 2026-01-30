@@ -10,6 +10,7 @@ public interface IEmailNotificationService
 {
     Task SendBookingNotificationsAsync(Booking booking);
     Task SendCertificateOrderNotificationsAsync(CertificateOrder order);
+    Task<TestEmailResult> SendTestEmailAsync();
 }
 
 public class EmailNotificationService : IEmailNotificationService
@@ -161,6 +162,38 @@ public class EmailNotificationService : IEmailNotificationService
             customerBody);
     }
 
+    public async Task<TestEmailResult> SendTestEmailAsync()
+    {
+        var settings = await GetSettingsAsync();
+        if (settings == null)
+        {
+            return new TestEmailResult(false, "Настройки почты не найдены.");
+        }
+
+        if (!HasSmtpConfiguration(settings))
+        {
+            return new TestEmailResult(false, "SMTP не настроен. Укажите SMTP host.");
+        }
+
+        var senderEmail = GetSenderEmail(settings);
+        if (string.IsNullOrWhiteSpace(senderEmail))
+        {
+            return new TestEmailResult(false, "Email отправителя не указан.");
+        }
+
+        var subject = "Тестовое письмо";
+        var body = """
+                   <p>Это тестовое письмо. Если вы его получили, то настройки SMTP работают корректно.</p>
+                   """;
+        var success = await SendEmailAsync(settings, senderEmail, subject, body);
+        if (!success)
+        {
+            return new TestEmailResult(false, "Не удалось отправить тестовое письмо. Проверьте настройки SMTP.");
+        }
+
+        return new TestEmailResult(true, $"Тестовое письмо отправлено на {senderEmail}.");
+    }
+
     private async Task<Settings?> GetSettingsAsync()
     {
         return await _context.Settings.AsNoTracking().FirstOrDefaultAsync();
@@ -196,17 +229,14 @@ public class EmailNotificationService : IEmailNotificationService
         }
     }
 
-    private async Task SendEmailAsync(Settings settings, string recipient, string subject, string body)
+    private async Task<bool> SendEmailAsync(Settings settings, string recipient, string subject, string body)
     {
-        var fromEmail = settings.SmtpFromEmail
-            ?? settings.NotificationEmail
-            ?? settings.Email
-            ?? settings.SmtpUser;
+        var fromEmail = GetSenderEmail(settings);
 
         if (string.IsNullOrWhiteSpace(fromEmail))
         {
             _logger.LogWarning("Email notifications skipped: sender email is not configured.");
-            return;
+            return false;
         }
 
         var fromName = string.IsNullOrWhiteSpace(settings.SmtpFromName)
@@ -236,16 +266,26 @@ public class EmailNotificationService : IEmailNotificationService
         try
         {
             await client.SendMailAsync(message);
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send email to {Recipient}.", recipient);
+            return false;
         }
     }
 
     private static bool HasSmtpConfiguration(Settings settings)
     {
         return !string.IsNullOrWhiteSpace(settings.SmtpHost);
+    }
+
+    private static string? GetSenderEmail(Settings settings)
+    {
+        return settings.SmtpFromEmail
+               ?? settings.NotificationEmail
+               ?? settings.Email
+               ?? settings.SmtpUser;
     }
 
     private static IEnumerable<string> ParseRecipients(string? recipients)
@@ -277,3 +317,5 @@ public class EmailNotificationService : IEmailNotificationService
         return result;
     }
 }
+
+public readonly record struct TestEmailResult(bool Success, string Message);
