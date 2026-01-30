@@ -118,6 +118,7 @@ export default function BookingsPage() {
     message: '',
     tone: 'info',
   });
+  const [isTotalPriceManual, setIsTotalPriceManual] = useState(false);
   const [editingBooking, setEditingBooking] = useState<{
     id: string;
     questId: string | null;
@@ -467,6 +468,16 @@ export default function BookingsPage() {
     }
   }, [editingBooking?.bookingDate, editingBooking?.bookingTime, editingBooking?.questScheduleId, scheduleSlots]);
 
+  useEffect(() => {
+    if (!editingBooking || isTotalPriceManual) {
+      return;
+    }
+    const nextTotal = calculateTotalPrice(editingBooking);
+    if (editingBooking.totalPrice !== nextTotal) {
+      setEditingBooking({ ...editingBooking, totalPrice: nextTotal });
+    }
+  }, [editingBooking, isTotalPriceManual]);
+
   const loadBookings = async () => {
     try {
       const data = await api.getBookings();
@@ -631,6 +642,16 @@ export default function BookingsPage() {
     const quest = quests.find((item) => item.id === defaultQuestId) || quests[0];
     const today = formatDate(new Date());
     setCreateResult('');
+    setIsTotalPriceManual(false);
+    const initialTotal = calculateTotalPrice({
+      questPrice: quest?.price ?? 0,
+      extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
+      extraParticipantsCount: 0,
+      extraServices: [],
+      promoDiscountType: '',
+      promoDiscountValue: 0,
+      promoDiscountAmount: 0,
+    });
     setBookingFormMode('create');
     setEditingBooking({
       id: 'new',
@@ -648,7 +669,7 @@ export default function BookingsPage() {
       createdAt: new Date().toISOString(),
       participantsCount: 2,
       extraParticipantsCount: 0,
-      totalPrice: quest?.price ?? 0,
+      totalPrice: initialTotal,
       paymentType: 'cash',
       promoCode: '',
       promoDiscountType: '',
@@ -672,7 +693,18 @@ export default function BookingsPage() {
       ? { date: booking.bookingDate, time: booking.bookingTime }
       : { date: booking.bookingDate, time: '' };
 
+    const calculatedTotal = calculateTotalPrice({
+      questPrice: getQuestPrice(booking) ?? 0,
+      extraParticipantPrice: getExtraParticipantPrice(booking) ?? 0,
+      extraParticipantsCount: booking.extraParticipantsCount ?? 0,
+      extraServices: booking.extraServices || [],
+      promoDiscountType: booking.promoDiscountType || '',
+      promoDiscountValue: booking.promoDiscountValue ?? 0,
+      promoDiscountAmount: booking.promoDiscountAmount ?? 0,
+    });
+
     setCreateResult('');
+    setIsTotalPriceManual(booking.totalPrice !== calculatedTotal);
     setBookingFormMode('edit');
     setEditingBooking({
       id: booking.id,
@@ -1001,6 +1033,30 @@ export default function BookingsPage() {
       return value;
     }
     return value;
+  };
+
+  const calculateTotalPrice = (booking: {
+    questPrice: number;
+    extraParticipantPrice: number;
+    extraParticipantsCount: number;
+    extraServices: Booking['extraServices'];
+    promoDiscountType: string;
+    promoDiscountValue: number;
+    promoDiscountAmount: number;
+  }) => {
+    const extrasTotal = booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0;
+    const participantsTotal = booking.extraParticipantPrice * (booking.extraParticipantsCount ?? 0);
+    const baseTotal = (booking.questPrice ?? 0) + participantsTotal + extrasTotal;
+    const discountAmount =
+      booking.promoDiscountAmount && booking.promoDiscountAmount > 0
+        ? booking.promoDiscountAmount
+        : booking.promoDiscountValue > 0
+        ? booking.promoDiscountType.toLowerCase().includes('percent') ||
+          booking.promoDiscountType.includes('%')
+          ? (baseTotal * booking.promoDiscountValue) / 100
+          : booking.promoDiscountValue
+        : 0;
+    return Math.max(0, Math.round(baseTotal - discountAmount));
   };
 
   const getQuestData = (booking: Booking) => {
@@ -1724,8 +1780,8 @@ export default function BookingsPage() {
 
       {editingBooking && bookingFormMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
                   {bookingFormMode === 'create' ? 'Создать бронь' : 'Редактирование брони'}
@@ -1744,16 +1800,16 @@ export default function BookingsPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="p-6 space-y-5 overflow-y-auto bg-gray-50/40">
               <div
-                className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
+                className="inline-flex px-3 py-1 rounded-full text-xs font-bold border bg-white"
                 style={getStatusBadgeStyle(
                   bookingFormMode === 'create' ? 'created' : editingBooking.status
                 )}
               >
                 {bookingFormMode === 'create' ? 'Новая бронь' : getStatusText(editingBooking.status)}
               </div>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Квест
@@ -1982,23 +2038,6 @@ export default function BookingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Итоговая сумма
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingBooking.totalPrice}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        totalPrice: Number(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Тип оплаты
                   </label>
                   <select
@@ -2151,9 +2190,75 @@ export default function BookingsPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
                 </div>
+                <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-sm font-semibold text-gray-700">
+                      Итоговая сумма
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={isTotalPriceManual}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setIsTotalPriceManual(next);
+                          if (!next && editingBooking) {
+                            setEditingBooking({
+                              ...editingBooking,
+                              totalPrice: calculateTotalPrice(editingBooking),
+                            });
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      />
+                      Ручной ввод
+                    </label>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingBooking.totalPrice}
+                      onChange={(e) => {
+                        setIsTotalPriceManual(true);
+                        setEditingBooking({
+                          ...editingBooking,
+                          totalPrice: Number(e.target.value) || 0,
+                        });
+                      }}
+                      readOnly={!isTotalPriceManual}
+                      className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
+                        isTotalPriceManual
+                          ? 'border-gray-300 bg-white'
+                          : 'border-gray-200 bg-gray-100 text-gray-600'
+                      }`}
+                    />
+                    {isTotalPriceManual && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!editingBooking) {
+                            return;
+                          }
+                          setIsTotalPriceManual(false);
+                          setEditingBooking({
+                            ...editingBooking,
+                            totalPrice: calculateTotalPrice(editingBooking),
+                          });
+                        }}
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      >
+                        Рассчитать
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Автосумма учитывает цену квеста, доп. участников, услуги и скидку по промокоду.
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 px-6 py-4 border-t border-gray-200">
+            <div className="flex flex-wrap gap-3 px-6 py-4 border-t border-gray-200 bg-white">
               {bookingFormMode === 'create' && createResult && (
                 <span className="text-sm text-gray-600">{createResult}</span>
               )}
