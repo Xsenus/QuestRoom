@@ -4,6 +4,7 @@ import {
   Booking,
   BookingTableColumnPreference,
   BookingTablePreferences,
+  PromoCode,
   Quest,
   QuestSchedule,
   Settings,
@@ -118,6 +119,7 @@ export default function BookingsPage() {
     message: '',
     tone: 'info',
   });
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isTotalPriceManual, setIsTotalPriceManual] = useState(false);
   const [editingBooking, setEditingBooking] = useState<{
     id: string;
@@ -321,6 +323,7 @@ export default function BookingsPage() {
     loadBookings();
     loadQuests();
     loadSettings();
+    loadPromoCodes();
   }, []);
 
   useEffect(() => {
@@ -478,6 +481,31 @@ export default function BookingsPage() {
     }
   }, [editingBooking, isTotalPriceManual]);
 
+  useEffect(() => {
+    if (!editingBooking?.promoCode) {
+      return;
+    }
+    if (!editingBooking.promoDiscountType || editingBooking.promoDiscountValue <= 0) {
+      return;
+    }
+    const nextAmount = calculateDiscountAmount(
+      editingBooking,
+      editingBooking.promoDiscountType,
+      editingBooking.promoDiscountValue
+    );
+    if (editingBooking.promoDiscountAmount !== nextAmount) {
+      setEditingBooking({ ...editingBooking, promoDiscountAmount: nextAmount });
+    }
+  }, [
+    editingBooking?.promoCode,
+    editingBooking?.promoDiscountType,
+    editingBooking?.promoDiscountValue,
+    editingBooking?.questPrice,
+    editingBooking?.extraParticipantPrice,
+    editingBooking?.extraParticipantsCount,
+    editingBooking?.extraServices,
+  ]);
+
   const loadBookings = async () => {
     try {
       const data = await api.getBookings();
@@ -507,6 +535,16 @@ export default function BookingsPage() {
       }
     } catch (error) {
       console.error('Error loading quests:', error);
+    }
+  };
+
+  const loadPromoCodes = async () => {
+    try {
+      const data = await api.getPromoCodes();
+      setPromoCodes(data || []);
+    } catch (error) {
+      console.error('Error loading promo codes:', error);
+      setPromoCodes([]);
     }
   };
 
@@ -821,6 +859,63 @@ export default function BookingsPage() {
     setEditingBooking({ ...editingBooking, extraServices: nextServices });
   };
 
+  const handleApplyPromoCode = () => {
+    if (!editingBooking) {
+      return;
+    }
+    const code = editingBooking.promoCode.trim();
+    if (!code) {
+      setNotification({
+        isOpen: true,
+        title: 'Промокод не указан',
+        message: 'Введите промокод и повторите попытку.',
+        tone: 'info',
+      });
+      return;
+    }
+    const promo = promoCodes.find((item) => item.code.toLowerCase() === code.toLowerCase());
+    if (!promo) {
+      setNotification({
+        isOpen: true,
+        title: 'Промокод не найден',
+        message: 'Проверьте правильность ввода промокода.',
+        tone: 'error',
+      });
+      return;
+    }
+    const now = new Date();
+    const validFrom = new Date(promo.validFrom);
+    const validUntil = promo.validUntil ? new Date(promo.validUntil) : null;
+    if (!promo.isActive || now < validFrom || (validUntil && now > validUntil)) {
+      setNotification({
+        isOpen: true,
+        title: 'Промокод недействителен',
+        message: 'Этот промокод не активен или срок его действия истёк.',
+        tone: 'error',
+      });
+      return;
+    }
+    const discountAmount = calculateDiscountAmount(
+      editingBooking,
+      promo.discountType,
+      promo.discountValue
+    );
+    const isPercent =
+      promo.discountType.toLowerCase().includes('percent') || promo.discountType.includes('%');
+    setEditingBooking({
+      ...editingBooking,
+      promoDiscountType: promo.discountType,
+      promoDiscountValue: promo.discountValue,
+      promoDiscountAmount: discountAmount,
+    });
+    setNotification({
+      isOpen: true,
+      title: 'Промокод применён',
+      message: `Скидка ${promo.discountValue}${isPercent ? '%' : ' ₽'} учтена.`,
+      tone: 'success',
+    });
+  };
+
   const removeExtraService = (index: number) => {
     if (!editingBooking) {
       return;
@@ -1035,6 +1130,28 @@ export default function BookingsPage() {
     return value;
   };
 
+  const calculateDiscountAmount = (
+    booking: {
+      questPrice: number;
+      extraParticipantPrice: number;
+      extraParticipantsCount: number;
+      extraServices: Booking['extraServices'];
+    },
+    discountType: string,
+    discountValue: number
+  ) => {
+    if (!discountValue || discountValue <= 0) {
+      return 0;
+    }
+    const extrasTotal =
+      booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0;
+    const participantsTotal = booking.extraParticipantPrice * (booking.extraParticipantsCount ?? 0);
+    const baseTotal = (booking.questPrice ?? 0) + participantsTotal + extrasTotal;
+    const isPercent =
+      discountType.toLowerCase().includes('percent') || discountType.includes('%');
+    return Math.round(isPercent ? (baseTotal * discountValue) / 100 : discountValue);
+  };
+
   const calculateTotalPrice = (booking: {
     questPrice: number;
     extraParticipantPrice: number;
@@ -1050,12 +1167,11 @@ export default function BookingsPage() {
     const discountAmount =
       booking.promoDiscountAmount && booking.promoDiscountAmount > 0
         ? booking.promoDiscountAmount
-        : booking.promoDiscountValue > 0
-        ? booking.promoDiscountType.toLowerCase().includes('percent') ||
-          booking.promoDiscountType.includes('%')
-          ? (baseTotal * booking.promoDiscountValue) / 100
-          : booking.promoDiscountValue
-        : 0;
+        : calculateDiscountAmount(
+            booking,
+            booking.promoDiscountType,
+            booking.promoDiscountValue
+          );
     return Math.max(0, Math.round(baseTotal - discountAmount));
   };
 
@@ -1091,6 +1207,13 @@ export default function BookingsPage() {
       return booking.extraParticipantPrice;
     }
     return quest?.extraParticipantPrice ?? null;
+  };
+
+  const getQuestParticipantsMax = (booking: { questId: string | null }) => {
+    if (!booking.questId) {
+      return null;
+    }
+    return questLookup.get(booking.questId)?.participantsMax ?? null;
   };
 
   const getExtraServicesTotal = (booking: Booking) => {
@@ -1129,6 +1252,20 @@ export default function BookingsPage() {
     () => visibleTableColumns.reduce((sum, column) => sum + column.width, 0),
     [visibleTableColumns]
   );
+
+  const editingQuestMaxParticipants = useMemo(() => {
+    if (!editingBooking) {
+      return null;
+    }
+    return getQuestParticipantsMax(editingBooking);
+  }, [editingBooking, questLookup]);
+
+  const autoExtraParticipants = useMemo(() => {
+    if (!editingBooking || editingQuestMaxParticipants == null) {
+      return 0;
+    }
+    return Math.max(0, editingBooking.participantsCount - editingQuestMaxParticipants);
+  }, [editingBooking?.participantsCount, editingQuestMaxParticipants]);
 
   const parseBookingDate = (booking: Booking) => {
     if (booking.bookingDateTime) {
@@ -1780,11 +1917,21 @@ export default function BookingsPage() {
 
       {editingBooking && bookingFormMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 flex flex-wrap items-center gap-2">
                   {bookingFormMode === 'create' ? 'Создать бронь' : 'Редактирование брони'}
+                  <span
+                    className="inline-flex px-3 py-1 rounded-full text-xs font-bold border bg-white"
+                    style={getStatusBadgeStyle(
+                      bookingFormMode === 'create' ? 'created' : editingBooking.status
+                    )}
+                  >
+                    {bookingFormMode === 'create'
+                      ? 'Новая бронь'
+                      : getStatusText(editingBooking.status)}
+                  </span>
                 </h3>
                 {bookingFormMode === 'create' ? (
                   <p className="text-xs text-gray-500">Заполните данные и выберите время</p>
@@ -1801,15 +1948,7 @@ export default function BookingsPage() {
               </button>
             </div>
             <div className="p-6 space-y-5 overflow-y-auto bg-gray-50/40">
-              <div
-                className="inline-flex px-3 py-1 rounded-full text-xs font-bold border bg-white"
-                style={getStatusBadgeStyle(
-                  bookingFormMode === 'create' ? 'created' : editingBooking.status
-                )}
-              >
-                {bookingFormMode === 'create' ? 'Новая бронь' : getStatusText(editingBooking.status)}
-              </div>
-              <div className="grid md:grid-cols-2 gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <div className="grid gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm md:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Квест
@@ -1819,12 +1958,18 @@ export default function BookingsPage() {
                     onChange={(e) => {
                       const questId = e.target.value || null;
                       const quest = quests.find((item) => item.id === questId);
+                      const questMax = quest?.participantsMax ?? null;
+                      const nextExtraParticipants =
+                        questMax != null
+                          ? Math.max(0, editingBooking.participantsCount - questMax)
+                          : editingBooking.extraParticipantsCount;
                       setEditingBooking({
                         ...editingBooking,
                         questId,
                         questTitle: quest?.title ?? '',
                         questPrice: quest?.price ?? 0,
                         extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
+                        extraParticipantsCount: nextExtraParticipants,
                         questScheduleId: null,
                         bookingTime: '',
                       });
@@ -1993,14 +2138,26 @@ export default function BookingsPage() {
                     type="number"
                     min="1"
                     value={editingBooking.participantsCount}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const nextParticipants = parseInt(e.target.value) || 1;
+                      const questMax = editingQuestMaxParticipants;
+                      const nextExtraParticipants =
+                        questMax != null
+                          ? Math.max(0, nextParticipants - questMax)
+                          : editingBooking.extraParticipantsCount;
                       setEditingBooking({
                         ...editingBooking,
-                        participantsCount: parseInt(e.target.value) || 1,
-                      })
-                    }
+                        participantsCount: nextParticipants,
+                        extraParticipantsCount: nextExtraParticipants,
+                      });
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
+                  {editingQuestMaxParticipants != null && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      В квесте до {editingQuestMaxParticipants} участников.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2018,6 +2175,11 @@ export default function BookingsPage() {
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
+                  {editingQuestMaxParticipants != null && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Авторасчёт: {autoExtraParticipants} доп. участников при текущем количестве.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2055,14 +2217,23 @@ export default function BookingsPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Промокод
                   </label>
-                  <input
-                    type="text"
-                    value={editingBooking.promoCode}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, promoCode: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editingBooking.promoCode}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, promoCode: e.target.value })
+                      }
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyPromoCode}
+                      className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    >
+                      Применить
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2137,7 +2308,7 @@ export default function BookingsPage() {
                     <option value="cancelled">Отменено</option>
                   </select>
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 lg:col-span-3">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Дополнительные услуги
                   </label>
@@ -2177,7 +2348,7 @@ export default function BookingsPage() {
                     </button>
                   </div>
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 lg:col-span-3">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Комментарий
                   </label>
@@ -2190,7 +2361,7 @@ export default function BookingsPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
                 </div>
-                <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="md:col-span-2 lg:col-span-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="text-sm font-semibold text-gray-700">
                       Итоговая сумма
