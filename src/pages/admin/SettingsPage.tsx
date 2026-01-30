@@ -299,6 +299,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testEmailSending, setTestEmailSending] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [activeTemplateTab, setActiveTemplateTab] = useState<
     'booking-admin' | 'booking-customer' | 'certificate-admin' | 'certificate-customer'
@@ -510,6 +511,29 @@ export default function SettingsPage() {
     }
 
     setSaving(false);
+  };
+
+  const handleSendTestEmail = async () => {
+    setTestEmailSending(true);
+
+    try {
+      const response = await api.sendTestEmail();
+      setNotification({
+        isOpen: true,
+        title: 'Тестовое письмо отправлено',
+        message: response.message || 'Проверьте почтовый ящик отправителя.',
+        tone: 'success',
+      });
+    } catch (error) {
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось отправить тестовое письмо',
+        message: `Ошибка: ${(error as Error).message}`,
+        tone: 'error',
+      });
+    }
+
+    setTestEmailSending(false);
   };
 
   if (loading) {
@@ -1022,6 +1046,25 @@ export default function SettingsPage() {
                 />
                 Использовать SSL
               </label>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Тестовое письмо</p>
+                  <p className="text-sm text-gray-500">
+                    Письмо придет на адрес отправителя из настроек выше.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendTestEmail}
+                  disabled={testEmailSending}
+                  className="inline-flex items-center justify-center rounded-lg border border-red-600 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {testEmailSending ? 'Отправляем...' : 'Отправить тестовое письмо'}
+                </button>
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
