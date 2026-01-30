@@ -48,6 +48,11 @@ dotnet restore
     "Key": "ваш_секретный_ключ_минимум_32_символа",
     "Issuer": "QuestRoomApi",
     "Audience": "QuestRoomClient"
+  },
+  "MirKvestov": {
+    "Md5Key": "секретный_ключ_для_md5",
+    "PrepayMd5Key": "секретный_ключ_для_предоплаты",
+    "TimeZone": "Asia/Krasnoyarsk"
   }
 }
 ```
@@ -114,6 +119,17 @@ Swagger UI: `http://localhost:5000/swagger`
 - `POST /api/bookings` - Создать бронирование (публичный доступ)
 - `PUT /api/bookings/{id}` - Обновить бронирование (требуется авторизация admin)
 - `DELETE /api/bookings/{id}` - Удалить бронирование (требуется авторизация admin)
+
+### Интеграция Mir-kvestov.ru
+
+- `GET /api/mir-kvestov/{questSlug}` или `/api/mir-kvestov/{questSlug}.json` - Получить расписание на 2 недели (формат Mir-kvestov).
+  - Query параметры: `from` и `to` в формате `YYYY-MM-DD` (опционально).
+- `POST /api/mir-kvestov/{questSlug}/order` - Создать бронирование от агрегатора.
+  - Принимает `application/x-www-form-urlencoded` или JSON с полями: `first_name`, `family_name`, `phone`, `email`, `comment`, `source`, `md5`, `date`, `time`, `price`, `unique_id`, `your_slot_id`, `players`, `tariff`.
+- `GET /api/mir-kvestov/{questSlug}/get_price?date=YYYY-MM-DD&time=HH:MM` - Получить тарифы для слота.
+- `GET /api/mir-kvestov/{questSlug}/prepay?md5=...&unique_id=...&prepay=...` - Уведомление о предоплате (ответ строго `{"success":true}`).
+
+Подробная документация: [Docs/MirKvestov.md](Docs/MirKvestov.md).
 
 ### Контент
 
