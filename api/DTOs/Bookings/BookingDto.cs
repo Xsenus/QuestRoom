@@ -9,6 +9,8 @@ public class BookingDto
     public string CustomerPhone { get; set; } = string.Empty;
     public string? CustomerEmail { get; set; }
     public DateOnly BookingDate { get; set; }
+    public string? BookingTime { get; set; }
+    public DateTime? BookingDateTime { get; set; }
     public int ParticipantsCount { get; set; }
     public int ExtraParticipantsCount { get; set; }
     public int TotalPrice { get; set; }

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api';
 import { Quest, QuestSchedule } from '../lib/types';
+import NotificationModal from './NotificationModal';
 
 interface BookingModalProps {
   slot: QuestSchedule;
@@ -16,12 +17,23 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     phone: '',
     email: '',
     comments: '',
-    paymentType: 'card',
+    paymentType: 'cash',
     promoCode: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(quest.participantsMin);
   const [selectedExtraServices, setSelectedExtraServices] = useState<string[]>([]);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: ReactNode;
+    tone: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
+  });
 
   const questExtraServices = quest.extraServices || [];
   const maxParticipants = quest.participantsMax + Math.max(0, quest.extraParticipantsMax || 0);
@@ -69,11 +81,38 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
         promoCode: formData.promoCode || null,
       });
 
-      alert('Бронирование успешно создано! Наш менеджер свяжется с вами для подтверждения.');
-      onBookingComplete();
+      const formattedDate = new Date(`${slot.date}T00:00:00`).toLocaleDateString('ru-RU');
+      const formattedTime = slot.timeSlot.substring(0, 5);
+      const emailLabel = formData.email ? formData.email : 'указанный адрес';
+
+      setNotification({
+        isOpen: true,
+        title: 'Бронирование принято',
+        tone: 'success',
+        message: (
+          <div className="space-y-3">
+            <p className="text-base font-semibold text-gray-900">
+              Большое спасибо за бронирование!
+            </p>
+            <p>
+              Вы забронировали квест <strong>{quest.title}</strong> на{' '}
+              <strong>{formattedDate}</strong> в <strong>{formattedTime}</strong>.
+            </p>
+            <p>
+              Письмо с деталями отправлено на <strong>{emailLabel}</strong>. Мы свяжемся с
+              вами в ближайшее время для подтверждения.
+            </p>
+          </div>
+        ),
+      });
     } catch (error) {
       console.error('Error creating booking:', error);
-      alert('Ошибка при создании брони. Попробуйте еще раз.');
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось создать бронь',
+        tone: 'error',
+        message: 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -159,14 +198,14 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                       <input
                         type="radio"
                         name="paymentType"
-                        value="card"
-                        checked={formData.paymentType === 'card'}
+                        value="cash"
+                        checked={formData.paymentType === 'cash'}
                         onChange={handleChange}
                         className="sr-only"
                       />
                       <span
                         className={`px-2.5 py-1 border text-xs font-semibold transition-colors ${
-                          formData.paymentType === 'card'
+                          formData.paymentType === 'cash'
                             ? 'bg-white text-red-600 border-white'
                             : 'border-white text-white hover:bg-white/20'
                         }`}
@@ -298,6 +337,18 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
           </form>
         </div>
       </div>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() => {
+          setNotification({ ...notification, isOpen: false });
+          if (notification.tone === 'success') {
+            onBookingComplete();
+          }
+        }}
+      />
     </div>
   );
 }

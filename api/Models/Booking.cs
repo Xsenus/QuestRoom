@@ -40,7 +40,7 @@ public class Booking
     public int TotalPrice { get; set; }
 
     [Column("payment_type")]
-    public string PaymentType { get; set; } = "card";
+    public string PaymentType { get; set; } = "cash";
 
     [Column("promo_code_id")]
     public Guid? PromoCodeId { get; set; }

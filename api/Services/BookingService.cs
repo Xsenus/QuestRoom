@@ -28,6 +28,7 @@ public class BookingService : IBookingService
     {
         return await _context.Bookings
             .Include(b => b.ExtraServices)
+            .Include(b => b.QuestSchedule)
             .OrderBy(b => b.BookingDate)
             .Select(b => ToDto(b))
             .ToListAsync();
@@ -88,7 +89,7 @@ public class BookingService : IBookingService
             var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, quest.ExtraParticipantPrice);
             var extrasTotal = selectedExtras.Sum(service => service.Price);
             var paymentType = string.IsNullOrWhiteSpace(dto.PaymentType)
-                ? "card"
+                ? "cash"
                 : dto.PaymentType!.ToLowerInvariant();
             var basePrice = schedule?.Price ?? quest.Price;
             var totalPrice = paymentType == "certificate"
@@ -180,7 +181,9 @@ public class BookingService : IBookingService
 
     public async Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto)
     {
-        var booking = await _context.Bookings.FindAsync(id);
+        var booking = await _context.Bookings
+            .Include(b => b.ExtraServices)
+            .FirstOrDefaultAsync(b => b.Id == id);
         if (booking == null)
         {
             return false;
@@ -188,9 +191,18 @@ public class BookingService : IBookingService
 
         var wasCancelled = booking.Status == "cancelled";
         var nextStatus = string.IsNullOrWhiteSpace(dto.Status) ? booking.Status : dto.Status;
+        var shouldRecalculate = false;
 
         booking.Status = nextStatus;
         booking.Notes = dto.Notes;
+        if (dto.QuestId.HasValue)
+        {
+            booking.QuestId = dto.QuestId.Value;
+        }
+        if (dto.QuestScheduleId.HasValue)
+        {
+            booking.QuestScheduleId = dto.QuestScheduleId.Value;
+        }
         if (dto.CustomerName != null)
         {
             booking.CustomerName = dto.CustomerName;
@@ -205,15 +217,97 @@ public class BookingService : IBookingService
                 ? null
                 : dto.CustomerEmail;
         }
+        if (dto.BookingDate.HasValue)
+        {
+            booking.BookingDate = DateOnly.FromDateTime(dto.BookingDate.Value);
+        }
         if (dto.ParticipantsCount.HasValue)
         {
             booking.ParticipantsCount = dto.ParticipantsCount.Value;
+            shouldRecalculate = true;
         }
+        if (dto.ExtraParticipantsCount.HasValue)
+        {
+            booking.ExtraParticipantsCount = dto.ExtraParticipantsCount.Value;
+        }
+        if (dto.PaymentType != null)
+        {
+            booking.PaymentType = string.IsNullOrWhiteSpace(dto.PaymentType)
+                ? booking.PaymentType
+                : dto.PaymentType.ToLowerInvariant();
+            shouldRecalculate = true;
+        }
+        if (dto.PromoCode != null)
+        {
+            booking.PromoCode = string.IsNullOrWhiteSpace(dto.PromoCode) ? null : dto.PromoCode;
+            shouldRecalculate = true;
+        }
+        if (dto.PromoDiscountType != null)
+        {
+            booking.PromoDiscountType = string.IsNullOrWhiteSpace(dto.PromoDiscountType)
+                ? null
+                : dto.PromoDiscountType;
+            shouldRecalculate = true;
+        }
+        if (dto.PromoDiscountValue.HasValue)
+        {
+            booking.PromoDiscountValue = dto.PromoDiscountValue;
+            shouldRecalculate = true;
+        }
+        if (dto.PromoDiscountAmount.HasValue)
+        {
+            booking.PromoDiscountAmount = dto.PromoDiscountAmount;
+            shouldRecalculate = true;
+        }
+        if (dto.ExtraServices != null)
+        {
+            var updatedIds = dto.ExtraServices
+                .Where(service => service.Id != Guid.Empty)
+                .Select(service => service.Id)
+                .ToHashSet();
+
+            var toRemove = booking.ExtraServices
+                .Where(service => !updatedIds.Contains(service.Id))
+                .ToList();
+
+            if (toRemove.Count > 0)
+            {
+                _context.BookingExtraServices.RemoveRange(toRemove);
+            }
+
+            foreach (var serviceDto in dto.ExtraServices)
+            {
+                var existing = booking.ExtraServices.FirstOrDefault(service => service.Id == serviceDto.Id);
+                if (existing != null)
+                {
+                    existing.Title = serviceDto.Title;
+                    existing.Price = serviceDto.Price;
+                }
+                else
+                {
+                    booking.ExtraServices.Add(new BookingExtraService
+                    {
+                        Id = serviceDto.Id == Guid.Empty ? Guid.NewGuid() : serviceDto.Id,
+                        BookingId = booking.Id,
+                        Title = serviceDto.Title,
+                        Price = serviceDto.Price,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+            shouldRecalculate = true;
+        }
+
         booking.UpdatedAt = DateTime.UtcNow;
 
-        if (dto.ParticipantsCount.HasValue)
+        if (shouldRecalculate)
         {
             await RecalculateTotalsAsync(booking);
+        }
+
+        if (dto.TotalPrice.HasValue)
+        {
+            booking.TotalPrice = dto.TotalPrice.Value;
         }
 
         if (nextStatus == "cancelled" && !wasCancelled && booking.QuestScheduleId.HasValue)
@@ -266,6 +360,13 @@ public class BookingService : IBookingService
 
     private static BookingDto ToDto(Booking booking)
     {
+        var bookingTime = booking.QuestSchedule?.TimeSlot;
+        DateTime? bookingDateTime = null;
+        if (bookingTime.HasValue)
+        {
+            bookingDateTime = booking.BookingDate.ToDateTime(bookingTime.Value);
+        }
+
         return new BookingDto
         {
             Id = booking.Id,
@@ -275,6 +376,8 @@ public class BookingService : IBookingService
             CustomerPhone = booking.CustomerPhone,
             CustomerEmail = booking.CustomerEmail,
             BookingDate = booking.BookingDate,
+            BookingTime = bookingTime?.ToString("HH:mm"),
+            BookingDateTime = bookingDateTime,
             ParticipantsCount = booking.ParticipantsCount,
             ExtraParticipantsCount = booking.ExtraParticipantsCount,
             TotalPrice = booking.TotalPrice,
