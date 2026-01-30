@@ -277,11 +277,11 @@ export default function QuestDetailPage() {
           </div>
 
           <div className="text-white">
-            <div className="flex flex-col gap-3 mb-4 lg:flex-row lg:items-center lg:gap-3">
-              <h1 className="text-3xl lg:text-4xl font-bold text-center lg:text-left">
+            <div className="flex flex-col items-center gap-3 mb-4">
+              <h1 className="text-3xl lg:text-4xl font-bold text-center">
                 {quest.title}
               </h1>
-              <div className="grid w-full grid-cols-2 gap-3 lg:flex lg:w-auto lg:justify-start lg:gap-3">
+              <div className="grid w-full max-w-md grid-cols-2 gap-3">
                 <div className="bg-red-600 rounded-full px-4 py-2 flex items-center justify-center gap-2">
                   <Star className="w-5 h-5 fill-white" />
                   <span className="font-bold">{formatAgeRating(quest.ageRating)}</span>
