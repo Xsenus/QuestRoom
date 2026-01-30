@@ -1,0 +1,28 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+          VPS_APP_ROOT: ${{ secrets.VPS_APP_ROOT }}
+          VPS_SERVICE_NAME: ${{ secrets.VPS_SERVICE_NAME }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          envs: VPS_APP_DIR,VPS_APP_ROOT,VPS_SERVICE_NAME
+          script: |
+            set -euo pipefail
+            APP_DIR="${VPS_APP_DIR:-/var/www/questroom/repo}"
+            APP_ROOT="${VPS_APP_ROOT:-/var/www/questroom}"
+            SERVICE_NAME="${VPS_SERVICE_NAME:-questroom-api}"
+            bash "$APP_DIR/scripts/deploy.sh" "$APP_DIR" "$APP_ROOT" "$SERVICE_NAME"

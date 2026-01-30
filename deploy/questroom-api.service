@@ -1,0 +1,15 @@
+[Unit]
+Description=QuestRoom API
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/questroom/api
+ExecStart=/usr/bin/dotnet /var/www/questroom/api/QuestRoomApi.dll
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/questroom/api.env
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
