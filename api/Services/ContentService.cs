@@ -424,6 +424,10 @@ public class ContentService : IContentService
                 BookingStatusConfirmedColor = dto.BookingStatusConfirmedColor,
                 BookingStatusCompletedColor = dto.BookingStatusCompletedColor,
                 BookingStatusCancelledColor = dto.BookingStatusCancelledColor,
+                CertificateStatusPendingColor = dto.CertificateStatusPendingColor,
+                CertificateStatusProcessedColor = dto.CertificateStatusProcessedColor,
+                CertificateStatusCompletedColor = dto.CertificateStatusCompletedColor,
+                CertificateStatusCanceledColor = dto.CertificateStatusCanceledColor,
                 BookingDaysAhead = dto.BookingDaysAhead > 0 ? dto.BookingDaysAhead : 10,
                 BookingCutoffMinutes = dto.BookingCutoffMinutes > 0 ? dto.BookingCutoffMinutes : 10,
                 TimeZone = dto.TimeZone,
@@ -505,6 +509,14 @@ public class ContentService : IContentService
                 dto.BookingStatusCompletedColor ?? existing.BookingStatusCompletedColor;
             existing.BookingStatusCancelledColor =
                 dto.BookingStatusCancelledColor ?? existing.BookingStatusCancelledColor;
+            existing.CertificateStatusPendingColor =
+                dto.CertificateStatusPendingColor ?? existing.CertificateStatusPendingColor;
+            existing.CertificateStatusProcessedColor =
+                dto.CertificateStatusProcessedColor ?? existing.CertificateStatusProcessedColor;
+            existing.CertificateStatusCompletedColor =
+                dto.CertificateStatusCompletedColor ?? existing.CertificateStatusCompletedColor;
+            existing.CertificateStatusCanceledColor =
+                dto.CertificateStatusCanceledColor ?? existing.CertificateStatusCanceledColor;
             if (dto.BookingDaysAhead > 0)
             {
                 existing.BookingDaysAhead = dto.BookingDaysAhead;
@@ -673,6 +685,10 @@ public class ContentService : IContentService
             BookingStatusConfirmedColor = settings.BookingStatusConfirmedColor,
             BookingStatusCompletedColor = settings.BookingStatusCompletedColor,
             BookingStatusCancelledColor = settings.BookingStatusCancelledColor,
+            CertificateStatusPendingColor = settings.CertificateStatusPendingColor,
+            CertificateStatusProcessedColor = settings.CertificateStatusProcessedColor,
+            CertificateStatusCompletedColor = settings.CertificateStatusCompletedColor,
+            CertificateStatusCanceledColor = settings.CertificateStatusCanceledColor,
             BookingDaysAhead = settings.BookingDaysAhead,
             BookingCutoffMinutes = settings.BookingCutoffMinutes,
             TimeZone = settings.TimeZone,

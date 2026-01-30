@@ -10,9 +10,10 @@ import {
   List,
   Save,
   X,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../../lib/api';
-import type { CertificateOrder, CertificateOrderUpdate } from '../../lib/types';
+import type { CertificateOrder, CertificateOrderUpdate, Settings } from '../../lib/types';
 
 const statusLabels: Record<string, string> = {
   pending: 'Новая',
@@ -35,6 +36,7 @@ export default function CertificateOrdersAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
     if (typeof window === 'undefined') {
       return 'cards';
@@ -46,6 +48,14 @@ export default function CertificateOrdersAdminPage() {
     (CertificateOrderUpdate & { id: string; certificateTitle: string }) | null
   >(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const defaultStatusColors: Record<string, string> = {
+    pending: '#f59e0b',
+    processed: '#0ea5e9',
+    completed: '#22c55e',
+    canceled: '#ef4444',
+  };
 
   const sortedOrders = useMemo(
     () =>
@@ -73,8 +83,18 @@ export default function CertificateOrdersAdminPage() {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const data = await api.getSettings();
+      setSettings(data);
+    } catch (loadError) {
+      console.error('Ошибка загрузки настроек заявок:', loadError);
+    }
+  };
+
   useEffect(() => {
     loadOrders();
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -114,6 +134,59 @@ export default function CertificateOrdersAdminPage() {
       setIsSaving(false);
     }
   };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Вы уверены, что хотите удалить эту заявку?')) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await api.deleteCertificateOrder(id);
+      setOrders((prev) => prev.filter((order) => order.id !== id));
+    } catch (deleteError) {
+      alert('Ошибка при удалении заявки: ' + (deleteError as Error).message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const getStatusColorValue = (status: string) => {
+    const mapping: Record<string, string | null | undefined> = {
+      pending: settings?.certificateStatusPendingColor,
+      processed: settings?.certificateStatusProcessedColor,
+      completed: settings?.certificateStatusCompletedColor,
+      canceled: settings?.certificateStatusCanceledColor,
+    };
+    return mapping[status] || defaultStatusColors[status] || '#ef4444';
+  };
+
+  const hexToRgba = (color: string, alpha: number) => {
+    const normalized = color.replace('#', '');
+    const isShort = normalized.length === 3;
+    const hex = isShort
+      ? normalized
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : normalized;
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const getStatusBadgeStyle = (status: string) => {
+    const color = getStatusColorValue(status);
+    return {
+      backgroundColor: hexToRgba(color, 0.12),
+      color,
+      borderColor: hexToRgba(color, 0.4),
+    };
+  };
+
+  const getRowStyle = (status: string) => ({
+    backgroundColor: hexToRgba(getStatusColorValue(status), 0.08),
+  });
 
   if (isLoading) {
     return (
@@ -202,7 +275,11 @@ export default function CertificateOrdersAdminPage() {
             </thead>
             <tbody>
               {sortedOrders.map((order) => (
-                <tr key={order.id} className="border-t border-gray-100">
+                <tr
+                  key={order.id}
+                  className="border-t border-gray-100"
+                  style={getRowStyle(order.status)}
+                >
                   <td className="px-4 py-3 text-gray-600">{formatDateTime(order.createdAt)}</td>
                   <td className="px-4 py-3 font-semibold text-gray-900">
                     {order.certificateTitle}
@@ -224,20 +301,34 @@ export default function CertificateOrdersAdminPage() {
                       : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
+                    <span
+                      className="rounded-full border px-3 py-1 text-xs font-semibold"
+                      style={getStatusBadgeStyle(order.status)}
+                    >
                       {statusLabels[order.status] ?? order.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{order.notes || '—'}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(order)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Редактировать
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(order)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Редактировать
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(order.id)}
+                        disabled={isDeleting}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Удалить
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -258,7 +349,10 @@ export default function CertificateOrdersAdminPage() {
                     Создано: {formatDateTime(order.createdAt)}
                   </p>
                 </div>
-                <span className="rounded-full bg-red-50 px-3 py-1 text-sm font-semibold text-red-600">
+                <span
+                  className="rounded-full border px-3 py-1 text-sm font-semibold"
+                  style={getStatusBadgeStyle(order.status)}
+                >
                   {statusLabels[order.status] ?? order.status}
                 </span>
               </div>
@@ -301,7 +395,7 @@ export default function CertificateOrdersAdminPage() {
                 </div>
               )}
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => handleEdit(order)}
@@ -309,6 +403,15 @@ export default function CertificateOrdersAdminPage() {
                 >
                   <Edit className="h-4 w-4" />
                   Редактировать
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(order.id)}
+                  disabled={isDeleting}
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Удалить
                 </button>
               </div>
             </article>

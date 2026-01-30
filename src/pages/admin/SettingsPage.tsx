@@ -290,6 +290,12 @@ export default function SettingsPage() {
     { key: 'bookingStatusCompletedColor', label: 'Завершено', fallback: '#3b82f6' },
     { key: 'bookingStatusCancelledColor', label: 'Отменено', fallback: '#ef4444' },
   ] as const;
+  const certificateStatusColorOptions = [
+    { key: 'certificateStatusPendingColor', label: 'Новая', fallback: '#f59e0b' },
+    { key: 'certificateStatusProcessedColor', label: 'Обработана', fallback: '#0ea5e9' },
+    { key: 'certificateStatusCompletedColor', label: 'Завершена', fallback: '#22c55e' },
+    { key: 'certificateStatusCanceledColor', label: 'Отменена', fallback: '#ef4444' },
+  ] as const;
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -340,6 +346,10 @@ export default function SettingsPage() {
         bookingStatusConfirmedColor: data.bookingStatusConfirmedColor ?? null,
         bookingStatusCompletedColor: data.bookingStatusCompletedColor ?? null,
         bookingStatusCancelledColor: data.bookingStatusCancelledColor ?? null,
+        certificateStatusPendingColor: data.certificateStatusPendingColor ?? null,
+        certificateStatusProcessedColor: data.certificateStatusProcessedColor ?? null,
+        certificateStatusCompletedColor: data.certificateStatusCompletedColor ?? null,
+        certificateStatusCanceledColor: data.certificateStatusCanceledColor ?? null,
       });
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -393,6 +403,10 @@ export default function SettingsPage() {
         bookingStatusConfirmedColor: '#22c55e',
         bookingStatusCompletedColor: '#3b82f6',
         bookingStatusCancelledColor: '#ef4444',
+        certificateStatusPendingColor: '#f59e0b',
+        certificateStatusProcessedColor: '#0ea5e9',
+        certificateStatusCompletedColor: '#22c55e',
+        certificateStatusCanceledColor: '#ef4444',
         bookingDaysAhead: 10,
         bookingCutoffMinutes: 10,
         timeZone: 'Asia/Krasnoyarsk',
@@ -461,6 +475,10 @@ export default function SettingsPage() {
       bookingStatusConfirmedColor: settings.bookingStatusConfirmedColor,
       bookingStatusCompletedColor: settings.bookingStatusCompletedColor,
       bookingStatusCancelledColor: settings.bookingStatusCancelledColor,
+      certificateStatusPendingColor: settings.certificateStatusPendingColor,
+      certificateStatusProcessedColor: settings.certificateStatusProcessedColor,
+      certificateStatusCompletedColor: settings.certificateStatusCompletedColor,
+      certificateStatusCanceledColor: settings.certificateStatusCanceledColor,
       bookingDaysAhead: settings.bookingDaysAhead,
       bookingCutoffMinutes: settings.bookingCutoffMinutes,
       timeZone: settings.timeZone,
@@ -1203,6 +1221,45 @@ export default function SettingsPage() {
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900">Цвета статусов заявок</h4>
+              <p className="text-sm text-gray-500 mt-1">
+                Используются для подсветки строк и статусов в разделе заявок на сертификаты.
+              </p>
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                {certificateStatusColorOptions.map((item) => {
+                  const key = item.key as keyof Settings;
+                  const currentValue = getColorValue(
+                    settings[key] as string | null,
+                    item.fallback,
+                  );
+                  return (
+                    <div key={item.key} className="rounded-lg border border-gray-200 p-4">
+                      <div className="text-sm font-semibold text-gray-700 mb-2">{item.label}</div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={currentValue}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [key]: e.target.value })
+                          }
+                          className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
+                        />
+                        <input
+                          type="text"
+                          value={(settings[key] as string | null) || ''}
+                          onChange={(e) =>
+                            setSettings({ ...settings, [key]: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          placeholder={item.fallback}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

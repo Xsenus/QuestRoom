@@ -610,6 +610,12 @@ class ApiClient {
     });
   }
 
+  async deleteCertificateOrder(id: string) {
+    return this.request(`/certificateorders/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Promo codes
   async getPromoCodes(): Promise<PromoCode[]> {
     return this.request('/promocodes');

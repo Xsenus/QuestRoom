@@ -10,6 +10,7 @@ public interface ICertificateOrderService
     Task<IReadOnlyList<CertificateOrderDto>> GetCertificateOrdersAsync();
     Task<CertificateOrderDto> CreateCertificateOrderAsync(CertificateOrderCreateDto dto);
     Task<bool> UpdateCertificateOrderAsync(Guid id, CertificateOrderUpdateDto dto);
+    Task<bool> DeleteCertificateOrderAsync(Guid id);
 }
 
 public class CertificateOrderService : ICertificateOrderService
@@ -99,6 +100,19 @@ public class CertificateOrderService : ICertificateOrderService
         }
 
         order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteCertificateOrderAsync(Guid id)
+    {
+        var order = await _context.CertificateOrders.FindAsync(id);
+        if (order == null)
+        {
+            return false;
+        }
+
+        _context.CertificateOrders.Remove(order);
         await _context.SaveChangesAsync();
         return true;
     }

@@ -1148,6 +1148,7 @@ namespace QuestRoomApi.Migrations
                     b.Property<string>("BookingStatusPlannedColor")
                         .HasColumnType("text")
                         .HasColumnName("booking_status_planned_color");
+
                     b.Property<string>("CertificateEmailTemplateAdmin")
                         .HasColumnType("text")
                         .HasColumnName("certificate_email_template_admin");

@@ -52,6 +52,10 @@ public class SettingsUpdateDto
     public string? BookingStatusConfirmedColor { get; set; }
     public string? BookingStatusCompletedColor { get; set; }
     public string? BookingStatusCancelledColor { get; set; }
+    public string? CertificateStatusPendingColor { get; set; }
+    public string? CertificateStatusProcessedColor { get; set; }
+    public string? CertificateStatusCompletedColor { get; set; }
+    public string? CertificateStatusCanceledColor { get; set; }
     public int BookingDaysAhead { get; set; }
     public int BookingCutoffMinutes { get; set; }
     public string? TimeZone { get; set; }
