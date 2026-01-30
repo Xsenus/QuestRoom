@@ -1,6 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Booking, Quest, QuestSchedule, Settings } from '../../lib/types';
+import {
+  Booking,
+  BookingTableColumnPreference,
+  BookingTablePreferences,
+  Quest,
+  QuestSchedule,
+  Settings,
+} from '../../lib/types';
 import {
   Calendar,
   User,
@@ -15,6 +22,7 @@ import {
   Trash2,
   Plus,
   SlidersHorizontal,
+  GripVertical,
 } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -152,6 +160,13 @@ export default function BookingsPage() {
     bookingTableDefaultColumns
   );
   const [columnsLoadedKey, setColumnsLoadedKey] = useState<string | null>(null);
+  const [draggedColumnKey, setDraggedColumnKey] = useState<BookingTableColumnKey | null>(null);
+  const [resizeState, setResizeState] = useState<{
+    key: BookingTableColumnKey;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+  const preferencesSaveTimeout = useRef<number | null>(null);
 
   const formatDate = (value: Date) => value.toISOString().split('T')[0];
 
@@ -160,6 +175,123 @@ export default function BookingsPage() {
     date.setHours(23, 59, 59, 999);
     return date;
   };
+
+  const buildTablePreferences = useCallback(
+    (columns: BookingTableColumnConfig[]): BookingTablePreferences => ({
+      columns: columns.map((column) => ({
+        key: column.key,
+        width: column.width,
+        visible: column.visible,
+      })),
+    }),
+    []
+  );
+
+  const mergeTablePreferences = useCallback((preferences?: BookingTablePreferences | null) => {
+    if (!preferences?.columns?.length) {
+      return bookingTableDefaultColumns;
+    }
+    const defaultMap = new Map(bookingTableDefaultColumns.map((column) => [column.key, column]));
+    const next: BookingTableColumnConfig[] = [];
+    const seen = new Set<BookingTableColumnKey>();
+
+    preferences.columns.forEach((column) => {
+      const base = defaultMap.get(column.key as BookingTableColumnKey);
+      if (!base) {
+        return;
+      }
+      seen.add(base.key);
+      next.push({
+        ...base,
+        width: column.width,
+        visible: column.visible,
+        locked: base.locked,
+      });
+    });
+
+    bookingTableDefaultColumns.forEach((column) => {
+      if (!seen.has(column.key)) {
+        next.push(column);
+      }
+    });
+
+    return next;
+  }, []);
+
+  const updateTableColumn = useCallback(
+    (key: BookingTableColumnKey, updates: Partial<BookingTableColumnConfig>) => {
+      setTableColumns((prev) =>
+        prev.map((column) => (column.key === key ? { ...column, ...updates } : column))
+      );
+    },
+    []
+  );
+
+  const moveTableColumn = useCallback(
+    (fromKey: BookingTableColumnKey, toKey: BookingTableColumnKey) => {
+      if (fromKey === toKey) {
+        return;
+      }
+      setTableColumns((prev) => {
+        const fromIndex = prev.findIndex((column) => column.key === fromKey);
+        const toIndex = prev.findIndex((column) => column.key === toKey);
+        if (fromIndex === -1 || toIndex === -1) {
+          return prev;
+        }
+        if (prev[fromIndex].locked || prev[toIndex].locked) {
+          return prev;
+        }
+        const next = [...prev];
+        const [moved] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, moved);
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleColumnDragStart = useCallback(
+    (key: BookingTableColumnKey, locked?: boolean) => (event: React.DragEvent) => {
+      if (locked) {
+        event.preventDefault();
+        return;
+      }
+      setDraggedColumnKey(key);
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', key);
+    },
+    []
+  );
+
+  const handleColumnDragOver = useCallback(
+    (key: BookingTableColumnKey, locked?: boolean) => (event: React.DragEvent) => {
+      if (locked || !draggedColumnKey || draggedColumnKey === key) {
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+    },
+    [draggedColumnKey]
+  );
+
+  const handleColumnDrop = useCallback(
+    (key: BookingTableColumnKey, locked?: boolean) => (event: React.DragEvent) => {
+      if (locked) {
+        return;
+      }
+      event.preventDefault();
+      const sourceKey = draggedColumnKey ?? event.dataTransfer.getData('text/plain');
+      if (sourceKey) {
+        moveTableColumn(sourceKey as BookingTableColumnKey, key);
+      }
+      setDraggedColumnKey(null);
+    },
+    [draggedColumnKey, moveTableColumn]
+  );
+
+  const handleColumnDragEnd = useCallback(() => {
+    setDraggedColumnKey(null);
+  }, []);
 
   useEffect(() => {
     const today = new Date();
@@ -217,40 +349,81 @@ export default function BookingsPage() {
   }, [listDateFrom, listDateTo, listRangeStorageKey]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    let isActive = true;
+
+    const loadPreferences = async () => {
+      let preferences: BookingTablePreferences | null = null;
+
+      if (user?.email) {
+        try {
+          preferences = await api.getBookingsTablePreferences();
+        } catch (error) {
+          console.warn('Не удалось загрузить настройки таблицы с сервера:', error);
+        }
+      }
+
+      if (!preferences?.columns?.length) {
+        const saved = localStorage.getItem(tableColumnsStorageKey);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved) as
+              | BookingTableColumnConfig[]
+              | BookingTableColumnPreference[];
+            const normalized = parsed.map((column) => ({
+              key: column.key,
+              width: column.width,
+              visible: column.visible,
+            }));
+            preferences = { columns: normalized };
+          } catch {
+            preferences = null;
+          }
+        }
+      }
+
+      if (!isActive) {
+        return;
+      }
+
+      setTableColumns(mergeTablePreferences(preferences));
+      setColumnsLoadedKey(tableColumnsStorageKey);
+    };
+
+    loadPreferences();
+
+    return () => {
+      isActive = false;
+    };
+  }, [tableColumnsStorageKey, user?.email, mergeTablePreferences]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       if (columnsLoadedKey !== tableColumnsStorageKey) {
         return;
       }
       localStorage.setItem(tableColumnsStorageKey, JSON.stringify(tableColumns));
+      if (preferencesSaveTimeout.current) {
+        window.clearTimeout(preferencesSaveTimeout.current);
+      }
+      if (user?.email) {
+        preferencesSaveTimeout.current = window.setTimeout(() => {
+          api
+            .updateBookingsTablePreferences(buildTablePreferences(tableColumns))
+            .catch((error) => {
+              console.warn('Не удалось сохранить настройки таблицы:', error);
+            });
+        }, 500);
+      }
     }
-  }, [tableColumns, tableColumnsStorageKey, columnsLoadedKey]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const saved = localStorage.getItem(tableColumnsStorageKey);
-    if (!saved) {
-      setTableColumns(bookingTableDefaultColumns);
-      setColumnsLoadedKey(tableColumnsStorageKey);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(saved) as BookingTableColumnConfig[];
-      const parsedMap = new Map(parsed.map((col) => [col.key, col]));
-      setTableColumns(
-        bookingTableDefaultColumns.map((col) => ({
-          ...col,
-          ...parsedMap.get(col.key),
-          locked: col.locked,
-        }))
-      );
-    } catch {
-      setTableColumns(bookingTableDefaultColumns);
-      setColumnsLoadedKey(tableColumnsStorageKey);
-    }
-    setColumnsLoadedKey(tableColumnsStorageKey);
-  }, [tableColumnsStorageKey]);
+    return () => {
+      if (preferencesSaveTimeout.current) {
+        window.clearTimeout(preferencesSaveTimeout.current);
+      }
+    };
+  }, [tableColumns, tableColumnsStorageKey, columnsLoadedKey, user?.email, buildTablePreferences]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -261,6 +434,29 @@ export default function BookingsPage() {
       loadScheduleSlots(selectedQuestId, dateFrom, dateTo);
     }
   }, [selectedQuestId, dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (!resizeState) {
+      return;
+    }
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const nextWidth = Math.max(80, resizeState.startWidth + (event.clientX - resizeState.startX));
+      updateTableColumn(resizeState.key, { width: nextWidth });
+    };
+
+    const handleMouseUp = () => {
+      setResizeState(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizeState, updateTableColumn]);
 
   const loadBookings = async () => {
     try {
@@ -450,12 +646,15 @@ export default function BookingsPage() {
       customerName: booking.customerName,
       customerPhone: booking.customerPhone,
       customerEmail: booking.customerEmail || '',
-      bookingDate: formatDateTimeLocal(booking.bookingDate),
+      bookingDate: formatBookingDateTimeLocal(booking),
       createdAt: booking.createdAt,
       participantsCount: booking.participantsCount,
       extraParticipantsCount: booking.extraParticipantsCount ?? 0,
       totalPrice: booking.totalPrice,
-      paymentType: booking.paymentType || '',
+      paymentType:
+        booking.paymentType === 'card'
+          ? 'cash'
+          : booking.paymentType || 'cash',
       promoCode: booking.promoCode || '',
       promoDiscountType: booking.promoDiscountType || '',
       promoDiscountValue: booking.promoDiscountValue ?? 0,
@@ -698,6 +897,19 @@ export default function BookingsPage() {
     });
   };
 
+  const formatBookingDateTime = (booking: Booking) => {
+    if (booking.bookingDateTime) {
+      return formatDateTime(booking.bookingDateTime);
+    }
+    if (booking.bookingTime) {
+      return formatDateTime(`${booking.bookingDate}T${booking.bookingTime}`);
+    }
+    if (booking.bookingDate) {
+      return new Date(`${booking.bookingDate}T00:00:00`).toLocaleDateString('ru-RU');
+    }
+    return '—';
+  };
+
   const formatDateTimeLocal = (value?: string | null) => {
     if (!value) {
       return '';
@@ -712,12 +924,24 @@ export default function BookingsPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  const formatBookingDateTimeLocal = (booking: Booking) => {
+    if (booking.bookingDateTime) {
+      return formatDateTimeLocal(booking.bookingDateTime);
+    }
+    if (booking.bookingTime) {
+      return formatDateTimeLocal(`${booking.bookingDate}T${booking.bookingTime}`);
+    }
+    if (booking.bookingDate) {
+      return `${booking.bookingDate}T00:00`;
+    }
+    return '';
+  };
+
   const normalizeDateTimeForApi = (value: string) => {
     if (!value) {
       return value;
     }
-    const date = new Date(value);
-    return date.toISOString();
+    return value;
   };
 
   const getQuestData = (booking: Booking) => {
@@ -772,10 +996,17 @@ export default function BookingsPage() {
     [visibleTableColumns]
   );
 
-  const updateTableColumn = (key: BookingTableColumnKey, updates: Partial<BookingTableColumnConfig>) => {
-    setTableColumns((prev) =>
-      prev.map((column) => (column.key === key ? { ...column, ...updates } : column))
-    );
+  const parseBookingDate = (booking: Booking) => {
+    if (booking.bookingDateTime) {
+      return new Date(booking.bookingDateTime);
+    }
+    if (booking.bookingTime) {
+      return new Date(`${booking.bookingDate}T${booking.bookingTime}`);
+    }
+    if (booking.bookingDate) {
+      return new Date(`${booking.bookingDate}T00:00:00`);
+    }
+    return null;
   };
 
   const listItemsPerPage = viewMode === 'table' ? 10 : 9;
@@ -812,7 +1043,10 @@ export default function BookingsPage() {
     }
 
     if (statusFilter !== 'pending' && (rangeStart || rangeEnd)) {
-      const bookingDate = new Date(booking.bookingDate);
+      const bookingDate = parseBookingDate(booking);
+      if (!bookingDate) {
+        return false;
+      }
       if (rangeStart && bookingDate < rangeStart) {
         return false;
       }
@@ -894,7 +1128,7 @@ export default function BookingsPage() {
           </span>
         );
       case 'bookingDate':
-        return <span>{formatDateTime(booking.bookingDate)}</span>;
+        return <span>{formatBookingDateTime(booking)}</span>;
       case 'createdAt':
         return <span>{formatDateTime(booking.createdAt)}</span>;
       case 'quest':
@@ -1157,20 +1391,47 @@ export default function BookingsPage() {
           </div>
 
           {viewMode === 'table' ? (
-            <div className="bg-white rounded-lg shadow overflow-x-auto max-w-full">
+            <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-auto">
               <table
-                className="text-sm table-fixed min-w-full w-full"
-                style={{ minWidth: totalTableWidth || '100%' }}
+                className="text-sm table-fixed min-w-max"
+                style={{
+                  width: totalTableWidth ? `${totalTableWidth}px` : '100%',
+                  minWidth: '100%',
+                }}
               >
                 <thead className="bg-gray-50 text-gray-700">
                   <tr>
                     {visibleTableColumns.map((column) => (
                       <th
                         key={column.key}
-                        className={`px-4 py-3 font-semibold ${column.key === 'actions' ? 'text-right' : 'text-left'}`}
+                        className={`group relative px-4 py-3 font-semibold ${
+                          column.key === 'actions' ? 'text-right' : 'text-left'
+                        } ${column.locked ? 'cursor-default' : 'cursor-move'}`}
                         style={{ width: column.width }}
+                        draggable={!column.locked}
+                        onDragStart={handleColumnDragStart(column.key, column.locked)}
+                        onDragOver={handleColumnDragOver(column.key, column.locked)}
+                        onDrop={handleColumnDrop(column.key, column.locked)}
+                        onDragEnd={handleColumnDragEnd}
                       >
-                        {column.label}
+                        <div className="flex items-center gap-2">
+                          {!column.locked && <GripVertical className="h-4 w-4 text-gray-400" />}
+                          <span>{column.label}</span>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Изменить ширину колонки ${column.label}`}
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setResizeState({
+                              key: column.key,
+                              startX: event.clientX,
+                              startWidth: column.width,
+                            });
+                          }}
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize opacity-0 transition-opacity group-hover:opacity-100"
+                        />
                       </th>
                     ))}
                   </tr>
@@ -1239,7 +1500,7 @@ export default function BookingsPage() {
                     <div className="flex items-center gap-2 text-gray-700">
                       <Calendar className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Дата:</span>
-                      <span>{formatDateTime(booking.bookingDate)}</span>
+                      <span>{formatBookingDateTime(booking)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <Calendar className="w-4 h-4 text-red-600" />
@@ -1585,22 +1846,6 @@ export default function BookingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ID слота
-                  </label>
-                  <input
-                    type="text"
-                    value={editingBooking.questScheduleId || ''}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        questScheduleId: e.target.value || null,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Название квеста
                   </label>
                   <input
@@ -1777,14 +2022,16 @@ export default function BookingsPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Тип оплаты
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={editingBooking.paymentType}
                     onChange={(e) =>
                       setEditingBooking({ ...editingBooking, paymentType: e.target.value })
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
+                  >
+                    <option value="cash">Наличные</option>
+                    <option value="certificate">Сертификат</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">

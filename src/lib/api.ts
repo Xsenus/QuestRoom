@@ -5,6 +5,7 @@ import type {
   AdminUserUpsert,
   Booking,
   BookingCreate,
+  BookingTablePreferences,
   BookingUpdate,
   Certificate,
   CertificateOrder,
@@ -453,6 +454,17 @@ class ApiClient {
   // Bookings
   async getBookings(): Promise<Booking[]> {
     return this.request('/bookings');
+  }
+
+  async getBookingsTablePreferences(): Promise<BookingTablePreferences> {
+    return this.request('/user-preferences/bookings-table');
+  }
+
+  async updateBookingsTablePreferences(payload: BookingTablePreferences) {
+    return this.request('/user-preferences/bookings-table', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
   }
 
   async createBooking(booking: BookingCreate): Promise<Booking> {

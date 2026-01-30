@@ -1,27 +1,48 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api';
 import { Quest, QuestSchedule } from '../lib/types';
+import NotificationModal from './NotificationModal';
 
 interface BookingModalProps {
   slot: QuestSchedule;
   quest: Quest;
   onClose: () => void;
+  onBookingCreated?: (slotId: string) => void;
   onBookingComplete: () => void;
 }
 
-export default function BookingModal({ slot, quest, onClose, onBookingComplete }: BookingModalProps) {
+export default function BookingModal({
+  slot,
+  quest,
+  onClose,
+  onBookingCreated,
+  onBookingComplete,
+}: BookingModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     comments: '',
-    paymentType: 'card',
+    paymentType: 'cash',
     promoCode: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(quest.participantsMin);
   const [selectedExtraServices, setSelectedExtraServices] = useState<string[]>([]);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: ReactNode;
+    tone: 'success' | 'error' | 'info';
+    action?: 'success' | 'conflict' | 'error';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
+    action: undefined,
+  });
 
   const questExtraServices = quest.extraServices || [];
   const maxParticipants = quest.participantsMax + Math.max(0, quest.extraParticipantsMax || 0);
@@ -55,7 +76,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     setSubmitting(true);
 
     try {
-      await api.createBooking({
+      const createdBooking = await api.createBooking({
         questId: quest.id,
         questScheduleId: slot.id,
         customerName: formData.name,
@@ -69,11 +90,76 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
         promoCode: formData.promoCode || null,
       });
 
-      alert('Бронирование успешно создано! Наш менеджер свяжется с вами для подтверждения.');
-      onBookingComplete();
+      const formattedDate = new Date(`${slot.date}T00:00:00`).toLocaleDateString('ru-RU');
+      const formattedTime = slot.timeSlot.substring(0, 5);
+      const emailLabel = formData.email ? formData.email : 'указанный адрес';
+      const selectedExtras = questExtraServices.filter((service) =>
+        selectedExtraServices.includes(service.id)
+      );
+      const discountAmount = createdBooking.promoDiscountAmount ?? 0;
+      const totalLabel = `${createdBooking.totalPrice} ₽`;
+
+      onBookingCreated?.(slot.id);
+
+      setNotification({
+        isOpen: true,
+        title: 'Бронирование принято',
+        tone: 'success',
+        action: 'success',
+        message: (
+          <div className="space-y-3">
+            <p className="text-base font-semibold text-gray-900">
+              Большое спасибо за бронирование!
+            </p>
+            <p>
+              Вы забронировали квест <strong>{quest.title}</strong> на{' '}
+              <strong>{formattedDate}</strong> в <strong>{formattedTime}</strong>.
+            </p>
+            <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+              <div className="flex items-center justify-between">
+                <span>Итоговая стоимость:</span>
+                <strong className="text-gray-900">{totalLabel}</strong>
+              </div>
+              {formData.promoCode && (
+                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                  <span>Промокод: {formData.promoCode}</span>
+                  {discountAmount > 0 && <span>Скидка: −{discountAmount} ₽</span>}
+                </div>
+              )}
+              {selectedExtras.length > 0 && (
+                <div className="mt-3 text-xs text-gray-500">
+                  <div className="font-semibold text-gray-700">Дополнительные услуги:</div>
+                  <ul className="mt-1 space-y-1">
+                    {selectedExtras.map((service) => (
+                      <li key={service.id}>
+                        {service.title} — {service.price} ₽
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <p>
+              Письмо с деталями отправлено на <strong>{emailLabel}</strong>. Мы свяжемся с
+              вами в ближайшее время для подтверждения.
+            </p>
+          </div>
+        ),
+      });
     } catch (error) {
       console.error('Error creating booking:', error);
-      alert('Ошибка при создании брони. Попробуйте еще раз.');
+      const errorMessage = (error as Error).message || '';
+      const isSlotBooked = errorMessage.toLowerCase().includes('уже забронировано');
+
+      setNotification({
+        isOpen: true,
+        title: isSlotBooked ? 'Это время уже занято' : 'Не удалось создать бронь',
+        tone: isSlotBooked ? 'info' : 'error',
+        action: isSlotBooked ? 'conflict' : 'error',
+        message: isSlotBooked
+          ? 'Похоже, другой пользователь уже забронировал выбранное время. Пожалуйста, выберите другой слот.'
+          : 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -159,14 +245,14 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
                       <input
                         type="radio"
                         name="paymentType"
-                        value="card"
-                        checked={formData.paymentType === 'card'}
+                        value="cash"
+                        checked={formData.paymentType === 'cash'}
                         onChange={handleChange}
                         className="sr-only"
                       />
                       <span
                         className={`px-2.5 py-1 border text-xs font-semibold transition-colors ${
-                          formData.paymentType === 'card'
+                          formData.paymentType === 'cash'
                             ? 'bg-white text-red-600 border-white'
                             : 'border-white text-white hover:bg-white/20'
                         }`}
@@ -298,6 +384,23 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
           </form>
         </div>
       </div>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        showToneLabel={false}
+        onClose={() => {
+          setNotification({ ...notification, isOpen: false });
+          if (notification.action === 'success') {
+            onBookingComplete();
+            return;
+          }
+          if (notification.action === 'conflict') {
+            onBookingComplete();
+          }
+        }}
+      />
     </div>
   );
 }

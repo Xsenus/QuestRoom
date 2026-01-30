@@ -118,6 +118,8 @@ export type Booking = {
   customerPhone: string;
   customerEmail: string | null;
   bookingDate: string;
+  bookingTime?: string | null;
+  bookingDateTime?: string | null;
   participantsCount: number;
   extraParticipantsCount: number;
   totalPrice: number;
@@ -197,6 +199,16 @@ export type BookingExtraService = {
   id: string;
   title: string;
   price: number;
+};
+
+export type BookingTableColumnPreference = {
+  key: string;
+  width: number;
+  visible: boolean;
+};
+
+export type BookingTablePreferences = {
+  columns: BookingTableColumnPreference[];
 };
 
 export type Rule = {
