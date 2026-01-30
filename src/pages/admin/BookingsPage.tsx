@@ -4,6 +4,7 @@ import {
   Booking,
   BookingTableColumnPreference,
   BookingTablePreferences,
+  PromoCode,
   Quest,
   QuestSchedule,
   Settings,
@@ -118,6 +119,7 @@ export default function BookingsPage() {
     message: '',
     tone: 'info',
   });
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isTotalPriceManual, setIsTotalPriceManual] = useState(false);
   const [editingBooking, setEditingBooking] = useState<{
     id: string;
@@ -321,6 +323,7 @@ export default function BookingsPage() {
     loadBookings();
     loadQuests();
     loadSettings();
+    loadPromoCodes();
   }, []);
 
   useEffect(() => {
@@ -478,6 +481,31 @@ export default function BookingsPage() {
     }
   }, [editingBooking, isTotalPriceManual]);
 
+  useEffect(() => {
+    if (!editingBooking?.promoCode) {
+      return;
+    }
+    if (!editingBooking.promoDiscountType || editingBooking.promoDiscountValue <= 0) {
+      return;
+    }
+    const nextAmount = calculateDiscountAmount(
+      editingBooking,
+      editingBooking.promoDiscountType,
+      editingBooking.promoDiscountValue
+    );
+    if (editingBooking.promoDiscountAmount !== nextAmount) {
+      setEditingBooking({ ...editingBooking, promoDiscountAmount: nextAmount });
+    }
+  }, [
+    editingBooking?.promoCode,
+    editingBooking?.promoDiscountType,
+    editingBooking?.promoDiscountValue,
+    editingBooking?.questPrice,
+    editingBooking?.extraParticipantPrice,
+    editingBooking?.extraParticipantsCount,
+    editingBooking?.extraServices,
+  ]);
+
   const loadBookings = async () => {
     try {
       const data = await api.getBookings();
@@ -507,6 +535,16 @@ export default function BookingsPage() {
       }
     } catch (error) {
       console.error('Error loading quests:', error);
+    }
+  };
+
+  const loadPromoCodes = async () => {
+    try {
+      const data = await api.getPromoCodes();
+      setPromoCodes(data || []);
+    } catch (error) {
+      console.error('Error loading promo codes:', error);
+      setPromoCodes([]);
     }
   };
 
@@ -698,7 +736,7 @@ export default function BookingsPage() {
       extraParticipantPrice: getExtraParticipantPrice(booking) ?? 0,
       extraParticipantsCount: booking.extraParticipantsCount ?? 0,
       extraServices: booking.extraServices || [],
-      promoDiscountType: booking.promoDiscountType || '',
+      promoDiscountType: normalizeDiscountType(booking.promoDiscountType || ''),
       promoDiscountValue: booking.promoDiscountValue ?? 0,
       promoDiscountAmount: booking.promoDiscountAmount ?? 0,
     });
@@ -773,7 +811,10 @@ export default function BookingsPage() {
         promoDiscountAmount: editingBooking.promoDiscountAmount,
         notes: editingBooking.notes || null,
         status: editingBooking.status,
-        extraServices: editingBooking.extraServices,
+        extraServices: editingBooking.extraServices.map((service) => ({
+          ...service,
+          id: normalizeExtraServiceId(service.id),
+        })),
       });
       closeBookingForm();
       loadBookings();
@@ -819,6 +860,63 @@ export default function BookingsPage() {
         : service
     );
     setEditingBooking({ ...editingBooking, extraServices: nextServices });
+  };
+
+  const handleApplyPromoCode = () => {
+    if (!editingBooking) {
+      return;
+    }
+    const code = editingBooking.promoCode.trim();
+    if (!code) {
+      setNotification({
+        isOpen: true,
+        title: 'Промокод не указан',
+        message: 'Введите промокод и повторите попытку.',
+        tone: 'info',
+      });
+      return;
+    }
+    const promo = promoCodes.find((item) => item.code.toLowerCase() === code.toLowerCase());
+    if (!promo) {
+      setNotification({
+        isOpen: true,
+        title: 'Промокод не найден',
+        message: 'Проверьте правильность ввода промокода.',
+        tone: 'error',
+      });
+      return;
+    }
+    const now = new Date();
+    const validFrom = new Date(promo.validFrom);
+    const validUntil = promo.validUntil ? new Date(promo.validUntil) : null;
+    if (!promo.isActive || now < validFrom || (validUntil && now > validUntil)) {
+      setNotification({
+        isOpen: true,
+        title: 'Промокод недействителен',
+        message: 'Этот промокод не активен или срок его действия истёк.',
+        tone: 'error',
+      });
+      return;
+    }
+    const normalizedType = normalizeDiscountType(promo.discountType);
+    const discountAmount = calculateDiscountAmount(
+      editingBooking,
+      normalizedType,
+      promo.discountValue
+    );
+    const isPercent = normalizedType === 'percent';
+    setEditingBooking({
+      ...editingBooking,
+      promoDiscountType: normalizedType,
+      promoDiscountValue: promo.discountValue,
+      promoDiscountAmount: discountAmount,
+    });
+    setNotification({
+      isOpen: true,
+      title: 'Промокод применён',
+      message: `Скидка ${promo.discountValue}${isPercent ? '%' : ' ₽'} учтена.`,
+      tone: 'success',
+    });
   };
 
   const removeExtraService = (index: number) => {
@@ -1035,6 +1133,48 @@ export default function BookingsPage() {
     return value;
   };
 
+  const normalizeDiscountType = (value: string) => {
+    const normalized = value.toLowerCase();
+    if (!normalized) {
+      return '';
+    }
+    if (normalized.includes('percent') || normalized.includes('%')) {
+      return 'percent';
+    }
+    return 'amount';
+  };
+
+  const normalizeExtraServiceId = (value: string) => {
+    const isGuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+    return isGuid ? value : '00000000-0000-0000-0000-000000000000';
+  };
+
+  const calculateDiscountAmount = (
+    booking: {
+      questPrice: number;
+      extraParticipantPrice: number;
+      extraParticipantsCount: number;
+      extraServices: Booking['extraServices'];
+    },
+    discountType: string,
+    discountValue: number
+  ) => {
+    if (!discountValue || discountValue <= 0) {
+      return 0;
+    }
+    const extrasTotal =
+      booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0;
+    const participantsTotal = booking.extraParticipantPrice * (booking.extraParticipantsCount ?? 0);
+    const baseTotal = (booking.questPrice ?? 0) + participantsTotal + extrasTotal;
+    const normalizedType = discountType.toLowerCase();
+    const isPercent =
+      normalizedType === 'percent' ||
+      normalizedType.includes('percent') ||
+      normalizedType.includes('%');
+    return Math.round(isPercent ? (baseTotal * discountValue) / 100 : discountValue);
+  };
+
   const calculateTotalPrice = (booking: {
     questPrice: number;
     extraParticipantPrice: number;
@@ -1050,12 +1190,11 @@ export default function BookingsPage() {
     const discountAmount =
       booking.promoDiscountAmount && booking.promoDiscountAmount > 0
         ? booking.promoDiscountAmount
-        : booking.promoDiscountValue > 0
-        ? booking.promoDiscountType.toLowerCase().includes('percent') ||
-          booking.promoDiscountType.includes('%')
-          ? (baseTotal * booking.promoDiscountValue) / 100
-          : booking.promoDiscountValue
-        : 0;
+        : calculateDiscountAmount(
+            booking,
+            booking.promoDiscountType,
+            booking.promoDiscountValue
+          );
     return Math.max(0, Math.round(baseTotal - discountAmount));
   };
 
@@ -1091,6 +1230,13 @@ export default function BookingsPage() {
       return booking.extraParticipantPrice;
     }
     return quest?.extraParticipantPrice ?? null;
+  };
+
+  const getQuestParticipantsMax = (booking: { questId: string | null }) => {
+    if (!booking.questId) {
+      return null;
+    }
+    return questLookup.get(booking.questId)?.participantsMax ?? null;
   };
 
   const getExtraServicesTotal = (booking: Booking) => {
@@ -1129,6 +1275,20 @@ export default function BookingsPage() {
     () => visibleTableColumns.reduce((sum, column) => sum + column.width, 0),
     [visibleTableColumns]
   );
+
+  const editingQuestMaxParticipants = useMemo(() => {
+    if (!editingBooking) {
+      return null;
+    }
+    return getQuestParticipantsMax(editingBooking);
+  }, [editingBooking, questLookup]);
+
+  const autoExtraParticipants = useMemo(() => {
+    if (!editingBooking || editingQuestMaxParticipants == null) {
+      return 0;
+    }
+    return Math.max(0, editingBooking.participantsCount - editingQuestMaxParticipants);
+  }, [editingBooking?.participantsCount, editingQuestMaxParticipants]);
 
   const parseBookingDate = (booking: Booking) => {
     if (booking.bookingDateTime) {
@@ -1780,11 +1940,21 @@ export default function BookingsPage() {
 
       {editingBooking && bookingFormMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 flex flex-wrap items-center gap-2">
                   {bookingFormMode === 'create' ? 'Создать бронь' : 'Редактирование брони'}
+                  <span
+                    className="inline-flex px-3 py-1 rounded-full text-xs font-bold border bg-white"
+                    style={getStatusBadgeStyle(
+                      bookingFormMode === 'create' ? 'created' : editingBooking.status
+                    )}
+                  >
+                    {bookingFormMode === 'create'
+                      ? 'Новая бронь'
+                      : getStatusText(editingBooking.status)}
+                  </span>
                 </h3>
                 {bookingFormMode === 'create' ? (
                   <p className="text-xs text-gray-500">Заполните данные и выберите время</p>
@@ -1801,343 +1971,403 @@ export default function BookingsPage() {
               </button>
             </div>
             <div className="p-6 space-y-5 overflow-y-auto bg-gray-50/40">
-              <div
-                className="inline-flex px-3 py-1 rounded-full text-xs font-bold border bg-white"
-                style={getStatusBadgeStyle(
-                  bookingFormMode === 'create' ? 'created' : editingBooking.status
-                )}
-              >
-                {bookingFormMode === 'create' ? 'Новая бронь' : getStatusText(editingBooking.status)}
-              </div>
-              <div className="grid md:grid-cols-2 gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Квест
-                  </label>
-                  <select
-                    value={editingBooking.questId || ''}
-                    onChange={(e) => {
-                      const questId = e.target.value || null;
-                      const quest = quests.find((item) => item.id === questId);
-                      setEditingBooking({
-                        ...editingBooking,
-                        questId,
-                        questTitle: quest?.title ?? '',
-                        questPrice: quest?.price ?? 0,
-                        extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
-                        questScheduleId: null,
-                        bookingTime: '',
-                      });
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  >
-                    <option value="">Без квеста</option>
-                    {quests.map((quest) => (
-                      <option key={quest.id} value={quest.id}>
-                        {quest.title}
+              <div className="space-y-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Квест
+                    </label>
+                    <select
+                      value={editingBooking.questId || ''}
+                      onChange={(e) => {
+                        const questId = e.target.value || null;
+                        const quest = quests.find((item) => item.id === questId);
+                        const questMax = quest?.participantsMax ?? null;
+                        const nextExtraParticipants =
+                          questMax != null
+                            ? Math.max(0, editingBooking.participantsCount - questMax)
+                            : editingBooking.extraParticipantsCount;
+                        const nextParticipantsCount =
+                          questMax != null
+                            ? Math.max(questMax, editingBooking.participantsCount)
+                            : editingBooking.participantsCount;
+                        setEditingBooking({
+                          ...editingBooking,
+                          questId,
+                          questTitle: quest?.title ?? '',
+                          questPrice: quest?.price ?? 0,
+                          extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
+                          extraParticipantsCount: nextExtraParticipants,
+                          participantsCount: nextParticipantsCount,
+                          questScheduleId: null,
+                          bookingTime: '',
+                        });
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    >
+                      <option value="">Без квеста</option>
+                      {quests.map((quest) => (
+                        <option key={quest.id} value={quest.id}>
+                          {quest.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Название квеста
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBooking.questTitle}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, questTitle: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Дата создания
+                    </label>
+                    <input
+                      type="text"
+                      value={formatDateTime(editingBooking.createdAt)}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Дата брони
+                    </label>
+                    <input
+                      type="date"
+                      value={editingBooking.bookingDate}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          bookingDate: e.target.value,
+                          questScheduleId: null,
+                          bookingTime: '',
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Время брони
+                    </label>
+                    <select
+                      value={editingBooking.questScheduleId || ''}
+                      onChange={(e) => {
+                        const slotId = e.target.value || null;
+                        const slot = scheduleSlots.find((item) => item.id === slotId) || null;
+                        setEditingBooking({
+                          ...editingBooking,
+                          questScheduleId: slotId,
+                          bookingTime: slot ? slot.timeSlot.slice(0, 5) : '',
+                        });
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      disabled={!editingBooking.bookingDate}
+                    >
+                      <option value="">
+                        {editingBooking.bookingDate
+                          ? availableSlots.length
+                            ? 'Выберите время'
+                            : 'Нет свободного времени'
+                          : 'Сначала выберите дату'}
                       </option>
-                    ))}
-                  </select>
+                      {availableSlots.map((slot) => (
+                        <option key={slot.id} value={slot.id}>
+                          {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedSlot ? `Цена слота: ${selectedSlot.price} ₽` : 'Выберите время'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Цена квеста
+                    </label>
+                    <input
+                      type="number"
+                      value={editingBooking.questPrice}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          questPrice: Number(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
                 </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Имя клиента
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBooking.customerName}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, customerName: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Телефон
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBooking.customerPhone}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, customerPhone: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editingBooking.customerEmail}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, customerEmail: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Количество участников
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editingBooking.participantsCount}
+                      onChange={(e) => {
+                        const nextParticipants = parseInt(e.target.value) || 1;
+                        const questMax = editingQuestMaxParticipants;
+                        const nextExtraParticipants =
+                          questMax != null
+                            ? Math.max(0, nextParticipants - questMax)
+                            : editingBooking.extraParticipantsCount;
+                        setEditingBooking({
+                          ...editingBooking,
+                          participantsCount: nextParticipants,
+                          extraParticipantsCount: nextExtraParticipants,
+                        });
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                    {editingQuestMaxParticipants != null && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        В квесте до {editingQuestMaxParticipants} участников.
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Цена доп. участника
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingBooking.extraParticipantPrice}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          extraParticipantPrice: Number(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Доп. участники
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingBooking.extraParticipantsCount}
+                      onChange={(e) => {
+                        const nextExtra = parseInt(e.target.value, 10) || 0;
+                        const questMax = editingQuestMaxParticipants;
+                        const nextParticipants =
+                          questMax != null
+                            ? questMax + nextExtra
+                            : editingBooking.participantsCount;
+                        setEditingBooking({
+                          ...editingBooking,
+                          extraParticipantsCount: nextExtra,
+                          participantsCount: nextParticipants,
+                        });
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                    {editingQuestMaxParticipants != null && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Авторасчёт: {autoExtraParticipants} доп. участников при текущем количестве.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Промокод
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBooking.promoCode}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, promoCode: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Применить
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleApplyPromoCode}
+                      className="w-full px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    >
+                      Применить
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Тип скидки
+                    </label>
+                    <select
+                      value={editingBooking.promoDiscountType}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          promoDiscountType: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    >
+                      <option value="">—</option>
+                      <option value="percent">Проценты</option>
+                      <option value="amount">Рубли</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Значение скидки
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingBooking.promoDiscountValue}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          promoDiscountValue: Number(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Сумма скидки
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingBooking.promoDiscountAmount}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          promoDiscountAmount: Number(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Агрегатор
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBooking.aggregator}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, aggregator: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      placeholder="Наш сайт"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Тип оплаты
+                    </label>
+                    <select
+                      value={editingBooking.paymentType}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, paymentType: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    >
+                      <option value="cash">Наличные</option>
+                      <option value="certificate">Сертификат</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Статус
+                    </label>
+                    <select
+                      value={editingBooking.status}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          status: e.target.value as Booking['status'],
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    >
+                      <option value="planned">Запланировано</option>
+                      <option value="created">Создано</option>
+                      <option value="pending">Ожидает</option>
+                      <option value="not_confirmed">Не подтверждено</option>
+                      <option value="confirmed">Подтверждено</option>
+                      <option value="completed">Завершено</option>
+                      <option value="cancelled">Отменено</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Название квеста
-                  </label>
-                  <input
-                    type="text"
-                    value={editingBooking.questTitle}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, questTitle: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Цена квеста
-                  </label>
-                  <input
-                    type="number"
-                    value={editingBooking.questPrice}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        questPrice: Number(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Агрегатор
-                  </label>
-                  <input
-                    type="text"
-                    value={editingBooking.aggregator}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, aggregator: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    placeholder="Наш сайт"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Дата брони
-                  </label>
-                  <input
-                    type="date"
-                    value={editingBooking.bookingDate}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        bookingDate: e.target.value,
-                        questScheduleId: null,
-                        bookingTime: '',
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Время брони
-                  </label>
-                  <select
-                    value={editingBooking.questScheduleId || ''}
-                    onChange={(e) => {
-                      const slotId = e.target.value || null;
-                      const slot = scheduleSlots.find((item) => item.id === slotId) || null;
-                      setEditingBooking({
-                        ...editingBooking,
-                        questScheduleId: slotId,
-                        bookingTime: slot ? slot.timeSlot.slice(0, 5) : '',
-                      });
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                    disabled={!editingBooking.bookingDate}
-                  >
-                    <option value="">
-                      {editingBooking.bookingDate
-                        ? availableSlots.length
-                          ? 'Выберите время'
-                          : 'Нет свободного времени'
-                        : 'Сначала выберите дату'}
-                    </option>
-                    {availableSlots.map((slot) => (
-                      <option key={slot.id} value={slot.id}>
-                        {slot.timeSlot.slice(0, 5)} · {slot.price} ₽
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {selectedSlot ? `Цена слота: ${selectedSlot.price} ₽` : 'Выберите время'}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Дата создания
-                  </label>
-                  <input
-                    type="text"
-                    value={formatDateTime(editingBooking.createdAt)}
-                    readOnly
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Имя клиента
-                  </label>
-                  <input
-                    type="text"
-                    value={editingBooking.customerName}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, customerName: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Телефон
-                  </label>
-                  <input
-                    type="text"
-                    value={editingBooking.customerPhone}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, customerPhone: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={editingBooking.customerEmail}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, customerEmail: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Участников
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editingBooking.participantsCount}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        participantsCount: parseInt(e.target.value) || 1,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Доп. участников
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingBooking.extraParticipantsCount}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        extraParticipantsCount: parseInt(e.target.value, 10) || 0,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Цена доп. участников
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingBooking.extraParticipantPrice}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        extraParticipantPrice: Number(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Тип оплаты
-                  </label>
-                  <select
-                    value={editingBooking.paymentType}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, paymentType: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  >
-                    <option value="cash">Наличные</option>
-                    <option value="certificate">Сертификат</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Промокод
-                  </label>
-                  <input
-                    type="text"
-                    value={editingBooking.promoCode}
-                    onChange={(e) =>
-                      setEditingBooking({ ...editingBooking, promoCode: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Тип скидки
-                  </label>
-                  <input
-                    type="text"
-                    value={editingBooking.promoDiscountType}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        promoDiscountType: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Значение скидки
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingBooking.promoDiscountValue}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        promoDiscountValue: Number(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Сумма скидки
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingBooking.promoDiscountAmount}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        promoDiscountAmount: Number(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Статус
-                  </label>
-                  <select
-                    value={editingBooking.status}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        status: e.target.value as Booking['status'],
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  >
-                    <option value="planned">Запланировано</option>
-                    <option value="created">Создано</option>
-                    <option value="pending">Ожидает</option>
-                    <option value="not_confirmed">Не подтверждено</option>
-                    <option value="confirmed">Подтверждено</option>
-                    <option value="completed">Завершено</option>
-                    <option value="cancelled">Отменено</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Дополнительные услуги
                   </label>
@@ -2177,7 +2407,7 @@ export default function BookingsPage() {
                     </button>
                   </div>
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Комментарий
                   </label>
@@ -2190,7 +2420,7 @@ export default function BookingsPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
                 </div>
-                <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="text-sm font-semibold text-gray-700">
                       Итоговая сумма
@@ -2258,16 +2488,16 @@ export default function BookingsPage() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 px-6 py-4 border-t border-gray-200 bg-white">
+            <div className="flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-white">
               {bookingFormMode === 'create' && createResult && (
-                <span className="text-sm text-gray-600">{createResult}</span>
+                <span className="mr-auto text-sm text-gray-600">{createResult}</span>
               )}
               <button
                 onClick={bookingFormMode === 'create' ? handleCreateBooking : handleUpdateBooking}
                 className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
               >
                 <Save className="w-4 h-4" />
-                {bookingFormMode === 'create' ? 'Создать бронь' : 'Сохранить изменения'}
+                {bookingFormMode === 'create' ? 'Создать бронь' : 'Сохранить'}
               </button>
               <button
                 onClick={closeBookingForm}
