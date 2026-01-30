@@ -3,6 +3,14 @@ import { api } from '../../lib/api';
 import { Certificate, CertificateUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 
+type ActionModalState = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  tone?: 'info' | 'danger';
+  onConfirm: () => Promise<void> | void;
+};
+
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -10,6 +18,8 @@ export default function CertificatesPage() {
     (CertificateUpsert & { id?: string }) | null
   >(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     loadCertificates();
@@ -73,15 +83,37 @@ export default function CertificatesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить этот сертификат?')) return;
+  const closeActionModal = () => {
+    setActionModal(null);
+  };
 
+  const openActionModal = (modal: ActionModalState) => {
+    setActionModal(modal);
+  };
+
+  const performAction = async (action: () => Promise<void> | void) => {
+    setActionLoading(true);
     try {
-      await api.deleteCertificate(id);
-      loadCertificates();
+      await action();
+      closeActionModal();
     } catch (error) {
       alert('Ошибка при удалении сертификата: ' + (error as Error).message);
+    } finally {
+      setActionLoading(false);
     }
+  };
+
+  const handleDelete = (cert: Certificate) => {
+    openActionModal({
+      title: 'Удалить сертификат',
+      message: `Удалить сертификат «${cert.title}»? Это действие необратимо.`,
+      confirmLabel: 'Удалить',
+      tone: 'danger',
+      onConfirm: async () => {
+        await api.deleteCertificate(cert.id);
+        loadCertificates();
+      },
+    });
   };
 
   if (loading) {
@@ -160,7 +192,7 @@ export default function CertificatesPage() {
                 )}
               </button>
               <button
-                onClick={() => handleDelete(cert.id)}
+                onClick={() => handleDelete(cert)}
                 className="flex-1 p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                 title="Удалить"
               >
@@ -312,6 +344,44 @@ export default function CertificatesPage() {
                   Сохранить
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {actionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">{actionModal.title}</h3>
+              <button
+                onClick={closeActionModal}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5 text-sm text-gray-700">{actionModal.message}</div>
+            <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <button
+                onClick={closeActionModal}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                disabled={actionLoading}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => performAction(actionModal.onConfirm)}
+                className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors ${
+                  actionModal.tone === 'danger'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-gray-900 hover:bg-gray-800'
+                }`}
+                disabled={actionLoading}
+              >
+                {actionModal.confirmLabel || 'Да'}
+              </button>
             </div>
           </div>
         </div>
