@@ -173,7 +173,17 @@ public class BookingService : IBookingService
 
         if (booking != null)
         {
-            await _emailNotificationService.SendBookingNotificationsAsync(booking);
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailNotificationService.SendBookingNotificationsAsync(booking);
+                }
+                catch
+                {
+                    // Ignore notification errors to avoid blocking booking creation.
+                }
+            });
         }
 
         return result;
