@@ -67,7 +67,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
     setSubmitting(true);
 
     try {
-      await api.createBooking({
+      const createdBooking = await api.createBooking({
         questId: quest.id,
         questScheduleId: slot.id,
         customerName: formData.name,
@@ -84,6 +84,11 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
       const formattedDate = new Date(`${slot.date}T00:00:00`).toLocaleDateString('ru-RU');
       const formattedTime = slot.timeSlot.substring(0, 5);
       const emailLabel = formData.email ? formData.email : 'указанный адрес';
+      const selectedExtras = questExtraServices.filter((service) =>
+        selectedExtraServices.includes(service.id)
+      );
+      const discountAmount = createdBooking.promoDiscountAmount ?? 0;
+      const totalLabel = `${createdBooking.totalPrice} ₽`;
 
       setNotification({
         isOpen: true,
@@ -98,6 +103,30 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
               Вы забронировали квест <strong>{quest.title}</strong> на{' '}
               <strong>{formattedDate}</strong> в <strong>{formattedTime}</strong>.
             </p>
+            <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+              <div className="flex items-center justify-between">
+                <span>Итоговая стоимость:</span>
+                <strong className="text-gray-900">{totalLabel}</strong>
+              </div>
+              {formData.promoCode && (
+                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                  <span>Промокод: {formData.promoCode}</span>
+                  {discountAmount > 0 && <span>Скидка: −{discountAmount} ₽</span>}
+                </div>
+              )}
+              {selectedExtras.length > 0 && (
+                <div className="mt-3 text-xs text-gray-500">
+                  <div className="font-semibold text-gray-700">Дополнительные услуги:</div>
+                  <ul className="mt-1 space-y-1">
+                    {selectedExtras.map((service) => (
+                      <li key={service.id}>
+                        {service.title} — {service.price} ₽
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
             <p>
               Письмо с деталями отправлено на <strong>{emailLabel}</strong>. Мы свяжемся с
               вами в ближайшее время для подтверждения.
@@ -342,6 +371,7 @@ export default function BookingModal({ slot, quest, onClose, onBookingComplete }
         title={notification.title}
         message={notification.message}
         tone={notification.tone}
+        showToneLabel={false}
         onClose={() => {
           setNotification({ ...notification, isOpen: false });
           if (notification.tone === 'success') {
