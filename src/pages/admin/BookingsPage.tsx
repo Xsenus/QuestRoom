@@ -811,7 +811,10 @@ export default function BookingsPage() {
         promoDiscountAmount: editingBooking.promoDiscountAmount,
         notes: editingBooking.notes || null,
         status: editingBooking.status,
-        extraServices: editingBooking.extraServices,
+        extraServices: editingBooking.extraServices.map((service) => ({
+          ...service,
+          id: normalizeExtraServiceId(service.id),
+        })),
       });
       closeBookingForm();
       loadBookings();
@@ -1139,6 +1142,12 @@ export default function BookingsPage() {
       return 'percent';
     }
     return 'amount';
+  };
+
+  const normalizeExtraServiceId = (value: string) => {
+    const isGuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+    return isGuid ? value : '00000000-0000-0000-0000-000000000000';
   };
 
   const calculateDiscountAmount = (
@@ -1964,60 +1973,58 @@ export default function BookingsPage() {
             <div className="p-6 space-y-5 overflow-y-auto bg-gray-50/40">
               <div className="space-y-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="md:col-span-2 space-y-3">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Квест
-                      </label>
-                      <select
-                        value={editingBooking.questId || ''}
-                        onChange={(e) => {
-                          const questId = e.target.value || null;
-                          const quest = quests.find((item) => item.id === questId);
-                          const questMax = quest?.participantsMax ?? null;
-                          const nextExtraParticipants =
-                            questMax != null
-                              ? Math.max(0, editingBooking.participantsCount - questMax)
-                              : editingBooking.extraParticipantsCount;
-                          const nextParticipantsCount =
-                            questMax != null
-                              ? Math.max(questMax, editingBooking.participantsCount)
-                              : editingBooking.participantsCount;
-                          setEditingBooking({
-                            ...editingBooking,
-                            questId,
-                            questTitle: quest?.title ?? '',
-                            questPrice: quest?.price ?? 0,
-                            extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
-                            extraParticipantsCount: nextExtraParticipants,
-                            participantsCount: nextParticipantsCount,
-                            questScheduleId: null,
-                            bookingTime: '',
-                          });
-                        }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      >
-                        <option value="">Без квеста</option>
-                        {quests.map((quest) => (
-                          <option key={quest.id} value={quest.id}>
-                            {quest.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Название квеста
-                      </label>
-                      <input
-                        type="text"
-                        value={editingBooking.questTitle}
-                        onChange={(e) =>
-                          setEditingBooking({ ...editingBooking, questTitle: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Квест
+                    </label>
+                    <select
+                      value={editingBooking.questId || ''}
+                      onChange={(e) => {
+                        const questId = e.target.value || null;
+                        const quest = quests.find((item) => item.id === questId);
+                        const questMax = quest?.participantsMax ?? null;
+                        const nextExtraParticipants =
+                          questMax != null
+                            ? Math.max(0, editingBooking.participantsCount - questMax)
+                            : editingBooking.extraParticipantsCount;
+                        const nextParticipantsCount =
+                          questMax != null
+                            ? Math.max(questMax, editingBooking.participantsCount)
+                            : editingBooking.participantsCount;
+                        setEditingBooking({
+                          ...editingBooking,
+                          questId,
+                          questTitle: quest?.title ?? '',
+                          questPrice: quest?.price ?? 0,
+                          extraParticipantPrice: quest?.extraParticipantPrice ?? 0,
+                          extraParticipantsCount: nextExtraParticipants,
+                          participantsCount: nextParticipantsCount,
+                          questScheduleId: null,
+                          bookingTime: '',
+                        });
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    >
+                      <option value="">Без квеста</option>
+                      {quests.map((quest) => (
+                        <option key={quest.id} value={quest.id}>
+                          {quest.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Название квеста
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBooking.questTitle}
+                      onChange={(e) =>
+                        setEditingBooking({ ...editingBooking, questTitle: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2490,7 +2497,7 @@ export default function BookingsPage() {
                 className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
               >
                 <Save className="w-4 h-4" />
-                {bookingFormMode === 'create' ? 'Создать бронь' : 'Сохранить изменения'}
+                {bookingFormMode === 'create' ? 'Создать бронь' : 'Сохранить'}
               </button>
               <button
                 onClick={closeBookingForm}
