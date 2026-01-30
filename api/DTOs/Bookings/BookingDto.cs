@@ -21,6 +21,7 @@ public class BookingDto
     public int? PromoDiscountAmount { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    public string? Aggregator { get; set; }
     public List<BookingExtraServiceDto> ExtraServices { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

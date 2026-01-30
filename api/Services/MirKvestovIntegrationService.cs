@@ -181,7 +181,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                 CustomerEmail = request.Email,
                 BookingDate = date,
                 ParticipantsCount = participantsCount,
-                Notes = notes
+                Notes = notes,
+                Aggregator = "МИР КВЕСТОВ"
             });
         }
         catch (InvalidOperationException ex)

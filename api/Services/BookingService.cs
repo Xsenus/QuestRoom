@@ -35,7 +35,8 @@ public class BookingService : IBookingService
         return await _context.Bookings
             .Include(b => b.ExtraServices)
             .Include(b => b.QuestSchedule)
-            .OrderBy(b => b.BookingDate)
+            .OrderByDescending(b => b.CreatedAt)
+            .ThenBy(b => b.BookingDate)
             .Select(b => ToDto(b))
             .ToListAsync();
     }
@@ -141,6 +142,7 @@ public class BookingService : IBookingService
                 PromoDiscountAmount = promoDiscountAmount,
                 Status = "pending",
                 Notes = dto.Notes,
+                Aggregator = string.IsNullOrWhiteSpace(dto.Aggregator) ? null : dto.Aggregator,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -234,6 +236,12 @@ public class BookingService : IBookingService
             booking.CustomerEmail = string.IsNullOrWhiteSpace(dto.CustomerEmail)
                 ? null
                 : dto.CustomerEmail;
+        }
+        if (dto.Aggregator != null)
+        {
+            booking.Aggregator = string.IsNullOrWhiteSpace(dto.Aggregator)
+                ? null
+                : dto.Aggregator;
         }
         if (dto.BookingDate.HasValue)
         {
@@ -406,6 +414,7 @@ public class BookingService : IBookingService
             PromoDiscountAmount = booking.PromoDiscountAmount,
             Status = booking.Status,
             Notes = booking.Notes,
+            Aggregator = booking.Aggregator,
             ExtraServices = booking.ExtraServices
                 .Select(service => new BookingExtraServiceDto
                 {
