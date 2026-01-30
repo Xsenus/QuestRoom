@@ -689,6 +689,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                 BackgroundGradientFrom = "#070816",
                 BackgroundGradientVia = "#160a2e",
                 BackgroundGradientTo = "#2c0b3f",
+                ScheduleBackground = null,
                 BookingEmailTemplateAdmin = """
                                             <p><strong>Информация о квесте:</strong></p>
                                             <p>

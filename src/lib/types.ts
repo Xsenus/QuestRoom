@@ -101,6 +101,7 @@ export type Settings = {
   backgroundGradientFrom: string | null;
   backgroundGradientVia: string | null;
   backgroundGradientTo: string | null;
+  scheduleBackground: string | null;
   updatedAt: string;
 };
 

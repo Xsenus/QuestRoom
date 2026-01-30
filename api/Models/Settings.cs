@@ -184,6 +184,9 @@ public class Settings
     [Column("background_gradient_to")]
     public string? BackgroundGradientTo { get; set; }
 
+    [Column("schedule_background")]
+    public string? ScheduleBackground { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }

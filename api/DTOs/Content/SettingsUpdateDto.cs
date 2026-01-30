@@ -60,4 +60,5 @@ public class SettingsUpdateDto
     public string? BackgroundGradientFrom { get; set; }
     public string? BackgroundGradientVia { get; set; }
     public string? BackgroundGradientTo { get; set; }
+    public string? ScheduleBackground { get; set; }
 }

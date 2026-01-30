@@ -212,6 +212,9 @@ export default function QuestDetailPage() {
   const difficultyValue = quest.difficulty || 1;
   const difficultyMax = Math.max(1, quest.difficultyMax || 5);
   const filledKeys = Math.min(difficultyValue, difficultyMax);
+  const scheduleBackgroundStyle = settings?.scheduleBackground?.trim()
+    ? { background: settings.scheduleBackground.trim() }
+    : undefined;
 
   return (
     <div className="min-h-screen py-8">
@@ -364,7 +367,12 @@ export default function QuestDetailPage() {
           </div>
         </div>
 
-        <div className="bg-purple-900/40 backdrop-blur-sm rounded-lg p-8 overflow-x-visible">
+        <div
+          className={`backdrop-blur-sm rounded-lg p-8 overflow-x-visible ${
+            scheduleBackgroundStyle ? '' : 'bg-purple-900/40'
+          }`}
+          style={scheduleBackgroundStyle}
+        >
           <h2 className="text-3xl font-bold text-white text-center mb-8">
             Расписание на квест {quest.title}
           </h2>
