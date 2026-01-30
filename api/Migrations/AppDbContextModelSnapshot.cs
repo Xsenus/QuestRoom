@@ -95,6 +95,10 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("notes");
 
+                    b.Property<string>("Aggregator")
+                        .HasColumnType("text")
+                        .HasColumnName("aggregator");
+
                     b.Property<int>("ParticipantsCount")
                         .HasColumnType("integer")
                         .HasColumnName("participants_count");

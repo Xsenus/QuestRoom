@@ -63,6 +63,9 @@ public class Booking
     [Column("notes")]
     public string? Notes { get; set; }
 
+    [Column("aggregator")]
+    public string? Aggregator { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 

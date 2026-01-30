@@ -10,6 +10,7 @@ public class BookingCreateDto
     public DateOnly BookingDate { get; set; }
     public int ParticipantsCount { get; set; }
     public string? Notes { get; set; }
+    public string? Aggregator { get; set; }
     public Guid[] ExtraServiceIds { get; set; } = Array.Empty<Guid>();
     public string? PaymentType { get; set; }
     public string? PromoCode { get; set; }
