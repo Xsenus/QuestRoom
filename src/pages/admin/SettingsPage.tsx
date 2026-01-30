@@ -641,39 +641,6 @@ export default function SettingsPage() {
                 }}
               />
             </div>
-            <div className="rounded-lg border border-gray-200 p-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                Фон расписания (страница квеста)
-              </h4>
-              <div className="flex flex-wrap items-center gap-3">
-                <input
-                  type="color"
-                  value={getColorValue(settings.scheduleBackground, '#2c0b3f')}
-                  onChange={(e) =>
-                    setSettings({ ...settings, scheduleBackground: e.target.value })
-                  }
-                  className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
-                />
-                <input
-                  type="text"
-                  value={settings.scheduleBackground || ''}
-                  onChange={(e) =>
-                    setSettings({ ...settings, scheduleBackground: e.target.value })
-                  }
-                  className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  placeholder="#2c0b3f или linear-gradient(...)"
-                />
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                Можно указать цвет или CSS-значение фона для блока расписания.
-              </p>
-              <div
-                className="mt-3 h-10 rounded-md border border-gray-200"
-                style={{
-                  background: settings.scheduleBackground?.trim() || '#2c0b3f',
-                }}
-              />
-            </div>
             <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-gray-700">Видео в модальном окне</p>
@@ -1338,6 +1305,39 @@ export default function SettingsPage() {
               <p className="mt-2 text-xs text-gray-500">
                 Используется для расчета времени закрытия слотов на публичной странице.
               </p>
+            </div>
+            <div className="md:col-span-2 rounded-lg border border-gray-200 p-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                Фон расписания (страница квеста)
+              </h4>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  type="color"
+                  value={getColorValue(settings.scheduleBackground, '#2c0b3f')}
+                  onChange={(e) =>
+                    setSettings({ ...settings, scheduleBackground: e.target.value })
+                  }
+                  className="h-10 w-12 cursor-pointer rounded-md border border-gray-300 bg-white p-1"
+                />
+                <input
+                  type="text"
+                  value={settings.scheduleBackground || ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, scheduleBackground: e.target.value })
+                  }
+                  className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  placeholder="#2c0b3f или linear-gradient(...)"
+                />
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Можно указать цвет или CSS-значение фона для блока расписания.
+              </p>
+              <div
+                className="mt-3 h-10 rounded-md border border-gray-200"
+                style={{
+                  background: settings.scheduleBackground?.trim() || '#2c0b3f',
+                }}
+              />
             </div>
             <div className="md:col-span-2">
               <h4 className="text-lg font-semibold text-gray-900">Цвета статусов брони</h4>
