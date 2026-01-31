@@ -123,6 +123,9 @@ export default function BookingsPage() {
   });
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isTotalPriceManual, setIsTotalPriceManual] = useState(false);
+  const [selectedQuestExtraServiceIds, setSelectedQuestExtraServiceIds] = useState<string[]>(
+    []
+  );
   const [editingBooking, setEditingBooking] = useState<{
     id: string;
     questId: string | null;
@@ -477,11 +480,11 @@ export default function BookingsPage() {
     if (!editingBooking || isTotalPriceManual) {
       return;
     }
-    const nextTotal = calculateTotalPrice(editingBooking);
+    const nextTotal = calculateTotalPrice(editingBooking, getSelectedQuestExtrasTotal());
     if (editingBooking.totalPrice !== nextTotal) {
       setEditingBooking({ ...editingBooking, totalPrice: nextTotal });
     }
-  }, [editingBooking, isTotalPriceManual]);
+  }, [editingBooking, isTotalPriceManual, selectedQuestExtraServiceIds]);
 
   useEffect(() => {
     if (!editingBooking?.promoCode) {
@@ -493,7 +496,8 @@ export default function BookingsPage() {
     const nextAmount = calculateDiscountAmount(
       editingBooking,
       editingBooking.promoDiscountType,
-      editingBooking.promoDiscountValue
+      editingBooking.promoDiscountValue,
+      getSelectedQuestExtrasTotal()
     );
     if (editingBooking.promoDiscountAmount !== nextAmount) {
       setEditingBooking({ ...editingBooking, promoDiscountAmount: nextAmount });
@@ -506,6 +510,7 @@ export default function BookingsPage() {
     editingBooking?.extraParticipantPrice,
     editingBooking?.extraParticipantsCount,
     editingBooking?.extraServices,
+    selectedQuestExtraServiceIds,
   ]);
 
   const loadBookings = async () => {
@@ -611,7 +616,13 @@ export default function BookingsPage() {
         bookingDate: slot.date,
         participantsCount: editingBooking.participantsCount,
         notes: editingBooking.notes || null,
-        extraServiceIds: [],
+        extraServiceIds: selectedQuestExtraServiceIds,
+        extraServices: editingBooking.extraServices
+          .map((service) => ({
+            title: service.title.trim(),
+            price: service.price,
+          }))
+          .filter((service) => service.title),
         paymentType: editingBooking.paymentType || null,
         promoCode: editingBooking.promoCode || null,
       });
@@ -728,6 +739,7 @@ export default function BookingsPage() {
       status: 'created',
       extraServices: [],
     });
+    setSelectedQuestExtraServiceIds([]);
   };
 
   const closeBookingForm = () => {
@@ -784,6 +796,7 @@ export default function BookingsPage() {
       status: booking.status,
       extraServices: booking.extraServices || [],
     });
+    setSelectedQuestExtraServiceIds([]);
   };
 
   const handleUpdateBooking = async () => {
@@ -858,6 +871,12 @@ export default function BookingsPage() {
     });
   };
 
+  const toggleQuestExtraService = (serviceId: string) => {
+    setSelectedQuestExtraServiceIds((prev) =>
+      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
+    );
+  };
+
   const updateExtraService = (index: number, field: 'title' | 'price', value: string) => {
     if (!editingBooking) {
       return;
@@ -913,7 +932,8 @@ export default function BookingsPage() {
     const discountAmount = calculateDiscountAmount(
       editingBooking,
       normalizedType,
-      promo.discountValue
+      promo.discountValue,
+      getSelectedQuestExtrasTotal()
     );
     const isPercent = normalizedType === 'percent';
     setEditingBooking({
@@ -1169,13 +1189,15 @@ export default function BookingsPage() {
       extraServices: Booking['extraServices'];
     },
     discountType: string,
-    discountValue: number
+    discountValue: number,
+    extraServicesTotal = 0
   ) => {
     if (!discountValue || discountValue <= 0) {
       return 0;
     }
     const extrasTotal =
-      booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0;
+      (booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0) +
+      extraServicesTotal;
     const participantsTotal = booking.extraParticipantPrice * (booking.extraParticipantsCount ?? 0);
     const baseTotal = (booking.questPrice ?? 0) + participantsTotal + extrasTotal;
     const normalizedType = discountType.toLowerCase();
@@ -1194,8 +1216,10 @@ export default function BookingsPage() {
     promoDiscountType: string;
     promoDiscountValue: number;
     promoDiscountAmount: number;
-  }) => {
-    const extrasTotal = booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0;
+  }, extraServicesTotal = 0) => {
+    const extrasTotal =
+      (booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0) +
+      extraServicesTotal;
     const participantsTotal = booking.extraParticipantPrice * (booking.extraParticipantsCount ?? 0);
     const baseTotal = (booking.questPrice ?? 0) + participantsTotal + extrasTotal;
     const discountAmount =
@@ -1204,9 +1228,23 @@ export default function BookingsPage() {
         : calculateDiscountAmount(
             booking,
             booking.promoDiscountType,
-            booking.promoDiscountValue
+            booking.promoDiscountValue,
+            extraServicesTotal
           );
     return Math.max(0, Math.round(baseTotal - discountAmount));
+  };
+
+  const getSelectedQuestExtrasTotal = () => {
+    if (bookingFormMode !== 'create' || !editingBooking?.questId) {
+      return 0;
+    }
+    const quest = questLookup.get(editingBooking.questId);
+    if (!quest?.extraServices?.length) {
+      return 0;
+    }
+    return quest.extraServices
+      .filter((service) => selectedQuestExtraServiceIds.includes(service.id))
+      .reduce((sum, service) => sum + service.price, 0);
   };
 
   const getQuestData = (booking: Booking) => {
@@ -1300,6 +1338,18 @@ export default function BookingsPage() {
     }
     return Math.max(0, editingBooking.participantsCount - editingQuestMaxParticipants);
   }, [editingBooking?.participantsCount, editingQuestMaxParticipants]);
+
+  const availableQuestExtras = useMemo(() => {
+    if (bookingFormMode !== 'create' || !editingBooking?.questId) {
+      return [];
+    }
+    return questLookup.get(editingBooking.questId)?.extraServices ?? [];
+  }, [bookingFormMode, editingBooking?.questId, questLookup]);
+
+  const selectedQuestExtrasTotal = useMemo(
+    () => getSelectedQuestExtrasTotal(),
+    [bookingFormMode, editingBooking?.questId, questLookup, selectedQuestExtraServiceIds]
+  );
 
   const parseBookingDate = (booking: Booking) => {
     if (booking.bookingDateTime) {
@@ -2023,6 +2073,7 @@ export default function BookingsPage() {
                           questScheduleId: null,
                           bookingTime: '',
                         });
+                        setSelectedQuestExtraServiceIds([]);
                       }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                     >
@@ -2389,6 +2440,34 @@ export default function BookingsPage() {
                 </div>
 
                 <div>
+                  {bookingFormMode === 'create' && availableQuestExtras.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Услуги квеста</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {availableQuestExtras.map((service) => (
+                          <label
+                            key={service.id}
+                            className="flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedQuestExtraServiceIds.includes(service.id)}
+                              onChange={() => toggleQuestExtraService(service.id)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            />
+                            <span>
+                              {service.title} · {service.price} ₽
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {selectedQuestExtrasTotal > 0 && (
+                        <p className="mt-2 text-xs text-gray-500">
+                          Сумма услуг квеста: {selectedQuestExtrasTotal} ₽
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Дополнительные услуги
                   </label>
@@ -2456,7 +2535,10 @@ export default function BookingsPage() {
                           if (!next && editingBooking) {
                             setEditingBooking({
                               ...editingBooking,
-                              totalPrice: calculateTotalPrice(editingBooking),
+                              totalPrice: calculateTotalPrice(
+                                editingBooking,
+                                getSelectedQuestExtrasTotal()
+                              ),
                             });
                           }
                         }}
@@ -2494,7 +2576,10 @@ export default function BookingsPage() {
                           setIsTotalPriceManual(false);
                           setEditingBooking({
                             ...editingBooking,
-                            totalPrice: calculateTotalPrice(editingBooking),
+                            totalPrice: calculateTotalPrice(
+                              editingBooking,
+                              getSelectedQuestExtrasTotal()
+                            ),
                           });
                         }}
                         className="px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50"

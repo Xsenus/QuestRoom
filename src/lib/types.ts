@@ -158,6 +158,7 @@ export type BookingCreate = {
   participantsCount: number;
   notes: string | null;
   extraServiceIds: string[];
+  extraServices?: BookingExtraServiceCreate[];
   paymentType?: string | null;
   promoCode?: string | null;
 };
@@ -203,6 +204,11 @@ export type QuestExtraServiceUpsert = {
 
 export type BookingExtraService = {
   id: string;
+  title: string;
+  price: number;
+};
+
+export type BookingExtraServiceCreate = {
   title: string;
   price: number;
 };

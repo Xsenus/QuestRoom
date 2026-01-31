@@ -92,9 +92,18 @@ public class BookingService : IBookingService
             var selectedExtras = quest.ExtraServices
                 .Where(service => dto.ExtraServiceIds.Contains(service.Id))
                 .ToList();
+            var customExtras = dto.ExtraServices?
+                .Select(service => new BookingExtraServiceCreateDto
+                {
+                    Title = service.Title.Trim(),
+                    Price = service.Price
+                })
+                .Where(service => !string.IsNullOrWhiteSpace(service.Title))
+                .ToList() ?? new List<BookingExtraServiceCreateDto>();
             var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - quest.ParticipantsMax);
             var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, quest.ExtraParticipantPrice);
-            var extrasTotal = selectedExtras.Sum(service => service.Price);
+            var extrasTotal = selectedExtras.Sum(service => service.Price)
+                + customExtras.Sum(service => service.Price);
             var paymentType = string.IsNullOrWhiteSpace(dto.PaymentType)
                 ? "cash"
                 : dto.PaymentType!.ToLowerInvariant();
@@ -154,6 +163,18 @@ public class BookingService : IBookingService
                     Id = Guid.NewGuid(),
                     BookingId = booking.Id,
                     QuestExtraServiceId = service.Id,
+                    Title = service.Title,
+                    Price = service.Price,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            foreach (var service in customExtras)
+            {
+                booking.ExtraServices.Add(new BookingExtraService
+                {
+                    Id = Guid.NewGuid(),
+                    BookingId = booking.Id,
                     Title = service.Title,
                     Price = service.Price,
                     CreatedAt = DateTime.UtcNow

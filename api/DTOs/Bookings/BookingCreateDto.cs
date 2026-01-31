@@ -12,6 +12,7 @@ public class BookingCreateDto
     public string? Notes { get; set; }
     public string? Aggregator { get; set; }
     public Guid[] ExtraServiceIds { get; set; } = Array.Empty<Guid>();
+    public List<BookingExtraServiceCreateDto>? ExtraServices { get; set; }
     public string? PaymentType { get; set; }
     public string? PromoCode { get; set; }
 }
