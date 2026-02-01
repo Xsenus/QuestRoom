@@ -117,6 +117,7 @@ export type Booking = {
   questId: string | null;
   questScheduleId: string | null;
   aggregator: string | null;
+  legacyId?: number | null;
   questTitle?: string | null;
   questPrice?: number | null;
   extraParticipantPrice?: number | null;
@@ -146,6 +147,14 @@ export type Booking = {
   extraServices: BookingExtraService[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type BookingImportResult = {
+  totalRows: number;
+  imported: number;
+  skipped: number;
+  duplicates: number;
+  errors: string[];
 };
 
 export type BookingCreate = {

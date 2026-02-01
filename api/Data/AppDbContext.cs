@@ -145,6 +145,10 @@ public class AppDbContext : DbContext
             .HasForeignKey<Booking>(b => b.QuestScheduleId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<Booking>()
+            .HasIndex(b => b.LegacyId)
+            .IsUnique();
+
         modelBuilder.Entity<BookingExtraService>()
             .HasOne(e => e.Booking)
             .WithMany(b => b.ExtraServices)

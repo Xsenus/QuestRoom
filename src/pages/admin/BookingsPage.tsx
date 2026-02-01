@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, ChangeEvent } from 'react';
 import { api } from '../../lib/api';
 import {
   Booking,
   BookingTableColumnPreference,
   BookingTablePreferences,
+  BookingImportResult,
   PromoCode,
   Quest,
   QuestSchedule,
@@ -126,6 +127,11 @@ export default function BookingsPage() {
   const [selectedQuestExtraServiceIds, setSelectedQuestExtraServiceIds] = useState<string[]>(
     []
   );
+  const [importContent, setImportContent] = useState('');
+  const [importFileName, setImportFileName] = useState('');
+  const [importResult, setImportResult] = useState<BookingImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [editingBooking, setEditingBooking] = useState<{
     id: string;
     questId: string | null;
@@ -529,6 +535,39 @@ export default function BookingsPage() {
       await loadBookings();
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImportContent(String(reader.result || ''));
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportBookings = async () => {
+    if (!importContent.trim()) {
+      setImportError('Добавьте файл или вставьте содержимое для импорта.');
+      return;
+    }
+    setIsImporting(true);
+    setImportError(null);
+    setImportResult(null);
+
+    try {
+      const result = await api.importBookings(importContent);
+      setImportResult(result);
+      await loadBookings();
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Ошибка импорта.');
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -1582,7 +1621,100 @@ export default function BookingsPage() {
       </div>
 
       <div className="space-y-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Импорт бронирований</h3>
+              <p className="text-sm text-gray-500">
+                Поддерживаются файлы CSV или TXT с разделителями “;” или табуляцией.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setImportContent('');
+                setImportFileName('');
+                setImportResult(null);
+                setImportError(null);
+              }}
+              className="text-sm font-semibold text-gray-500 hover:text-gray-700"
+            >
+              Очистить
+            </button>
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-sm font-semibold text-gray-700">Файл</span>
+                <input
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleImportFileChange}
+                  className="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200"
+                />
+              </label>
+              {importFileName && (
+                <div className="text-xs text-gray-500">Выбран файл: {importFileName}</div>
+              )}
+              <label className="block">
+                <span className="text-sm font-semibold text-gray-700">
+                  Содержимое (можно вставить вручную)
+                </span>
+                <textarea
+                  value={importContent}
+                  onChange={(event) => setImportContent(event.target.value)}
+                  rows={6}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                  placeholder="Вставьте содержимое CSV/TXT сюда."
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleImportBookings}
+                disabled={isImporting}
+                className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isImporting ? 'Импортируем…' : 'Импортировать'}
+              </button>
+            </div>
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700">
+              <p className="font-semibold text-gray-800">Правила импорта</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-gray-600">
+                <li>Пустые строки пропускаются, как и записи без телефона и e-mail.</li>
+                <li>Дубликаты по старому Id не создаются повторно.</li>
+                <li>Оплата “3” сохраняется как агрегатор “mir-kvestov”.</li>
+              </ul>
+              {importResult && (
+                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-green-700">
+                  <p className="font-semibold">Импорт завершён</p>
+                  <p>Строк всего: {importResult.totalRows}</p>
+                  <p>Импортировано: {importResult.imported}</p>
+                  <p>Пропущено: {importResult.skipped}</p>
+                  <p>Дубликатов: {importResult.duplicates}</p>
+                  {importResult.errors.length > 0 && (
+                    <div className="mt-2 text-xs text-green-800">
+                      <p className="font-semibold">Ошибки:</p>
+                      <ul className="list-disc pl-4">
+                        {importResult.errors.slice(0, 5).map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                      {importResult.errors.length > 5 && (
+                        <p>…и ещё {importResult.errors.length - 5}.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {importError && (
+                <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
+                  {importError}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2">
               {(
                 [
@@ -2412,6 +2544,7 @@ export default function BookingsPage() {
                     >
                       <option value="cash">Наличные</option>
                       <option value="certificate">Сертификат</option>
+                      <option value="aggregator">Агрегатор</option>
                     </select>
                   </div>
                   <div>
