@@ -41,6 +41,8 @@ import type {
   RoleDefinition,
   Settings,
   SettingsUpdate,
+  StandardExtraService,
+  StandardExtraServiceUpsert,
 } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -289,6 +291,32 @@ class ApiClient {
 
   async deleteQuest(id: string) {
     return this.request(`/quests/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Standard extra services
+  async getStandardExtraServices(active?: boolean): Promise<StandardExtraService[]> {
+    const params = active !== undefined ? `?active=${active}` : '';
+    return this.request(`/standardextraservices${params}`);
+  }
+
+  async createStandardExtraService(payload: StandardExtraServiceUpsert) {
+    return this.request('/standardextraservices', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateStandardExtraService(id: string, payload: StandardExtraServiceUpsert) {
+    return this.request(`/standardextraservices/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteStandardExtraService(id: string) {
+    return this.request(`/standardextraservices/${id}`, {
       method: 'DELETE',
     });
   }

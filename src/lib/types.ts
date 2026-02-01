@@ -202,6 +202,21 @@ export type QuestExtraServiceUpsert = {
   price: number;
 };
 
+export type StandardExtraService = {
+  id: string;
+  title: string;
+  price: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StandardExtraServiceUpsert = {
+  title: string;
+  price: number;
+  isActive: boolean;
+};
+
 export type BookingExtraService = {
   id: string;
   title: string;

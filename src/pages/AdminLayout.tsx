@@ -107,6 +107,10 @@ export default function AdminLayout() {
               <ListChecks className="w-5 h-5" />
               {!isMenuCollapsed && 'Квесты'}
             </NavLink>
+            <NavLink to="/adm/extra-services" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <ClipboardList className="w-5 h-5" />
+              {!isMenuCollapsed && 'Доп. услуги'}
+            </NavLink>
             <NavLink to="/adm/bookings" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Calendar className="w-5 h-5" />
               {!isMenuCollapsed && 'Бронь'}

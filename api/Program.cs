@@ -63,6 +63,7 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IMirKvestovIntegrationService, MirKvestovIntegrationService>();
 builder.Services.AddScoped<ICertificateOrderService, CertificateOrderService>();
 builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<IStandardExtraServiceService, StandardExtraServiceService>();
 builder.Services.AddScoped<IPricingRuleService, PricingRuleService>();
 builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
