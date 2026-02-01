@@ -141,10 +141,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
-                    b.Property<int?>("LegacyId")
-                        .HasColumnType("integer")
-                        .HasColumnName("legacy_id");
-
                     b.Property<int>("TotalPrice")
                         .HasColumnType("integer")
                         .HasColumnName("total_price");
@@ -156,9 +152,6 @@ namespace QuestRoomApi.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("QuestId");
-
-                    b.HasIndex("LegacyId")
-                        .IsUnique();
 
                     b.HasIndex("QuestScheduleId")
                         .IsUnique();

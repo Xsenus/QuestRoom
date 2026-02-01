@@ -463,7 +463,11 @@ public class BookingService : IBookingService
         var headerLine = ReadNextNonEmptyLine(reader);
         if (headerLine == null)
         {
-            result.Errors.Add("Импортируемый файл пустой.");
+            result.SkippedRows.Add(new BookingImportIssueDto
+            {
+                RowNumber = 0,
+                Reason = "Импортируемый файл пустой."
+            });
             return result;
         }
 
@@ -506,72 +510,125 @@ public class BookingService : IBookingService
             var record = new ImportRecord(headerLookup, fields);
             if (record.IsEmpty)
             {
-                result.Skipped++;
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(record.Email) && string.IsNullOrWhiteSpace(record.Phone))
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
             {
-                result.Skipped++;
-                continue;
-            }
+                RowNumber = result.TotalRows,
+                Reason = "Пустая строка."
+            });
+            continue;
+        }
 
-            if (!int.TryParse(record.LegacyId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var legacyId))
+        if (string.IsNullOrWhiteSpace(record.Email) && string.IsNullOrWhiteSpace(record.Phone))
+        {
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
             {
-                result.Skipped++;
-                result.Errors.Add($"Строка {result.TotalRows}: некорректный Id '{record.LegacyId}'.");
-                continue;
-            }
+                RowNumber = result.TotalRows,
+                Reason = "Не указан телефон и e-mail."
+            });
+            continue;
+        }
 
-            if (!importedLegacyIds.Add(legacyId) || legacyIdSet.Contains(legacyId))
+        if (!int.TryParse(record.LegacyId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var legacyId))
+        {
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
             {
-                result.Duplicates++;
-                continue;
-            }
+                RowNumber = result.TotalRows,
+                Reason = $"Некорректный Id '{record.LegacyId}'."
+            });
+            continue;
+        }
 
-            if (string.IsNullOrWhiteSpace(record.QuestSlug))
+        if (!importedLegacyIds.Add(legacyId))
+        {
+            result.Duplicates++;
+            result.DuplicateRows.Add(new BookingImportIssueDto
             {
-                result.Skipped++;
-                result.Errors.Add($"Строка {result.TotalRows}: не указан slug квеста.");
-                continue;
-            }
+                RowNumber = result.TotalRows,
+                LegacyId = legacyId,
+                Reason = "Дубликат Id внутри импортируемого файла."
+            });
+            continue;
+        }
 
-            if (!questLookup.TryGetValue(record.QuestSlug.ToLowerInvariant(), out var quest))
+        if (legacyIdSet.Contains(legacyId))
+        {
+            result.Duplicates++;
+            result.DuplicateRows.Add(new BookingImportIssueDto
             {
-                result.Skipped++;
-                result.Errors.Add($"Строка {result.TotalRows}: квест со slug '{record.QuestSlug}' не найден.");
-                continue;
-            }
+                RowNumber = result.TotalRows,
+                LegacyId = legacyId,
+                Reason = "Бронь с таким Id уже существует в базе."
+            });
+            continue;
+        }
 
-            if (!TryParseCreatedAt(record.CreatedAt, out var createdAt))
+        if (string.IsNullOrWhiteSpace(record.QuestSlug))
+        {
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
             {
-                result.Skipped++;
-                result.Errors.Add($"Строка {result.TotalRows}: не удалось разобрать дату создания '{record.CreatedAt}'.");
-                continue;
-            }
+                RowNumber = result.TotalRows,
+                LegacyId = legacyId,
+                Reason = "Не указан slug квеста."
+            });
+            continue;
+        }
 
-            if (!TryParseBookingDateTime(record.BookingDateTime, out var bookingDateTime))
+        if (!questLookup.TryGetValue(record.QuestSlug.ToLowerInvariant(), out var quest))
+        {
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
             {
-                result.Skipped++;
-                result.Errors.Add($"Строка {result.TotalRows}: не удалось разобрать дату квеста '{record.BookingDateTime}'.");
-                continue;
-            }
+                RowNumber = result.TotalRows,
+                LegacyId = legacyId,
+                Reason = $"Квест со slug '{record.QuestSlug}' не найден."
+            });
+            continue;
+        }
+
+        if (!TryParseCreatedAt(record.CreatedAt, out var createdAt))
+        {
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
+            {
+                RowNumber = result.TotalRows,
+                LegacyId = legacyId,
+                Reason = $"Не удалось разобрать дату создания '{record.CreatedAt}'."
+            });
+            continue;
+        }
+
+        if (!TryParseBookingDateTime(record.BookingDateTime, out var bookingDateTime))
+        {
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
+            {
+                RowNumber = result.TotalRows,
+                LegacyId = legacyId,
+                Reason = $"Не удалось разобрать дату квеста '{record.BookingDateTime}'."
+            });
+            continue;
+        }
 
             var bookingDate = DateOnly.FromDateTime(bookingDateTime);
             var bookingTime = TimeOnly.FromDateTime(bookingDateTime);
 
             var scheduleKey = (quest.Id, bookingDate, bookingTime);
-            if (!scheduleCache.TryGetValue(scheduleKey, out var schedule))
-            {
-                var scheduleFromDb = await _context.QuestSchedules
-                    .FirstOrDefaultAsync(s =>
-                        s.QuestId == quest.Id
-                        && s.Date == bookingDate
-                        && s.TimeSlot == bookingTime);
+        QuestSchedule? schedule = null;
+        if (!scheduleCache.TryGetValue(scheduleKey, out schedule))
+        {
+            var scheduleFromDb = await _context.QuestSchedules
+                .FirstOrDefaultAsync(s =>
+                    s.QuestId == quest.Id
+                    && s.Date == bookingDate
+                    && s.TimeSlot == bookingTime);
 
-                if (scheduleFromDb == null)
-                {
-                    schedule = new QuestSchedule
+            if (scheduleFromDb == null)
+            {
+                schedule = new QuestSchedule
                     {
                         Id = Guid.NewGuid(),
                         QuestId = quest.Id,
@@ -582,18 +639,32 @@ public class BookingService : IBookingService
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
-                    _context.QuestSchedules.Add(schedule);
-                }
-                else
-                {
-                    schedule = scheduleFromDb;
-                }
-
-                scheduleCache[scheduleKey] = schedule;
+                _context.QuestSchedules.Add(schedule);
+            }
+            else
+            {
+                schedule = scheduleFromDb;
             }
 
-            schedule.IsBooked = true;
-            schedule.UpdatedAt = DateTime.UtcNow;
+            scheduleCache[scheduleKey] = schedule;
+        }
+
+        var scheduleAlreadyBooked = schedule != null
+            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id);
+        if (scheduleAlreadyBooked)
+        {
+            result.Skipped++;
+            result.SkippedRows.Add(new BookingImportIssueDto
+            {
+                RowNumber = result.TotalRows,
+                LegacyId = legacyId,
+                Reason = "Слот расписания уже занят."
+            });
+            continue;
+        }
+
+        schedule.IsBooked = true;
+        schedule.UpdatedAt = DateTime.UtcNow;
 
             var status = MapLegacyStatus(record.Status);
             var paymentType = MapPaymentType(record.PaymentTypeCode, out var aggregator);
@@ -621,14 +692,15 @@ public class BookingService : IBookingService
                 UpdatedAt = createdAt
             };
 
-            _context.Bookings.Add(booking);
-            legacyIdSet.Add(legacyId);
-            result.Imported++;
-        }
-
-        await _context.SaveChangesAsync();
-        return result;
+        _context.Bookings.Add(booking);
+        legacyIdSet.Add(legacyId);
+        result.Imported++;
     }
+
+    await _context.SaveChangesAsync();
+    result.Processed = result.Imported + result.Skipped + result.Duplicates;
+    return result;
+}
 
     private async Task<int> GetNextLegacyIdAsync()
     {

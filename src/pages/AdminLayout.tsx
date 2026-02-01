@@ -115,6 +115,16 @@ export default function AdminLayout() {
               <Calendar className="w-5 h-5" />
               {!isMenuCollapsed && 'Бронь'}
             </NavLink>
+            <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
+              <NavLink
+                to="/adm/bookings/import"
+                className={navSubLinkClass}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <ClipboardList className="w-4 h-4 text-gray-500" />
+                {!isMenuCollapsed && 'Импорт'}
+              </NavLink>
+            </div>
             <button
               type="button"
               className={`flex w-full items-center gap-3 px-6 py-3 font-semibold text-gray-700 transition-all hover:bg-gray-100 ${

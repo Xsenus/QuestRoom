@@ -154,7 +154,15 @@ export type BookingImportResult = {
   imported: number;
   skipped: number;
   duplicates: number;
-  errors: string[];
+  processed: number;
+  skippedRows: BookingImportIssue[];
+  duplicateRows: BookingImportIssue[];
+};
+
+export type BookingImportIssue = {
+  rowNumber: number;
+  legacyId: number | null;
+  reason: string;
 };
 
 export type BookingCreate = {
