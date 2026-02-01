@@ -96,58 +96,43 @@ public class QuestService : IQuestService
 
         var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? quest.Title : dto.Slug;
         quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
-        var extraServices = dto.ExtraServices ?? new List<QuestExtraServiceUpsertDto>();
-        quest.ExtraServices = extraServices
-            .Where(service => !string.IsNullOrWhiteSpace(service.Title))
-            .Select(service => new QuestExtraService
-            {
-                Id = Guid.NewGuid(),
-                QuestId = quest.Id,
-                Title = service.Title.Trim(),
-                Price = service.Price,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            })
-            .ToList();
 
         _context.Quests.Add(quest);
         await _context.SaveChangesAsync();
+
+        await SyncExtraServicesAsync(quest.Id, dto.ExtraServices);
+        await _context.SaveChangesAsync();
+
+        quest.ExtraServices = await _context.QuestExtraServices
+            .Where(service => service.QuestId == quest.Id)
+            .OrderBy(service => service.CreatedAt)
+            .ToListAsync();
 
         return ToDto(quest);
     }
 
     public async Task<bool> UpdateQuestAsync(Guid id, QuestUpsertDto dto)
     {
-        var quest = await _context.Quests
-            .Include(q => q.ExtraServices)
-            .FirstOrDefaultAsync(q => q.Id == id);
-        if (quest == null)
-        {
-            return false;
-        }
-
-        await ApplyQuestUpdateAsync(quest, dto);
-
         for (var attempt = 0; attempt < 2; attempt++)
         {
+            var quest = await _context.Quests.FirstOrDefaultAsync(q => q.Id == id);
+            if (quest == null)
+            {
+                return false;
+            }
+
+            await ApplyQuestUpdateAsync(quest, dto);
+
             try
             {
+                await _context.SaveChangesAsync();
+                await SyncExtraServicesAsync(quest.Id, dto.ExtraServices);
                 await _context.SaveChangesAsync();
                 return true;
             }
             catch (DbUpdateConcurrencyException ex) when (attempt == 0)
             {
                 _context.ChangeTracker.Clear();
-                var refreshedQuest = await _context.Quests
-                    .Include(q => q.ExtraServices)
-                    .FirstOrDefaultAsync(q => q.Id == id);
-                if (refreshedQuest == null)
-                {
-                    return false;
-                }
-
-                quest = refreshedQuest;
-                await ApplyQuestUpdateAsync(quest, dto);
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -234,50 +219,51 @@ public class QuestService : IQuestService
         };
     }
 
-    private static void UpdateExtraServices(Quest quest, List<QuestExtraServiceUpsertDto>? services)
+    private async Task SyncExtraServicesAsync(Guid questId, List<QuestExtraServiceUpsertDto>? services)
     {
-        services ??= new List<QuestExtraServiceUpsertDto>();
-        var existing = quest.ExtraServices.ToList();
-        var incomingIds = services
-            .Where(s => s.Id.HasValue)
-            .Select(s => s.Id!.Value)
+        var normalizedServices = (services ?? new List<QuestExtraServiceUpsertDto>())
+            .Select(service => new
+            {
+                Id = service.Id.HasValue && service.Id.Value != Guid.Empty ? service.Id : null,
+                Title = service.Title?.Trim() ?? string.Empty,
+                service.Price
+            })
+            .Where(service => !string.IsNullOrWhiteSpace(service.Title))
+            .ToList();
+
+        var existingServices = await _context.QuestExtraServices
+            .Where(service => service.QuestId == questId)
+            .ToListAsync();
+
+        var incomingIds = normalizedServices
+            .Where(service => service.Id.HasValue)
+            .Select(service => service.Id!.Value)
             .ToHashSet();
 
-        foreach (var service in existing.Where(service => !incomingIds.Contains(service.Id)))
+        foreach (var service in existingServices.Where(service => !incomingIds.Contains(service.Id)))
         {
-            quest.ExtraServices.Remove(service);
+            _context.QuestExtraServices.Remove(service);
         }
 
-        foreach (var dto in services)
+        foreach (var dto in normalizedServices)
         {
-            if (string.IsNullOrWhiteSpace(dto.Title))
-            {
-                continue;
-            }
-
-            var trimmedTitle = dto.Title.Trim();
-            if (string.IsNullOrWhiteSpace(trimmedTitle))
-            {
-                continue;
-            }
-
             if (dto.Id.HasValue)
             {
-                var existingService = quest.ExtraServices.FirstOrDefault(s => s.Id == dto.Id.Value);
-                if (existingService != null)
+                var existing = existingServices.FirstOrDefault(service => service.Id == dto.Id.Value);
+                if (existing != null)
                 {
-                    existingService.Title = trimmedTitle;
-                    existingService.Price = dto.Price;
-                    existingService.UpdatedAt = DateTime.UtcNow;
+                    existing.Title = dto.Title;
+                    existing.Price = dto.Price;
+                    existing.UpdatedAt = DateTime.UtcNow;
                     continue;
                 }
             }
 
-            quest.ExtraServices.Add(new QuestExtraService
+            _context.QuestExtraServices.Add(new QuestExtraService
             {
                 Id = Guid.NewGuid(),
-                QuestId = quest.Id,
-                Title = trimmedTitle,
+                QuestId = questId,
+                Title = dto.Title,
                 Price = dto.Price,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -332,7 +318,7 @@ public class QuestService : IQuestService
         quest.SortOrder = dto.SortOrder;
         quest.UpdatedAt = DateTime.UtcNow;
 
-        UpdateExtraServices(quest, dto.ExtraServices);
+        // Extra services are synced separately after the quest is saved.
     }
 
     private async Task<string> BuildUniqueSlugAsync(string title, Guid questId)
