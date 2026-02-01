@@ -125,36 +125,42 @@ public class QuestService : IQuestService
             return false;
         }
 
-        quest.Title = dto.Title;
-        quest.Description = dto.Description;
-        var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? dto.Title : dto.Slug;
-        quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
-        quest.Addresses = dto.Addresses;
-        quest.Phones = dto.Phones;
-        quest.ParticipantsMin = dto.ParticipantsMin;
-        quest.ParticipantsMax = dto.ParticipantsMax;
-        quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
-        quest.ExtraParticipantPrice = dto.ExtraParticipantPrice;
-        quest.AgeRestriction = dto.AgeRestriction;
-        quest.AgeRating = dto.AgeRating;
-        quest.Price = dto.Price;
-        quest.Duration = dto.Duration;
-        quest.Difficulty = dto.Difficulty;
-        quest.DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5;
-        quest.IsNew = dto.IsNew;
-        quest.IsVisible = dto.IsVisible;
-        quest.MainImage = dto.MainImage;
-        quest.Images = dto.Images;
-        quest.GiftGameLabel = string.IsNullOrWhiteSpace(dto.GiftGameLabel) ? "Подарить игру" : dto.GiftGameLabel.Trim();
-        quest.GiftGameUrl = string.IsNullOrWhiteSpace(dto.GiftGameUrl) ? "/certificate" : dto.GiftGameUrl.Trim();
-        quest.VideoUrl = string.IsNullOrWhiteSpace(dto.VideoUrl) ? null : dto.VideoUrl.Trim();
-        quest.SortOrder = dto.SortOrder;
-        quest.UpdatedAt = DateTime.UtcNow;
+        await ApplyQuestUpdateAsync(quest, dto);
 
-        UpdateExtraServices(quest, dto.ExtraServices);
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateConcurrencyException ex) when (attempt == 0)
+            {
+                _context.ChangeTracker.Clear();
+                var refreshedQuest = await _context.Quests
+                    .Include(q => q.ExtraServices)
+                    .FirstOrDefaultAsync(q => q.Id == id);
+                if (refreshedQuest == null)
+                {
+                    return false;
+                }
 
-        await _context.SaveChangesAsync();
-        return true;
+                quest = refreshedQuest;
+                await ApplyQuestUpdateAsync(quest, dto);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (!await ResolveQuestConcurrencyAsync(ex))
+                {
+                    return false;
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task<bool> DeleteQuestAsync(Guid id)
@@ -270,6 +276,56 @@ public class QuestService : IQuestService
                 UpdatedAt = DateTime.UtcNow
             });
         }
+    }
+
+    private static async Task<bool> ResolveQuestConcurrencyAsync(DbUpdateConcurrencyException ex)
+    {
+        var hasEntries = false;
+        foreach (var entry in ex.Entries)
+        {
+            hasEntries = true;
+            var databaseValues = await entry.GetDatabaseValuesAsync();
+            if (databaseValues == null)
+            {
+                entry.State = EntityState.Detached;
+                continue;
+            }
+
+            entry.OriginalValues.SetValues(databaseValues);
+        }
+
+        return hasEntries;
+    }
+
+    private async Task ApplyQuestUpdateAsync(Quest quest, QuestUpsertDto dto)
+    {
+        quest.Title = dto.Title;
+        quest.Description = dto.Description;
+        var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? dto.Title : dto.Slug;
+        quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
+        quest.Addresses = dto.Addresses;
+        quest.Phones = dto.Phones;
+        quest.ParticipantsMin = dto.ParticipantsMin;
+        quest.ParticipantsMax = dto.ParticipantsMax;
+        quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
+        quest.ExtraParticipantPrice = dto.ExtraParticipantPrice;
+        quest.AgeRestriction = dto.AgeRestriction;
+        quest.AgeRating = dto.AgeRating;
+        quest.Price = dto.Price;
+        quest.Duration = dto.Duration;
+        quest.Difficulty = dto.Difficulty;
+        quest.DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5;
+        quest.IsNew = dto.IsNew;
+        quest.IsVisible = dto.IsVisible;
+        quest.MainImage = dto.MainImage;
+        quest.Images = dto.Images;
+        quest.GiftGameLabel = string.IsNullOrWhiteSpace(dto.GiftGameLabel) ? "Подарить игру" : dto.GiftGameLabel.Trim();
+        quest.GiftGameUrl = string.IsNullOrWhiteSpace(dto.GiftGameUrl) ? "/certificate" : dto.GiftGameUrl.Trim();
+        quest.VideoUrl = string.IsNullOrWhiteSpace(dto.VideoUrl) ? null : dto.VideoUrl.Trim();
+        quest.SortOrder = dto.SortOrder;
+        quest.UpdatedAt = DateTime.UtcNow;
+
+        UpdateExtraServices(quest, dto.ExtraServices);
     }
 
     private async Task<string> BuildUniqueSlugAsync(string title, Guid questId)

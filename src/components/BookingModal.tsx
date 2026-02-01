@@ -232,7 +232,7 @@ export default function BookingModal({
                   <span className="font-semibold text-right">{slot.timeSlot.substring(0, 5)}</span>
                   <span className="text-white/80">Стоимость:</span>
                   <span className="font-semibold text-right">
-                    {formData.paymentType === 'certificate' ? 0 : totalPrice} ₽
+                    {totalPrice} ₽
                   </span>
                 </div>
               </div>
