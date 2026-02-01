@@ -498,6 +498,7 @@ class ApiClient {
     promoCode?: string;
     dateFrom?: string;
     dateTo?: string;
+    sort?: string;
   }): Promise<Booking[]> {
     const searchParams = new URLSearchParams();
     if (params?.status) searchParams.set('status', params.status);
@@ -506,6 +507,7 @@ class ApiClient {
     if (params?.promoCode) searchParams.set('promoCode', params.promoCode);
     if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
     if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+    if (params?.sort) searchParams.set('sort', params.sort);
     const query = searchParams.toString();
     return this.request(`/bookings${query ? `?${query}` : ''}`);
   }

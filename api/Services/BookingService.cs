@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuestRoomApi.Data;
@@ -15,7 +16,8 @@ public interface IBookingService
         string? aggregator = null,
         string? promoCode = null,
         DateOnly? dateFrom = null,
-        DateOnly? dateTo = null);
+        DateOnly? dateTo = null,
+        string? sort = null);
     Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
     Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto);
     Task<bool> DeleteBookingAsync(Guid id);
@@ -45,11 +47,13 @@ public class BookingService : IBookingService
         string? aggregator = null,
         string? promoCode = null,
         DateOnly? dateFrom = null,
-        DateOnly? dateTo = null)
+        DateOnly? dateTo = null,
+        string? sort = null)
     {
         var query = _context.Bookings
             .Include(b => b.ExtraServices)
             .Include(b => b.QuestSchedule)
+            .Include(b => b.Quest)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status))
@@ -96,9 +100,9 @@ public class BookingService : IBookingService
             query = query.Where(b => b.BookingDate <= dateTo.Value);
         }
 
-        return await query
-            .OrderByDescending(b => b.CreatedAt)
-            .ThenBy(b => b.BookingDate)
+        var orderedQuery = ApplySorting(query, sort);
+
+        return await orderedQuery
             .Select(b => ToDto(b))
             .ToListAsync();
     }
@@ -760,6 +764,95 @@ public class BookingService : IBookingService
     result.Processed = result.Imported + result.Skipped + result.Duplicates;
     return result;
 }
+
+    private static IOrderedQueryable<Booking> ApplySorting(IQueryable<Booking> query, string? sort)
+    {
+        var sortParts = ParseSortParts(sort);
+        if (!sortParts.Any())
+        {
+            return query.OrderByDescending(b => b.CreatedAt)
+                .ThenBy(b => b.BookingDate)
+                .ThenBy(b => b.QuestSchedule != null ? b.QuestSchedule.TimeSlot : (TimeOnly?)null);
+        }
+
+        IOrderedQueryable<Booking>? ordered = null;
+        foreach (var part in sortParts)
+        {
+            ordered = ApplySortPart(ordered ?? query, part.Key, part.Descending, ordered != null);
+        }
+
+        return ordered ?? query.OrderByDescending(b => b.CreatedAt).ThenBy(b => b.BookingDate);
+    }
+
+    private static IReadOnlyList<(string Key, bool Descending)> ParseSortParts(string? sort)
+    {
+        if (string.IsNullOrWhiteSpace(sort))
+        {
+            return Array.Empty<(string, bool)>();
+        }
+
+        var parts = sort.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var result = new List<(string, bool)>();
+        foreach (var part in parts)
+        {
+            var tokens = part.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (tokens.Length == 0)
+            {
+                continue;
+            }
+            var key = tokens[0].ToLowerInvariant();
+            var direction = tokens.Length > 1 ? tokens[1].ToLowerInvariant() : "asc";
+            var descending = direction is "desc" or "descending";
+            result.Add((key, descending));
+        }
+        return result;
+    }
+
+    private static IOrderedQueryable<Booking> ApplySortPart(
+        IQueryable<Booking> query,
+        string key,
+        bool descending,
+        bool isThenBy)
+    {
+        return key switch
+        {
+            "status" => ApplyOrder(query, b => b.Status, descending, isThenBy),
+            "bookingdate" => ApplyDateSort(query, descending, isThenBy),
+            "createdat" => ApplyOrder(query, b => b.CreatedAt, descending, isThenBy),
+            "quest" => ApplyOrder(query, b => b.Quest != null ? b.Quest.Title : string.Empty, descending, isThenBy),
+            "questprice" => ApplyOrder(query, b => b.Quest != null ? b.Quest.Price : 0, descending, isThenBy),
+            "participants" => ApplyOrder(query, b => b.ParticipantsCount, descending, isThenBy),
+            "extraparticipants" => ApplyOrder(query, b => b.ExtraParticipantsCount, descending, isThenBy),
+            "extraparticipantprice" => ApplyOrder(query, b => b.Quest != null ? b.Quest.ExtraParticipantPrice : 0, descending, isThenBy),
+            "extraservicesprice" => ApplyOrder(query, b => b.ExtraServices.Sum(service => (int?)service.Price) ?? 0, descending, isThenBy),
+            "aggregator" => ApplyOrder(query, b => b.Aggregator ?? string.Empty, descending, isThenBy),
+            "promocode" => ApplyOrder(query, b => b.PromoCode ?? string.Empty, descending, isThenBy),
+            "totalprice" => ApplyOrder(query, b => b.TotalPrice, descending, isThenBy),
+            "customer" => ApplyOrder(query, b => b.CustomerName, descending, isThenBy),
+            "notes" => ApplyOrder(query, b => b.Notes ?? string.Empty, descending, isThenBy),
+            _ => ApplyOrder(query, b => b.CreatedAt, descending, isThenBy),
+        };
+    }
+
+    private static IOrderedQueryable<Booking> ApplyDateSort(IQueryable<Booking> query, bool descending, bool isThenBy)
+    {
+        var ordered = ApplyOrder(query, b => b.BookingDate, descending, isThenBy);
+        return ApplyOrder(ordered, b => b.QuestSchedule != null ? b.QuestSchedule.TimeSlot : (TimeOnly?)null, descending, true);
+    }
+
+    private static IOrderedQueryable<Booking> ApplyOrder<TKey>(
+        IQueryable<Booking> query,
+        Expression<Func<Booking, TKey>> selector,
+        bool descending,
+        bool isThenBy)
+    {
+        if (isThenBy)
+        {
+            var ordered = (IOrderedQueryable<Booking>)query;
+            return descending ? ordered.ThenByDescending(selector) : ordered.ThenBy(selector);
+        }
+        return descending ? query.OrderByDescending(selector) : query.OrderBy(selector);
+    }
 
     private async Task<int> GetNextLegacyIdAsync()
     {

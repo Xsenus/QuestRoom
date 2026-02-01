@@ -115,7 +115,8 @@ Swagger UI: `http://localhost:5000/swagger`
 
 ### Бронирования
 
-- `GET /api/bookings` - Получить все бронирования (требуется авторизация admin)
+- `GET /api/bookings` - Получить все бронирования (требуется авторизация admin).
+  - Query параметр `sort` принимает список ключей через запятую, например `createdAt:desc,bookingDate:asc`.
 - `POST /api/bookings` - Создать бронирование (публичный доступ)
 - `PUT /api/bookings/{id}` - Обновить бронирование (требуется авторизация admin)
 - `DELETE /api/bookings/{id}` - Удалить бронирование (требуется авторизация admin)
