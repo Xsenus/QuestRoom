@@ -479,6 +479,14 @@ class ApiClient {
     return response.json();
   }
 
+  async getImages(params?: { limit?: number; offset?: number }): Promise<ImageAsset[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit !== undefined) searchParams.set('limit', String(params.limit));
+    if (params?.offset !== undefined) searchParams.set('offset', String(params.offset));
+    const query = searchParams.toString();
+    return this.request(`/images${query ? `?${query}` : ''}`);
+  }
+
   // Bookings
   async getBookings(): Promise<Booking[]> {
     return this.request('/bookings');
