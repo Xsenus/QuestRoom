@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Quest, QuestUpsert, DurationBadge, StandardExtraService } from '../../lib/types';
+import { Quest, QuestUpsert, DurationBadge, StandardExtraService, ImageAsset } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 import QuestScheduleEditor from '../../components/admin/QuestScheduleEditor';
 
@@ -14,6 +14,13 @@ export default function QuestsPage() {
   );
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'schedule'>('details');
+  const [imageLibrary, setImageLibrary] = useState<ImageAsset[]>([]);
+  const [imageLibraryOffset, setImageLibraryOffset] = useState(0);
+  const [imageLibraryHasMore, setImageLibraryHasMore] = useState(true);
+  const [imageLibraryLoading, setImageLibraryLoading] = useState(false);
+  const [showImageLibrary, setShowImageLibrary] = useState(false);
+
+  const IMAGE_LIBRARY_PAGE_SIZE = 24;
 
   const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
     if (mainImage && !images.includes(mainImage)) {
@@ -340,6 +347,44 @@ export default function QuestsPage() {
     }
   };
 
+  const loadImageLibrary = async (reset = false) => {
+    if (imageLibraryLoading) return;
+    setImageLibraryLoading(true);
+    try {
+      const offset = reset ? 0 : imageLibraryOffset;
+      const images = await api.getImages({
+        limit: IMAGE_LIBRARY_PAGE_SIZE,
+        offset,
+      });
+      setImageLibrary((prev) => (reset ? images : [...prev, ...images]));
+      const nextOffset = offset + images.length;
+      setImageLibraryOffset(nextOffset);
+      setImageLibraryHasMore(images.length === IMAGE_LIBRARY_PAGE_SIZE);
+    } catch (error) {
+      alert('Ошибка загрузки библиотеки изображений: ' + (error as Error).message);
+    } finally {
+      setImageLibraryLoading(false);
+    }
+  };
+
+  const toggleImageLibrary = async () => {
+    const nextValue = !showImageLibrary;
+    setShowImageLibrary(nextValue);
+    if (nextValue && imageLibrary.length === 0) {
+      await loadImageLibrary(true);
+    }
+  };
+
+  const handleSelectLibraryImage = (url: string) => {
+    if (!editingQuest) return;
+    const images = [...(editingQuest.images || []), url];
+    setEditingQuest({
+      ...editingQuest,
+      images,
+      mainImage: editingQuest.mainImage || url,
+    });
+  };
+
   const handleEditQuest = (quest: Quest) => {
     setEditingQuest({
       ...quest,
@@ -458,10 +503,80 @@ export default function QuestsPage() {
                       onChange={(e) => handleImageUpload(e.target.files?.[0])}
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={toggleImageLibrary}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  >
+                    {showImageLibrary ? 'Скрыть библиотеку' : 'Открыть библиотеку'}
+                  </button>
                   <span className="text-sm text-gray-500">
                     Можно загрузить изображение в базу или вставить URL вручную.
                   </span>
                 </div>
+                {showImageLibrary && (
+                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-semibold text-gray-700">
+                        Загруженные изображения
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => loadImageLibrary(true)}
+                        className="text-xs text-red-600 hover:text-red-700"
+                        disabled={imageLibraryLoading}
+                      >
+                        Обновить
+                      </button>
+                    </div>
+                    {imageLibrary.length === 0 && !imageLibraryLoading ? (
+                      <p className="text-sm text-gray-500">
+                        В базе пока нет изображений.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {imageLibrary.map((image) => (
+                          <button
+                            key={image.id}
+                            type="button"
+                            onClick={() => handleSelectLibraryImage(image.url)}
+                            className="group border border-gray-200 rounded-lg overflow-hidden bg-white hover:border-red-300 transition-colors text-left"
+                            title="Добавить в квест"
+                          >
+                            <div className="aspect-video bg-gray-100">
+                              <img
+                                src={image.url}
+                                alt={image.fileName}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="p-2">
+                              <p className="text-xs text-gray-600 truncate">
+                                {image.fileName}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        Показано {imageLibrary.length}
+                      </span>
+                      {imageLibraryHasMore && (
+                        <button
+                          type="button"
+                          onClick={() => loadImageLibrary()}
+                          className="text-xs text-red-600 hover:text-red-700"
+                          disabled={imageLibraryLoading}
+                        >
+                          {imageLibraryLoading ? 'Загрузка...' : 'Показать ещё'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {(editingQuest.images || []).map((img, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <input

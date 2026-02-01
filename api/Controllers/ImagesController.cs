@@ -29,13 +29,14 @@ public class ImagesController : ControllerBase
 
         using var stream = new MemoryStream();
         await file.CopyToAsync(stream);
+        var data = stream.ToArray();
 
         var image = new ImageAsset
         {
             Id = Guid.NewGuid(),
             FileName = file.FileName,
             ContentType = file.ContentType,
-            Data = stream.ToArray(),
+            Data = data,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -43,6 +44,25 @@ public class ImagesController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(ToDto(image, Request));
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<ImageAssetDto>>> GetImages(
+        [FromQuery] int limit = 50,
+        [FromQuery] int offset = 0)
+    {
+        var clampedLimit = Math.Clamp(limit, 1, 200);
+        var clampedOffset = Math.Max(0, offset);
+
+        var images = await _context.ImageAssets
+            .AsNoTracking()
+            .OrderByDescending(i => i.CreatedAt)
+            .Skip(clampedOffset)
+            .Take(clampedLimit)
+            .ToListAsync();
+
+        return Ok(images.Select(image => ToDto(image, Request)).ToList());
     }
 
     [HttpGet("{id}")]
@@ -67,4 +87,5 @@ public class ImagesController : ControllerBase
             CreatedAt = image.CreatedAt
         };
     }
+
 }
