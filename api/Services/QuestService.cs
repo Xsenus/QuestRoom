@@ -127,26 +127,40 @@ public class QuestService : IQuestService
 
         await ApplyQuestUpdateAsync(quest, dto);
 
-        try
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            await _context.SaveChangesAsync();
-            return true;
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            _context.ChangeTracker.Clear();
-            var refreshedQuest = await _context.Quests
-                .Include(q => q.ExtraServices)
-                .FirstOrDefaultAsync(q => q.Id == id);
-            if (refreshedQuest == null)
+            try
             {
-                return false;
+                await _context.SaveChangesAsync();
+                return true;
             }
+            catch (DbUpdateConcurrencyException ex) when (attempt == 0)
+            {
+                _context.ChangeTracker.Clear();
+                var refreshedQuest = await _context.Quests
+                    .Include(q => q.ExtraServices)
+                    .FirstOrDefaultAsync(q => q.Id == id);
+                if (refreshedQuest == null)
+                {
+                    return false;
+                }
 
-            await ApplyQuestUpdateAsync(refreshedQuest, dto);
-            await _context.SaveChangesAsync();
-            return true;
+                quest = refreshedQuest;
+                await ApplyQuestUpdateAsync(quest, dto);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (!await ResolveQuestConcurrencyAsync(ex))
+                {
+                    return false;
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
         }
+
+        return false;
     }
 
     public async Task<bool> DeleteQuestAsync(Guid id)
@@ -262,6 +276,25 @@ public class QuestService : IQuestService
                 UpdatedAt = DateTime.UtcNow
             });
         }
+    }
+
+    private static async Task<bool> ResolveQuestConcurrencyAsync(DbUpdateConcurrencyException ex)
+    {
+        var hasEntries = false;
+        foreach (var entry in ex.Entries)
+        {
+            hasEntries = true;
+            var databaseValues = await entry.GetDatabaseValuesAsync();
+            if (databaseValues == null)
+            {
+                entry.State = EntityState.Detached;
+                continue;
+            }
+
+            entry.OriginalValues.SetValues(databaseValues);
+        }
+
+        return hasEntries;
     }
 
     private async Task ApplyQuestUpdateAsync(Quest quest, QuestUpsertDto dto)
