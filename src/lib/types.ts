@@ -373,10 +373,6 @@ export type PromotionUpsert = Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>;
 export type TeaZone = {
   id: string;
   name: string;
-  address: string;
-  description: string;
-  branch: string;
-  images: string[];
   isActive: boolean;
   sortOrder: number;
   createdAt: string;

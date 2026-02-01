@@ -530,59 +530,6 @@ namespace QuestRoomApi.Migrations
                     b.ToTable("promotions");
                 });
 
-            modelBuilder.Entity("QuestRoomApi.Models.TeaZone", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("address");
-
-                    b.Property<string>("Branch")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("branch");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.PrimitiveCollection<string[]>("Images")
-                        .IsRequired()
-                        .HasColumnType("text[]")
-                        .HasColumnName("images");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("tea_zones");
-                });
-
             modelBuilder.Entity("QuestRoomApi.Models.Quest", b =>
                 {
                     b.Property<Guid>("Id")

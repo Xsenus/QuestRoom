@@ -283,10 +283,6 @@ public class ContentService : IContentService
         {
             Id = Guid.NewGuid(),
             Name = dto.Name,
-            Address = dto.Address,
-            Description = dto.Description,
-            Branch = dto.Branch,
-            Images = dto.Images.ToArray(),
             IsActive = dto.IsActive,
             SortOrder = dto.SortOrder,
             CreatedAt = DateTime.UtcNow,
@@ -307,10 +303,6 @@ public class ContentService : IContentService
         }
 
         teaZone.Name = dto.Name;
-        teaZone.Address = dto.Address;
-        teaZone.Description = dto.Description;
-        teaZone.Branch = dto.Branch;
-        teaZone.Images = dto.Images.ToArray();
         teaZone.IsActive = dto.IsActive;
         teaZone.SortOrder = dto.SortOrder;
         teaZone.UpdatedAt = DateTime.UtcNow;
@@ -683,10 +675,6 @@ public class ContentService : IContentService
         {
             Id = teaZone.Id,
             Name = teaZone.Name,
-            Address = teaZone.Address,
-            Description = teaZone.Description,
-            Branch = teaZone.Branch,
-            Images = teaZone.Images.ToList(),
             IsActive = teaZone.IsActive,
             SortOrder = teaZone.SortOrder,
             CreatedAt = teaZone.CreatedAt,

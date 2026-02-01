@@ -13,18 +13,6 @@ public class TeaZone
     [Column("name")]
     public string Name { get; set; } = string.Empty;
 
-    [Column("address")]
-    public string Address { get; set; } = string.Empty;
-
-    [Column("description")]
-    public string Description { get; set; } = string.Empty;
-
-    [Column("branch")]
-    public string Branch { get; set; } = string.Empty;
-
-    [Column("images", TypeName = "text[]")]
-    public string[] Images { get; set; } = Array.Empty<string>();
-
     [Column("is_active")]
     public bool IsActive { get; set; }
 

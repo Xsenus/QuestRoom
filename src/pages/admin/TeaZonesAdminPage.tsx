@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
+import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TeaZone, TeaZoneUpsert } from '../../lib/types';
 
@@ -10,7 +10,6 @@ export default function TeaZonesAdminPage() {
     null
   );
   const [isCreating, setIsCreating] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     loadTeaZones();
@@ -29,10 +28,6 @@ export default function TeaZonesAdminPage() {
   const handleCreate = () => {
     setEditingZone({
       name: '',
-      address: '',
-      description: '',
-      branch: '',
-      images: [],
       isActive: true,
       sortOrder: teaZones.length,
     });
@@ -86,34 +81,6 @@ export default function TeaZonesAdminPage() {
     }
   };
 
-  const addImage = () => {
-    const images = editingZone?.images || [];
-    setEditingZone({ ...editingZone, images: [...images, ''] });
-  };
-
-  const removeImage = (index: number) => {
-    const images = [...(editingZone?.images || [])];
-    images.splice(index, 1);
-    setEditingZone({ ...editingZone, images });
-  };
-
-  const handleImageUpload = async (files?: FileList | null) => {
-    if (!files || !editingZone) return;
-    const filesToUpload = Array.from(files);
-    if (!filesToUpload.length) return;
-
-    setIsUploadingImage(true);
-    try {
-      const uploaded = await Promise.all(filesToUpload.map((file) => api.uploadImage(file)));
-      const images = [...(editingZone.images || []), ...uploaded.map((img) => img.url)];
-      setEditingZone({ ...editingZone, images });
-    } catch (error) {
-      alert('Ошибка загрузки изображения: ' + (error as Error).message);
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
   }
@@ -138,100 +105,6 @@ export default function TeaZonesAdminPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 placeholder="Чайная зона «Лофт»"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Адрес
-              </label>
-              <input
-                type="text"
-                value={editingZone.address || ''}
-                onChange={(e) => setEditingZone({ ...editingZone, address: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="ул. Примерная, 1"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Филиал
-              </label>
-              <input
-                type="text"
-                value={editingZone.branch || ''}
-                onChange={(e) => setEditingZone({ ...editingZone, branch: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="Центральный"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Описание
-              </label>
-              <textarea
-                value={editingZone.description || ''}
-                onChange={(e) =>
-                  setEditingZone({ ...editingZone, description: e.target.value })
-                }
-                rows={5}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                placeholder="Подробное описание зоны..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Фотографии зоны
-              </label>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors cursor-pointer">
-                    <Upload className="w-4 h-4" />
-                    {isUploadingImage ? 'Загрузка...' : 'Загрузить файлы'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e.target.files)}
-                    />
-                  </label>
-                  <span className="text-sm text-gray-500">
-                    Можно загрузить несколько изображений или вставить URL вручную.
-                  </span>
-                </div>
-                {(editingZone.images || []).map((img, index) => (
-                  <div key={`${img}-${index}`} className="flex items-center gap-3">
-                    <input
-                      type="text"
-                      value={img}
-                      onChange={(e) => {
-                        const newImages = [...(editingZone.images || [])];
-                        newImages[index] = e.target.value;
-                        setEditingZone({ ...editingZone, images: newImages });
-                      }}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      placeholder="URL изображения"
-                    />
-                    <button
-                      onClick={() => removeImage(index)}
-                      className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                      title="Удалить"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={addImage}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Добавить изображение
-                </button>
-              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
@@ -320,28 +193,9 @@ export default function TeaZonesAdminPage() {
               {zone.isActive ? 'Активна' : 'Неактивна'}
             </span>
 
-            {zone.images?.[0] && (
-              <img
-                src={zone.images[0]}
-                alt={zone.name}
-                className="mt-4 h-48 w-full object-cover rounded-lg"
-              />
-            )}
-
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <h3 className="text-xl font-bold text-gray-900">{zone.name}</h3>
-              {zone.branch && (
-                <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-700">
-                  {zone.branch}
-                </span>
-              )}
             </div>
-
-            <p className="mt-3 text-sm text-gray-600">{zone.address}</p>
-            <p className="mt-2 text-sm text-gray-500">{zone.description}</p>
-            <p className="mt-2 text-xs text-gray-400">
-              Фото: {zone.images?.length || 0}
-            </p>
 
             <div className="mt-auto pt-4 flex justify-end gap-2">
               <button
