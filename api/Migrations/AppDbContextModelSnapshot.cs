@@ -688,39 +688,6 @@ namespace QuestRoomApi.Migrations
                     b.ToTable("quest_extra_services");
                 });
 
-            modelBuilder.Entity("QuestRoomApi.Models.StandardExtraService", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<int>("Price")
-                        .HasColumnType("integer")
-                        .HasColumnName("price");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("title");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("standard_extra_services");
-                });
-
             modelBuilder.Entity("QuestRoomApi.Models.QuestPricingRule", b =>
                 {
                     b.Property<Guid>("Id")
