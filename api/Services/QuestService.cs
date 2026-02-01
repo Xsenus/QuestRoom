@@ -134,7 +134,7 @@ public class QuestService : IQuestService
         }
         catch (DbUpdateConcurrencyException)
         {
-            _context.Entry(quest).State = EntityState.Detached;
+            _context.ChangeTracker.Clear();
             var refreshedQuest = await _context.Quests
                 .Include(q => q.ExtraServices)
                 .FirstOrDefaultAsync(q => q.Id == id);
