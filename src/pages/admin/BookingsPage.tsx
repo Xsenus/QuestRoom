@@ -213,6 +213,7 @@ export default function BookingsPage() {
     startWidth: number;
   } | null>(null);
   const preferencesSaveTimeout = useRef<number | null>(null);
+  const hasUserEditedPreferences = useRef(false);
 
   const formatDate = (value: Date) => value.toISOString().split('T')[0];
   const normalizeDateParam = (value: string) => (value ? value : undefined);
@@ -502,8 +503,10 @@ export default function BookingsPage() {
       }
 
       setTableColumns(mergeTablePreferences(preferences));
-      setSearchQuery(preferences?.searchQuery ?? '');
-      setColumnFilters(normalizeColumnFilters(preferences?.columnFilters));
+      if (!hasUserEditedPreferences.current) {
+        setSearchQuery(preferences?.searchQuery ?? '');
+        setColumnFilters(normalizeColumnFilters(preferences?.columnFilters));
+      }
       setColumnsLoadedKey(tableColumnsStorageKey);
     };
 
@@ -769,16 +772,26 @@ export default function BookingsPage() {
 
   const handleListDateFromChange = (value: string) => {
     setListDateFromInput(value);
-    if (isCompleteDateInput(value)) {
-      setListDateFrom(value);
-    }
   };
 
   const handleListDateToChange = (value: string) => {
     setListDateToInput(value);
-    if (isCompleteDateInput(value)) {
-      setListDateTo(normalizeListEndDate(value));
+  };
+
+  const applyListDateFrom = () => {
+    if (isCompleteDateInput(listDateFromInput)) {
+      setListDateFrom(listDateFromInput);
+      return;
     }
+    setListDateFromInput(listDateFrom);
+  };
+
+  const applyListDateTo = () => {
+    if (isCompleteDateInput(listDateToInput)) {
+      setListDateTo(normalizeListEndDate(listDateToInput));
+      return;
+    }
+    setListDateToInput(listDateTo);
   };
 
   const handleCreateBooking = async () => {
@@ -1755,6 +1768,7 @@ export default function BookingsPage() {
   );
 
   const addColumnFilter = () => {
+    hasUserEditedPreferences.current = true;
     const defaultKey = columnFilterDefinitions[0]?.key ?? 'status';
     setColumnFilters((prev) => [
       ...prev,
@@ -1763,14 +1777,17 @@ export default function BookingsPage() {
   };
 
   const updateColumnFilter = (id: string, updates: Partial<BookingTableFilter>) => {
+    hasUserEditedPreferences.current = true;
     setColumnFilters((prev) => prev.map((filter) => (filter.id === id ? { ...filter, ...updates } : filter)));
   };
 
   const removeColumnFilter = (id: string) => {
+    hasUserEditedPreferences.current = true;
     setColumnFilters((prev) => prev.filter((filter) => filter.id !== id));
   };
 
   const clearColumnFilters = () => {
+    hasUserEditedPreferences.current = true;
     setColumnFilters([]);
   };
 
@@ -2273,9 +2290,10 @@ export default function BookingsPage() {
                   type="date"
                   value={listDateFromInput}
                   onChange={(e) => handleListDateFromChange(e.target.value)}
-                  onBlur={() => {
-                    if (!isCompleteDateInput(listDateFromInput)) {
-                      setListDateFromInput(listDateFrom);
+                  onBlur={applyListDateFrom}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
                     }
                   }}
                   disabled={statusFilter === 'pending'}
@@ -2290,9 +2308,10 @@ export default function BookingsPage() {
                   type="date"
                   value={listDateToInput}
                   onChange={(e) => handleListDateToChange(e.target.value)}
-                  onBlur={() => {
-                    if (!isCompleteDateInput(listDateToInput)) {
-                      setListDateToInput(listDateTo);
+                  onBlur={applyListDateTo}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
                     }
                   }}
                   disabled={statusFilter === 'pending'}
@@ -2306,7 +2325,10 @@ export default function BookingsPage() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    hasUserEditedPreferences.current = true;
+                    setSearchQuery(e.target.value);
+                  }}
                   placeholder="Имя, телефон, квест, статус... или status:confirmed"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
@@ -2321,6 +2343,7 @@ export default function BookingsPage() {
               </div>
               <button
                 onClick={() => {
+                  hasUserEditedPreferences.current = true;
                   setStatusFilter('all');
                   setQuestFilter('all');
                   setAggregatorFilter('all');
