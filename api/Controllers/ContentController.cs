@@ -191,13 +191,16 @@ public class SettingsController : ControllerBase
 {
     private readonly IContentService _contentService;
     private readonly IEmailNotificationService _emailNotificationService;
+    private readonly IDatabaseBackupService _databaseBackupService;
 
     public SettingsController(
         IContentService contentService,
-        IEmailNotificationService emailNotificationService)
+        IEmailNotificationService emailNotificationService,
+        IDatabaseBackupService databaseBackupService)
     {
         _contentService = contentService;
         _emailNotificationService = emailNotificationService;
+        _databaseBackupService = databaseBackupService;
     }
 
     [HttpGet]
@@ -240,5 +243,18 @@ public class SettingsController : ControllerBase
         }
 
         return Ok(new { message = result.Message });
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPost("backup")]
+    public async Task<IActionResult> BackupDatabase(CancellationToken cancellationToken)
+    {
+        var result = await _databaseBackupService.CreateBackupAsync(cancellationToken);
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(new { message = result.Message, fileName = result.FileName });
     }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Settings, SettingsUpdate } from '../../lib/types';
-import { ExternalLink, Save } from 'lucide-react';
+import { Database, ExternalLink, Save } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
 
 const tabs = [
@@ -319,6 +319,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [backupCreating, setBackupCreating] = useState(false);
   const [testEmailSending, setTestEmailSending] = useState(false);
   const [testEmailRecipient, setTestEmailRecipient] = useState('');
   const [testRecipientSending, setTestRecipientSending] = useState(false);
@@ -593,6 +594,29 @@ export default function SettingsPage() {
     setTestRecipientSending(false);
   };
 
+  const handleCreateBackup = async () => {
+    setBackupCreating(true);
+
+    try {
+      const response = await api.createDatabaseBackup();
+      setNotification({
+        isOpen: true,
+        title: 'Резервная копия создана',
+        message: response.message || 'Резервная копия базы данных сохранена.',
+        tone: 'success',
+      });
+    } catch (error) {
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось создать резервную копию',
+        message: `Ошибка: ${(error as Error).message}`,
+        tone: 'error',
+      });
+    }
+
+    setBackupCreating(false);
+  };
+
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
   }
@@ -774,36 +798,53 @@ export default function SettingsPage() {
             />
           </div>
           <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-700">Видео в модальном окне</p>
-                <p className="text-xs text-gray-500">
-                  Открывать видео квестов внутри сайта без перехода по ссылке.
-                </p>
-              </div>
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={settings.videoModalEnabled}
-                  onChange={(e) =>
-                    setSettings({ ...settings, videoModalEnabled: e.target.checked })
-                  }
-                />
-                <span
-                  className={`relative h-6 w-11 rounded-full transition ${
-                    settings.videoModalEnabled ? 'bg-red-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition ${
-                      settings.videoModalEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </span>
-              </label>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Видео в модальном окне</p>
+              <p className="text-xs text-gray-500">
+                Открывать видео квестов внутри сайта без перехода по ссылке.
+              </p>
             </div>
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={settings.videoModalEnabled}
+                onChange={(e) =>
+                  setSettings({ ...settings, videoModalEnabled: e.target.checked })
+                }
+              />
+              <span
+                className={`relative h-6 w-11 rounded-full transition ${
+                  settings.videoModalEnabled ? 'bg-red-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition ${
+                    settings.videoModalEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </span>
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Резервное копирование</p>
+              <p className="text-xs text-gray-500">
+                Создайте резервную копию базы данных и сохраните её на сервере.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCreateBackup}
+              disabled={backupCreating}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-70"
+            >
+              <Database className="h-4 w-4" />
+              {backupCreating ? 'Создание...' : 'Создать резервную копию'}
+            </button>
           </div>
         </div>
+      </div>
       )}
 
       {activeTab === 'social' && (

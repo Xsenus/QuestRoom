@@ -67,6 +67,7 @@ builder.Services.AddScoped<IStandardExtraServiceService, StandardExtraServiceSer
 builder.Services.AddScoped<IPricingRuleService, PricingRuleService>();
 builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+builder.Services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
 builder.Services.AddSingleton<IUserPreferencesService, UserPreferencesService>();
 builder.Services.AddHttpClient();
 

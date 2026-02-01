@@ -800,6 +800,12 @@ class ApiClient {
       body: JSON.stringify({ email }),
     });
   }
+
+  async createDatabaseBackup(): Promise<{ message: string; fileName?: string }> {
+    return this.request('/settings/backup', {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiClient();
