@@ -189,4 +189,17 @@ public class SettingsController : ControllerBase
 
         return Ok(new { message = result.Message });
     }
+
+    [Authorize(Roles = "admin")]
+    [HttpPost("test-email-recipient")]
+    public async Task<IActionResult> SendTestEmailToRecipient([FromBody] TestEmailRequestDto request)
+    {
+        var result = await _emailNotificationService.SendTestEmailAsync(request.Email);
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(new { message = result.Message });
+    }
 }
