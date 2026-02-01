@@ -3,6 +3,7 @@ import { api } from '../../lib/api';
 import {
   Booking,
   BookingTableColumnPreference,
+  BookingTableFilter,
   BookingTablePreferences,
   PromoCode,
   Quest,
@@ -54,6 +55,45 @@ type BookingTableColumnKey =
   | 'customer'
   | 'notes'
   | 'actions';
+
+type BookingColumnFilterKey =
+  | 'status'
+  | 'quest'
+  | 'aggregator'
+  | 'promoCode'
+  | 'customerName'
+  | 'customerPhone'
+  | 'customerEmail'
+  | 'bookingDate'
+  | 'createdAt'
+  | 'totalPrice'
+  | 'notes';
+
+type BookingColumnFilterDefinition = {
+  key: BookingColumnFilterKey;
+  label: string;
+  kind: 'text' | 'multi';
+  options?: { value: string; label: string }[];
+};
+
+type SearchOperatorKey =
+  | 'status'
+  | 'quest'
+  | 'aggregator'
+  | 'promo'
+  | 'phone'
+  | 'email'
+  | 'name'
+  | 'id'
+  | 'date'
+  | 'created'
+  | 'total'
+  | 'notes';
+
+type ParsedSearchQuery = {
+  freeTerms: string[];
+  operators: Record<SearchOperatorKey, string[]>;
+};
 
 type BookingTableColumnConfig = {
   key: BookingTableColumnKey;
@@ -107,6 +147,10 @@ export default function BookingsPage() {
   const [promoCodeFilter, setPromoCodeFilter] = useState<string>('all');
   const [listDateFrom, setListDateFrom] = useState<string>('');
   const [listDateTo, setListDateTo] = useState<string>('');
+  const [listDateFromInput, setListDateFromInput] = useState<string>('');
+  const [listDateToInput, setListDateToInput] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [columnFilters, setColumnFilters] = useState<BookingTableFilter[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
@@ -169,9 +213,20 @@ export default function BookingsPage() {
     startWidth: number;
   } | null>(null);
   const preferencesSaveTimeout = useRef<number | null>(null);
+  const hasUserEditedPreferences = useRef(false);
 
   const formatDate = (value: Date) => value.toISOString().split('T')[0];
   const normalizeDateParam = (value: string) => (value ? value : undefined);
+  const isCompleteDateInput = (value: string) => {
+    if (!value) {
+      return true;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return false;
+    }
+    return !Number.isNaN(new Date(value).getTime());
+  };
+  const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   const getEndOfNextMonth = (baseDate: Date) => {
     const date = new Date(baseDate.getFullYear(), baseDate.getMonth() + 2, 0);
@@ -180,11 +235,22 @@ export default function BookingsPage() {
   };
 
   const buildTablePreferences = useCallback(
-    (columns: BookingTableColumnConfig[]): BookingTablePreferences => ({
+    (
+      columns: BookingTableColumnConfig[],
+      filters: BookingTableFilter[],
+      search: string
+    ): BookingTablePreferences => ({
       columns: columns.map((column) => ({
         key: column.key,
         width: column.width,
         visible: column.visible,
+      })),
+      searchQuery: search,
+      columnFilters: filters.map((filter) => ({
+        id: filter.id,
+        key: filter.key,
+        value: filter.value ?? '',
+        values: filter.values ?? [],
       })),
     }),
     []
@@ -220,6 +286,51 @@ export default function BookingsPage() {
 
     return next;
   }, []);
+
+  const normalizeColumnFilters = useCallback((filters?: BookingTableFilter[] | null) => {
+    if (!filters?.length) {
+      return [];
+    }
+    return filters.map((filter) => ({
+      id: filter.id || crypto.randomUUID(),
+      key: filter.key,
+      value: filter.value ?? '',
+      values: filter.values ?? [],
+    }));
+  }, []);
+
+  const normalizeStoredPreferences = useCallback(
+    (
+      stored:
+        | BookingTablePreferences
+        | BookingTableColumnConfig[]
+        | BookingTableColumnPreference[]
+        | null
+    ) => {
+      if (!stored) {
+        return null;
+      }
+      if (Array.isArray(stored)) {
+        const normalized = stored.map((column) => ({
+          key: column.key,
+          width: column.width,
+          visible: column.visible,
+        }));
+        return { columns: normalized };
+      }
+      const normalizedColumns = (stored.columns || []).map((column) => ({
+        key: column.key,
+        width: column.width,
+        visible: column.visible,
+      }));
+      return {
+        columns: normalizedColumns,
+        searchQuery: stored.searchQuery ?? '',
+        columnFilters: normalizeColumnFilters(stored.columnFilters),
+      };
+    },
+    [normalizeColumnFilters]
+  );
 
   const updateTableColumn = useCallback(
     (key: BookingTableColumnKey, updates: Partial<BookingTableColumnConfig>) => {
@@ -339,6 +450,14 @@ export default function BookingsPage() {
   }, [viewMode]);
 
   useEffect(() => {
+    setListDateFromInput(listDateFrom);
+  }, [listDateFrom]);
+
+  useEffect(() => {
+    setListDateToInput(listDateTo);
+  }, [listDateTo]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(
         listRangeStorageKey,
@@ -369,14 +488,10 @@ export default function BookingsPage() {
         if (saved) {
           try {
             const parsed = JSON.parse(saved) as
+              | BookingTablePreferences
               | BookingTableColumnConfig[]
               | BookingTableColumnPreference[];
-            const normalized = parsed.map((column) => ({
-              key: column.key,
-              width: column.width,
-              visible: column.visible,
-            }));
-            preferences = { columns: normalized };
+            preferences = normalizeStoredPreferences(parsed);
           } catch {
             preferences = null;
           }
@@ -388,6 +503,10 @@ export default function BookingsPage() {
       }
 
       setTableColumns(mergeTablePreferences(preferences));
+      if (!hasUserEditedPreferences.current) {
+        setSearchQuery(preferences?.searchQuery ?? '');
+        setColumnFilters(normalizeColumnFilters(preferences?.columnFilters));
+      }
       setColumnsLoadedKey(tableColumnsStorageKey);
     };
 
@@ -396,24 +515,29 @@ export default function BookingsPage() {
     return () => {
       isActive = false;
     };
-  }, [tableColumnsStorageKey, user?.email, mergeTablePreferences]);
+  }, [
+    tableColumnsStorageKey,
+    user?.email,
+    mergeTablePreferences,
+    normalizeColumnFilters,
+    normalizeStoredPreferences,
+  ]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (columnsLoadedKey !== tableColumnsStorageKey) {
         return;
       }
-      localStorage.setItem(tableColumnsStorageKey, JSON.stringify(tableColumns));
+      const preferences = buildTablePreferences(tableColumns, columnFilters, searchQuery);
+      localStorage.setItem(tableColumnsStorageKey, JSON.stringify(preferences));
       if (preferencesSaveTimeout.current) {
         window.clearTimeout(preferencesSaveTimeout.current);
       }
       if (user?.email) {
         preferencesSaveTimeout.current = window.setTimeout(() => {
-          api
-            .updateBookingsTablePreferences(buildTablePreferences(tableColumns))
-            .catch((error) => {
-              console.warn('Не удалось сохранить настройки таблицы:', error);
-            });
+          api.updateBookingsTablePreferences(preferences).catch((error) => {
+            console.warn('Не удалось сохранить настройки таблицы:', error);
+          });
         }, 500);
       }
     }
@@ -422,11 +546,29 @@ export default function BookingsPage() {
         window.clearTimeout(preferencesSaveTimeout.current);
       }
     };
-  }, [tableColumns, tableColumnsStorageKey, columnsLoadedKey, user?.email, buildTablePreferences]);
+  }, [
+    tableColumns,
+    columnFilters,
+    searchQuery,
+    tableColumnsStorageKey,
+    columnsLoadedKey,
+    user?.email,
+    buildTablePreferences,
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, questFilter, aggregatorFilter, promoCodeFilter, listDateFrom, listDateTo, viewMode]);
+  }, [
+    statusFilter,
+    questFilter,
+    aggregatorFilter,
+    promoCodeFilter,
+    listDateFrom,
+    listDateTo,
+    searchQuery,
+    columnFilters,
+    viewMode,
+  ]);
 
   useEffect(() => {
     if (!resizeState) {
@@ -626,6 +768,30 @@ export default function BookingsPage() {
       return formatDate(getEndOfNextMonth(today));
     }
     return value;
+  };
+
+  const handleListDateFromChange = (value: string) => {
+    setListDateFromInput(value);
+  };
+
+  const handleListDateToChange = (value: string) => {
+    setListDateToInput(value);
+  };
+
+  const applyListDateFrom = () => {
+    if (isCompleteDateInput(listDateFromInput)) {
+      setListDateFrom(listDateFromInput);
+      return;
+    }
+    setListDateFromInput(listDateFrom);
+  };
+
+  const applyListDateTo = () => {
+    if (isCompleteDateInput(listDateToInput)) {
+      setListDateTo(normalizeListEndDate(listDateToInput));
+      return;
+    }
+    setListDateToInput(listDateTo);
   };
 
   const handleCreateBooking = async () => {
@@ -1151,6 +1317,60 @@ export default function BookingsPage() {
     return Array.from(values);
   }, [countBookings]);
 
+  const columnFilterDefinitions = useMemo<BookingColumnFilterDefinition[]>(() => {
+    return [
+      {
+        key: 'status',
+        label: 'Статус',
+        kind: 'multi',
+        options: [
+          { value: 'planned', label: 'Запланировано' },
+          { value: 'created', label: 'Создано' },
+          { value: 'pending', label: 'Ожидает' },
+          { value: 'not_confirmed', label: 'Не подтверждено' },
+          { value: 'confirmed', label: 'Подтверждено' },
+          { value: 'completed', label: 'Завершено' },
+          { value: 'cancelled', label: 'Отменено' },
+        ],
+      },
+      {
+        key: 'quest',
+        label: 'Квест',
+        kind: 'multi',
+        options: quests.map((quest) => ({ value: quest.id, label: quest.title })),
+      },
+      {
+        key: 'aggregator',
+        label: 'Агрегатор',
+        kind: 'multi',
+        options: [
+          { value: 'site', label: 'Наш сайт' },
+          ...aggregatorOptions.map((value) => ({ value, label: value })),
+        ],
+      },
+      {
+        key: 'promoCode',
+        label: 'Промокод',
+        kind: 'multi',
+        options: [
+          { value: 'none', label: 'Без промокода' },
+          ...promoCodeOptions.map((value) => ({ value, label: value })),
+        ],
+      },
+      { key: 'customerName', label: 'Имя клиента', kind: 'text' },
+      { key: 'customerPhone', label: 'Телефон клиента', kind: 'text' },
+      { key: 'customerEmail', label: 'Email клиента', kind: 'text' },
+      { key: 'bookingDate', label: 'Дата брони', kind: 'text' },
+      { key: 'createdAt', label: 'Дата создания', kind: 'text' },
+      { key: 'totalPrice', label: 'Итоговая сумма', kind: 'text' },
+      { key: 'notes', label: 'Комментарий', kind: 'text' },
+    ];
+  }, [quests, aggregatorOptions, promoCodeOptions]);
+
+  const columnFilterDefinitionMap = useMemo(() => {
+    return new Map(columnFilterDefinitions.map((item) => [item.key, item]));
+  }, [columnFilterDefinitions]);
+
   const formatDateTime = (value?: string | null) => {
     if (!value) {
       return '—';
@@ -1229,6 +1449,152 @@ export default function BookingsPage() {
     const isGuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
     return isGuid ? value : '00000000-0000-0000-0000-000000000000';
+  };
+
+  const parseSearchQuery = useCallback((value: string): ParsedSearchQuery => {
+    const operators: ParsedSearchQuery['operators'] = {
+      status: [],
+      quest: [],
+      aggregator: [],
+      promo: [],
+      phone: [],
+      email: [],
+      name: [],
+      id: [],
+      date: [],
+      created: [],
+      total: [],
+      notes: [],
+    };
+    const freeTerms: string[] = [];
+    if (!value.trim()) {
+      return { freeTerms, operators };
+    }
+    const tokens = value.match(/(?:[^\s"]+|"[^"]*")+/g) ?? [];
+    tokens.forEach((token) => {
+      const trimmed = token.trim();
+      if (!trimmed) {
+        return;
+      }
+      const match = trimmed.match(/^([a-zA-Z]+):(.+)$/);
+      if (match) {
+        const key = match[1].toLowerCase();
+        const rawValue = match[2].replace(/^"|"$/g, '');
+        const normalized = rawValue.trim();
+        if (!normalized) {
+          return;
+        }
+        const pushValue = (operator: SearchOperatorKey) => {
+          operators[operator].push(normalized);
+        };
+        switch (key) {
+          case 'status':
+            pushValue('status');
+            return;
+          case 'quest':
+            pushValue('quest');
+            return;
+          case 'aggregator':
+          case 'agg':
+            pushValue('aggregator');
+            return;
+          case 'promo':
+          case 'promocode':
+            pushValue('promo');
+            return;
+          case 'phone':
+          case 'tel':
+            pushValue('phone');
+            return;
+          case 'email':
+            pushValue('email');
+            return;
+          case 'name':
+          case 'customer':
+            pushValue('name');
+            return;
+          case 'id':
+            pushValue('id');
+            return;
+          case 'date':
+            pushValue('date');
+            return;
+          case 'created':
+            pushValue('created');
+            return;
+          case 'total':
+          case 'price':
+            pushValue('total');
+            return;
+          case 'notes':
+          case 'comment':
+            pushValue('notes');
+            return;
+          default:
+            break;
+        }
+      }
+      freeTerms.push(trimmed.replace(/^"|"$/g, ''));
+    });
+
+    return { freeTerms, operators };
+  }, []);
+
+  const fuzzyMatch = (term: string, text: string) => {
+    const normalizedTerm = term.toLowerCase();
+    const normalizedText = text.toLowerCase();
+    if (!normalizedTerm || !normalizedText) {
+      return false;
+    }
+    if (normalizedText.includes(normalizedTerm)) {
+      return true;
+    }
+    const maxDistance =
+      normalizedTerm.length <= 4 ? 1 : normalizedTerm.length <= 7 ? 2 : 3;
+    const computeDistance = (a: string, b: string) => {
+      const aLen = a.length;
+      const bLen = b.length;
+      const dp = Array.from({ length: aLen + 1 }, () => new Array(bLen + 1).fill(0));
+      for (let i = 0; i <= aLen; i += 1) dp[i][0] = i;
+      for (let j = 0; j <= bLen; j += 1) dp[0][j] = j;
+      for (let i = 1; i <= aLen; i += 1) {
+        for (let j = 1; j <= bLen; j += 1) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + cost
+          );
+        }
+      }
+      return dp[aLen][bLen];
+    };
+    if (normalizedText.length <= 40) {
+      return computeDistance(normalizedTerm, normalizedText) <= maxDistance;
+    }
+    const words = normalizedText.split(/\s+/);
+    return words.some((word) => computeDistance(normalizedTerm, word) <= maxDistance);
+  };
+
+  const highlightText = (value: string, terms: string[]) => {
+    if (!value || !terms.length) {
+      return value || '—';
+    }
+    const filteredTerms = terms.filter((term) => term);
+    if (!filteredTerms.length) {
+      return value;
+    }
+    const regex = new RegExp(`(${filteredTerms.map(escapeRegExp).join('|')})`, 'gi');
+    const parts = value.split(regex);
+    return parts.map((part, index) =>
+      index % 2 === 1 ? (
+        <mark key={`${part}-${index}`} className="rounded bg-yellow-200 px-0.5">
+          {part}
+        </mark>
+      ) : (
+        <span key={`${part}-${index}`}>{part}</span>
+      )
+    );
   };
 
   const calculateDiscountAmount = (
@@ -1401,8 +1767,207 @@ export default function BookingsPage() {
     [bookingFormMode, editingBooking?.questId, questLookup, selectedQuestExtraServiceIds]
   );
 
+  const addColumnFilter = () => {
+    hasUserEditedPreferences.current = true;
+    const defaultKey = columnFilterDefinitions[0]?.key ?? 'status';
+    setColumnFilters((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), key: defaultKey, value: '', values: [] },
+    ]);
+  };
+
+  const updateColumnFilter = (id: string, updates: Partial<BookingTableFilter>) => {
+    hasUserEditedPreferences.current = true;
+    setColumnFilters((prev) => prev.map((filter) => (filter.id === id ? { ...filter, ...updates } : filter)));
+  };
+
+  const removeColumnFilter = (id: string) => {
+    hasUserEditedPreferences.current = true;
+    setColumnFilters((prev) => prev.filter((filter) => filter.id !== id));
+  };
+
+  const clearColumnFilters = () => {
+    hasUserEditedPreferences.current = true;
+    setColumnFilters([]);
+  };
+
   const listItemsPerPage = viewMode === 'table' ? 10 : 9;
-  const filteredBookings = bookings;
+  const parsedSearch = useMemo(() => parseSearchQuery(searchQuery), [parseSearchQuery, searchQuery]);
+  const highlightTerms = useMemo(() => {
+    const values = new Set<string>();
+    parsedSearch.freeTerms.forEach((term) => values.add(term));
+    Object.values(parsedSearch.operators).forEach((operatorValues) => {
+      operatorValues.forEach((term) => values.add(term));
+    });
+    return Array.from(values).filter(Boolean);
+  }, [parsedSearch]);
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((booking) => {
+      const questTitle = getQuestTitle(booking);
+      const statusLabel = getStatusText(booking.status);
+      const aggregatorValue = booking.aggregator || 'site';
+
+      const getOperatorText = (key: SearchOperatorKey) => {
+        switch (key) {
+          case 'status':
+            return [booking.status, statusLabel];
+          case 'quest':
+            return [booking.questId ?? '', questTitle];
+          case 'aggregator':
+            return [aggregatorValue];
+          case 'promo':
+            return [booking.promoCode || 'none'];
+          case 'phone':
+            return [booking.customerPhone];
+          case 'email':
+            return [booking.customerEmail || ''];
+          case 'name':
+            return [booking.customerName];
+          case 'id':
+            return [booking.id];
+          case 'date':
+            return [formatBookingDateTime(booking)];
+          case 'created':
+            return [formatDateTime(booking.createdAt)];
+          case 'total':
+            return [String(booking.totalPrice ?? '')];
+          case 'notes':
+            return [booking.notes || ''];
+          default:
+            return [''];
+        }
+      };
+
+      const checkOperator = (key: SearchOperatorKey, values: string[]) => {
+        if (!values.length) {
+          return true;
+        }
+        const candidates = getOperatorText(key)
+          .filter(Boolean)
+          .map((text) => text.toLowerCase());
+        return values.every((value) =>
+          candidates.some((candidate) => candidate.includes(value.toLowerCase()))
+        );
+      };
+
+      const operatorMatches = (Object.keys(parsedSearch.operators) as SearchOperatorKey[]).every(
+        (key) => checkOperator(key, parsedSearch.operators[key])
+      );
+      if (!operatorMatches) {
+        return false;
+      }
+
+      if (parsedSearch.freeTerms.length) {
+        const searchableFields = [
+          booking.id,
+          booking.customerName,
+          booking.customerPhone,
+          booking.customerEmail,
+          booking.promoCode,
+          booking.aggregator,
+          booking.notes,
+          questTitle,
+          statusLabel,
+          formatBookingDateTime(booking),
+          formatDateTime(booking.createdAt),
+          String(booking.totalPrice ?? ''),
+        ].filter(Boolean) as string[];
+
+        const matchesTerm = (term: string) => {
+          const normalizedTerm = term.toLowerCase();
+          return searchableFields.some((field) => field.toLowerCase().includes(normalizedTerm));
+        };
+
+        const matchesFuzzy = (term: string) =>
+          fuzzyMatch(term, booking.customerName) || fuzzyMatch(term, booking.customerPhone);
+
+        const matchesAllTerms = parsedSearch.freeTerms.every(
+          (term) => matchesTerm(term) || matchesFuzzy(term)
+        );
+        if (!matchesAllTerms) {
+          return false;
+        }
+      }
+
+      for (const filter of columnFilters) {
+        const definition = columnFilterDefinitionMap.get(filter.key as BookingColumnFilterKey);
+        if (!definition) {
+          continue;
+        }
+        if (definition.kind === 'multi') {
+          const selectedValues = filter.values ?? [];
+          if (!selectedValues.length) {
+            continue;
+          }
+          let bookingValue = '';
+          switch (filter.key) {
+            case 'status':
+              bookingValue = booking.status;
+              break;
+            case 'quest':
+              bookingValue = booking.questId ?? '';
+              break;
+            case 'aggregator':
+              bookingValue = booking.aggregator || 'site';
+              break;
+            case 'promoCode':
+              bookingValue = booking.promoCode || 'none';
+              break;
+            default:
+              bookingValue = '';
+          }
+          if (!selectedValues.includes(bookingValue)) {
+            return false;
+          }
+          continue;
+        }
+        const rawValue = filter.value?.trim().toLowerCase() ?? '';
+        if (!rawValue) {
+          continue;
+        }
+        let bookingText = '';
+        switch (filter.key) {
+          case 'customerName':
+            bookingText = booking.customerName;
+            break;
+          case 'customerPhone':
+            bookingText = booking.customerPhone;
+            break;
+          case 'customerEmail':
+            bookingText = booking.customerEmail || '';
+            break;
+          case 'bookingDate':
+            bookingText = formatBookingDateTime(booking);
+            break;
+          case 'createdAt':
+            bookingText = formatDateTime(booking.createdAt);
+            break;
+          case 'totalPrice':
+            bookingText = String(booking.totalPrice ?? '');
+            break;
+          case 'notes':
+            bookingText = booking.notes || '';
+            break;
+          default:
+            bookingText = '';
+        }
+        if (!bookingText.toLowerCase().includes(rawValue)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [
+    bookings,
+    parsedSearch,
+    columnFilters,
+    columnFilterDefinitionMap,
+    formatBookingDateTime,
+    formatDateTime,
+    getQuestTitle,
+    getStatusText,
+    fuzzyMatch,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / listItemsPerPage));
   const safePage = Math.min(currentPage, totalPages);
@@ -1481,15 +2046,15 @@ export default function BookingsPage() {
             className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
             style={getStatusBadgeStyle(booking.status)}
           >
-            {getStatusText(booking.status)}
+            {highlightText(getStatusText(booking.status), highlightTerms)}
           </span>
         );
       case 'bookingDate':
-        return <span>{formatBookingDateTime(booking)}</span>;
+        return <span>{highlightText(formatBookingDateTime(booking), highlightTerms)}</span>;
       case 'createdAt':
-        return <span>{formatDateTime(booking.createdAt)}</span>;
+        return <span>{highlightText(formatDateTime(booking.createdAt), highlightTerms)}</span>;
       case 'quest':
-        return <span>{getQuestTitle(booking)}</span>;
+        return <span>{highlightText(getQuestTitle(booking), highlightTerms)}</span>;
       case 'questPrice':
         return <span>{questPrice != null ? `${questPrice} ₽` : '—'}</span>;
       case 'participants':
@@ -1513,11 +2078,13 @@ export default function BookingsPage() {
       case 'extraServicesPrice':
         return <span>{extraServicesTotal ? `${extraServicesTotal} ₽` : '—'}</span>;
       case 'aggregator':
-        return <span>{getAggregatorLabel(booking)}</span>;
+        return <span>{highlightText(getAggregatorLabel(booking), highlightTerms)}</span>;
       case 'promoCode':
         return booking.promoCode ? (
           <div>
-            <div className="font-semibold">{booking.promoCode}</div>
+            <div className="font-semibold">
+              {highlightText(booking.promoCode, highlightTerms)}
+            </div>
             {booking.promoDiscountAmount != null && (
               <div className="text-xs text-gray-500">−{booking.promoDiscountAmount} ₽</div>
             )}
@@ -1526,27 +2093,33 @@ export default function BookingsPage() {
           '—'
         );
       case 'totalPrice':
-        return <span>{booking.totalPrice} ₽</span>;
+        return <span>{highlightText(`${booking.totalPrice} ₽`, highlightTerms)}</span>;
       case 'customer':
         return (
           <div>
-            <div className="font-semibold text-gray-900">{booking.customerName}</div>
+            <div className="font-semibold text-gray-900">
+              {highlightText(booking.customerName, highlightTerms)}
+            </div>
             <div>
               <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
-                {booking.customerPhone}
+                {highlightText(booking.customerPhone, highlightTerms)}
               </a>
             </div>
             {booking.customerEmail && (
               <div>
                 <a href={`mailto:${booking.customerEmail}`} className="hover:text-red-600">
-                  {booking.customerEmail}
+                  {highlightText(booking.customerEmail, highlightTerms)}
                 </a>
               </div>
             )}
           </div>
         );
       case 'notes':
-        return <p className="line-clamp-2">{booking.notes || '—'}</p>;
+        return (
+          <p className="line-clamp-2">
+            {highlightText(booking.notes || '—', highlightTerms)}
+          </p>
+        );
       case 'actions':
         return <div className="flex justify-end gap-2">{renderActionButtons(booking)}</div>;
       default:
@@ -1672,7 +2245,7 @@ export default function BookingsPage() {
           </div>
 
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Агрегатор
@@ -1715,8 +2288,14 @@ export default function BookingsPage() {
                 </label>
                 <input
                   type="date"
-                  value={listDateFrom}
-                  onChange={(e) => setListDateFrom(e.target.value)}
+                  value={listDateFromInput}
+                  onChange={(e) => handleListDateFromChange(e.target.value)}
+                  onBlur={applyListDateFrom}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
+                    }
+                  }}
                   disabled={statusFilter === 'pending'}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
                 />
@@ -1727,11 +2306,35 @@ export default function BookingsPage() {
                 </label>
                 <input
                   type="date"
-                  value={listDateTo}
-                  onChange={(e) => setListDateTo(normalizeListEndDate(e.target.value))}
+                  value={listDateToInput}
+                  onChange={(e) => handleListDateToChange(e.target.value)}
+                  onBlur={applyListDateTo}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
+                    }
+                  }}
                   disabled={statusFilter === 'pending'}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Поиск
+                </label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    hasUserEditedPreferences.current = true;
+                    setSearchQuery(e.target.value);
+                  }}
+                  placeholder="Имя, телефон, квест, статус... или status:confirmed"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Операторы: status:, quest:"Название", phone:, email:, promo:, id:.
+                </p>
               </div>
             </div>
             <div className="flex items-center justify-between mt-4">
@@ -1740,15 +2343,118 @@ export default function BookingsPage() {
               </div>
               <button
                 onClick={() => {
+                  hasUserEditedPreferences.current = true;
                   setStatusFilter('all');
                   setQuestFilter('all');
                   setAggregatorFilter('all');
                   setPromoCodeFilter('all');
+                  setSearchQuery('');
+                  clearColumnFilters();
                 }}
                 className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
               >
                 Сбросить фильтры
               </button>
+            </div>
+            <div className="mt-4 border-t border-gray-200 pt-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Пользовательские фильтры</p>
+                  <p className="text-xs text-gray-500">
+                    Можно выбрать несколько значений в списке, удерживая Ctrl/⌘.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addColumnFilter}
+                  className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                >
+                  Добавить фильтр
+                </button>
+              </div>
+              {columnFilters.length === 0 ? (
+                <p className="text-xs text-gray-500 mt-3">
+                  Добавьте фильтры по нужным колонкам — они сохранятся в профиле.
+                </p>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  {columnFilters.map((filter) => {
+                    const definition = columnFilterDefinitionMap.get(
+                      filter.key as BookingColumnFilterKey
+                    );
+                    return (
+                      <div
+                        key={filter.id}
+                        className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto] items-start"
+                      >
+                        <select
+                          value={filter.key}
+                          onChange={(e) => {
+                            const nextKey = e.target.value as BookingColumnFilterKey;
+                            updateColumnFilter(filter.id, {
+                              key: nextKey,
+                              value: '',
+                              values: [],
+                            });
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                        >
+                          {columnFilterDefinitions.map((item) => (
+                            <option key={item.key} value={item.key}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                        {definition?.kind === 'multi' ? (
+                          <select
+                            multiple
+                            value={filter.values ?? []}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions).map(
+                                (option) => option.value
+                              );
+                              updateColumnFilter(filter.id, { values: selected });
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none min-h-[42px]"
+                          >
+                            {definition.options?.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={filter.value ?? ''}
+                            onChange={(e) =>
+                              updateColumnFilter(filter.id, { value: e.target.value })
+                            }
+                            placeholder="Содержит..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeColumnFilter(filter.id)}
+                          className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={clearColumnFilters}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      Сбросить пользовательские фильтры
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             {statusFilter === 'pending' && (
               <p className="text-xs text-gray-500 mt-3">
@@ -1835,14 +2541,14 @@ export default function BookingsPage() {
                           className="px-3 py-1 rounded-full text-xs font-bold border"
                           style={getStatusBadgeStyle(booking.status)}
                         >
-                          {getStatusText(booking.status)}
+                          {highlightText(getStatusText(booking.status), highlightTerms)}
                         </span>
                         <span className="text-xs text-gray-500">
                           ID: {booking.id.slice(0, 8)}
                         </span>
                       </div>
                       <p className="text-sm font-semibold text-gray-900">
-                        {getQuestTitle(booking)}
+                        {highlightText(getQuestTitle(booking), highlightTerms)}
                       </p>
                       <p className="text-xs text-gray-500">
                         Цена квеста:{' '}
@@ -1857,26 +2563,26 @@ export default function BookingsPage() {
                     <div className="flex items-center gap-2 text-gray-700">
                       <User className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Клиент:</span>
-                      <span>{booking.customerName}</span>
+                      <span>{highlightText(booking.customerName, highlightTerms)}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
                       <Phone className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Телефон:</span>
                       <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
-                        {booking.customerPhone}
+                        {highlightText(booking.customerPhone, highlightTerms)}
                       </a>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
                       <Calendar className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Дата:</span>
-                      <span>{formatBookingDateTime(booking)}</span>
+                      <span>{highlightText(formatBookingDateTime(booking), highlightTerms)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <Calendar className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Создано:</span>
-                      <span>{formatDateTime(booking.createdAt)}</span>
+                      <span>{highlightText(formatDateTime(booking.createdAt), highlightTerms)}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
@@ -1901,16 +2607,16 @@ export default function BookingsPage() {
                     <div className="flex items-center gap-2 text-gray-700">
                       <BadgeDollarSign className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Сумма:</span>
-                      <span>{booking.totalPrice} ₽</span>
+                      <span>{highlightText(`${booking.totalPrice} ₽`, highlightTerms)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <span className="font-semibold">Агрегатор:</span>
-                      <span>{getAggregatorLabel(booking)}</span>
+                      <span>{highlightText(getAggregatorLabel(booking), highlightTerms)}</span>
                     </div>
                     {booking.promoCode && (
                       <div className="flex items-center gap-2 text-gray-700">
                         <span className="font-semibold">Промокод:</span>
-                        <span>{booking.promoCode}</span>
+                        <span>{highlightText(booking.promoCode, highlightTerms)}</span>
                         {booking.promoDiscountAmount != null && (
                           <span className="text-xs text-gray-500">
                             −{booking.promoDiscountAmount} ₽
@@ -1922,13 +2628,13 @@ export default function BookingsPage() {
                       <div className="flex items-center gap-2 text-gray-700">
                         <Mail className="w-4 h-4 text-red-600" />
                         <span className="font-semibold">Email:</span>
-                        <a
-                          href={`mailto:${booking.customerEmail}`}
-                          className="hover:text-red-600"
-                        >
-                          {booking.customerEmail}
-                        </a>
-                      </div>
+                      <a
+                        href={`mailto:${booking.customerEmail}`}
+                        className="hover:text-red-600"
+                      >
+                        {highlightText(booking.customerEmail, highlightTerms)}
+                      </a>
+                    </div>
                     )}
                     <div className="flex items-start gap-2 text-gray-700 sm:col-span-2">
                       <span className="font-semibold">Доп. услуги:</span>
@@ -1959,7 +2665,9 @@ export default function BookingsPage() {
                       <FileText className="w-4 h-4 text-red-600 mt-1" />
                       <div>
                         <span className="font-semibold">Комментарий:</span>
-                        <p className="text-xs mt-1">{booking.notes || '—'}</p>
+                        <p className="text-xs mt-1">
+                          {highlightText(booking.notes || '—', highlightTerms)}
+                        </p>
                       </div>
                     </div>
                   </div>
