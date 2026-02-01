@@ -8,6 +8,7 @@ import RulesPage from './components/RulesPage';
 import CertificatePage from './components/CertificatePage';
 import ReviewsPage from './components/ReviewsPage';
 import PromotionsPage from './components/PromotionsPage';
+import TeaZonesPage from './components/TeaZonesPage';
 import QuestDetailPage from './pages/QuestDetailPage';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './pages/AdminLayout';
@@ -20,6 +21,7 @@ import CertificatesAdminPage from './pages/admin/CertificatesPage';
 import CertificateOrdersAdminPage from './pages/admin/CertificateOrdersPage';
 import ReviewsAdminPage from './pages/admin/ReviewsAdminPage';
 import PromotionsAdminPage from './pages/admin/PromotionsAdminPage';
+import TeaZonesAdminPage from './pages/admin/TeaZonesAdminPage';
 import PromoCodesPage from './pages/admin/PromoCodesPage';
 import UsersPage from './pages/admin/UsersPage';
 import RolesPage from './pages/admin/RolesPage';
@@ -87,6 +89,7 @@ function App() {
                 <Route path="certificate-orders" element={<CertificateOrdersAdminPage />} />
                 <Route path="reviews" element={<ReviewsAdminPage />} />
                 <Route path="promotions" element={<PromotionsAdminPage />} />
+                <Route path="tea-zones" element={<TeaZonesAdminPage />} />
                 <Route path="extra-services" element={<StandardExtraServicesPage />} />
                 <Route path="promo-codes" element={<PromoCodesPage />} />
                 <Route path="users" element={<UsersPage />} />
@@ -115,6 +118,7 @@ function App() {
               <Route path="/certificate" element={<CertificatePage />} />
               <Route path="/reviews" element={<ReviewsPage />} />
               <Route path="/promotions" element={<PromotionsPage />} />
+              <Route path="/tea-zones" element={<TeaZonesPage />} />
               <Route path="/quest/:id" element={<QuestDetailPage />} />
             </Routes>
             <ScrollToTopButton />

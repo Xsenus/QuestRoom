@@ -60,6 +60,7 @@ public class SettingsUpdateDto
     public int BookingCutoffMinutes { get; set; }
     public string? TimeZone { get; set; }
     public int PromotionsPerRow { get; set; }
+    public int TeaZonesPerRow { get; set; }
     public bool? VideoModalEnabled { get; set; }
     public string? BackgroundGradientFrom { get; set; }
     public string? BackgroundGradientVia { get; set; }

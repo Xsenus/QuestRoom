@@ -43,6 +43,8 @@ import type {
   SettingsUpdate,
   StandardExtraService,
   StandardExtraServiceUpsert,
+  TeaZone,
+  TeaZoneUpsert,
 } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -597,6 +599,32 @@ class ApiClient {
 
   async deletePromotion(id: string) {
     return this.request(`/promotions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Tea zones
+  async getTeaZones(active?: boolean): Promise<TeaZone[]> {
+    const params = active !== undefined ? `?active=${active}` : '';
+    return this.request(`/teazones${params}`);
+  }
+
+  async createTeaZone(teaZone: TeaZoneUpsert): Promise<TeaZone> {
+    return this.request('/teazones', {
+      method: 'POST',
+      body: JSON.stringify(teaZone),
+    });
+  }
+
+  async updateTeaZone(id: string, teaZone: TeaZoneUpsert) {
+    return this.request(`/teazones/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(teaZone),
+    });
+  }
+
+  async deleteTeaZone(id: string) {
+    return this.request(`/teazones/${id}`, {
       method: 'DELETE',
     });
   }

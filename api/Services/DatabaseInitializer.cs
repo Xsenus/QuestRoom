@@ -720,6 +720,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                 BookingCutoffMinutes = 10,
                 TimeZone = "Asia/Krasnoyarsk",
                 PromotionsPerRow = 1,
+                TeaZonesPerRow = 2,
                 SmtpHost = null,
                 SmtpPort = null,
                 SmtpUser = null,
@@ -932,6 +933,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.Rules.RemoveRange(await _context.Rules.ToListAsync());
         _context.Reviews.RemoveRange(await _context.Reviews.ToListAsync());
         _context.Promotions.RemoveRange(await _context.Promotions.ToListAsync());
+        _context.TeaZones.RemoveRange(await _context.TeaZones.ToListAsync());
         _context.Certificates.RemoveRange(await _context.Certificates.ToListAsync());
         _context.PromoCodes.RemoveRange(await _context.PromoCodes.ToListAsync());
         _context.ProductionCalendarDays.RemoveRange(await _context.ProductionCalendarDays.ToListAsync());

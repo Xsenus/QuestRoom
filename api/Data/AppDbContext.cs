@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<Rule> Rules { get; set; }
     public DbSet<Review> Reviews { get; set; }
     public DbSet<Promotion> Promotions { get; set; }
+    public DbSet<TeaZone> TeaZones { get; set; }
     public DbSet<Certificate> Certificates { get; set; }
     public DbSet<CertificateOrder> CertificateOrders { get; set; }
     public DbSet<AboutInfo> AboutInfos { get; set; }

@@ -91,6 +91,9 @@ export default function Footer({ setCurrentPage }: FooterProps) {
             <Link to="/promotions" className="hover:text-white transition-colors">
               Акции
             </Link>
+            <Link to="/tea-zones" className="hover:text-white transition-colors">
+              Зоны для чаепития
+            </Link>
           </nav>
         </div>
 
