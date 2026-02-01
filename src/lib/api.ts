@@ -706,6 +706,13 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  async sendTestEmailToRecipient(email: string): Promise<{ message: string }> {
+    return this.request('/settings/test-email-recipient', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
 }
 
 export const api = new ApiClient();

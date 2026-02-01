@@ -300,6 +300,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
+  const [testRecipientSending, setTestRecipientSending] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [activeTemplateTab, setActiveTemplateTab] = useState<
     'booking-admin' | 'booking-customer' | 'certificate-admin' | 'certificate-customer'
@@ -534,6 +536,39 @@ export default function SettingsPage() {
     }
 
     setTestEmailSending(false);
+  };
+
+  const handleSendRecipientTestEmail = async () => {
+    if (!testEmailRecipient.trim()) {
+      setNotification({
+        isOpen: true,
+        title: 'Укажите email',
+        message: 'Введите адрес получателя для тестового письма.',
+        tone: 'info',
+      });
+      return;
+    }
+
+    setTestRecipientSending(true);
+
+    try {
+      const response = await api.sendTestEmailToRecipient(testEmailRecipient.trim());
+      setNotification({
+        isOpen: true,
+        title: 'Тестовое письмо отправлено',
+        message: response.message || 'Проверьте почтовый ящик получателя.',
+        tone: 'success',
+      });
+    } catch (error) {
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось отправить тестовое письмо',
+        message: `Ошибка: ${(error as Error).message}`,
+        tone: 'error',
+      });
+    }
+
+    setTestRecipientSending(false);
   };
 
   if (loading) {
@@ -1063,6 +1098,28 @@ export default function SettingsPage() {
                   className="inline-flex items-center justify-center rounded-lg border border-red-600 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {testEmailSending ? 'Отправляем...' : 'Отправить тестовое письмо'}
+                </button>
+              </div>
+              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="w-full md:flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email для теста
+                  </label>
+                  <input
+                    type="email"
+                    value={testEmailRecipient}
+                    onChange={(e) => setTestEmailRecipient(e.target.value)}
+                    placeholder="user@example.com"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendRecipientTestEmail}
+                  disabled={testRecipientSending}
+                  className="inline-flex items-center justify-center rounded-lg border border-red-600 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70 md:mt-7"
+                >
+                  {testRecipientSending ? 'Отправляем...' : 'Отправить на адрес'}
                 </button>
               </div>
             </div>
