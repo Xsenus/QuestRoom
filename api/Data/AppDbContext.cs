@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<Quest> Quests { get; set; }
     public DbSet<QuestExtraService> QuestExtraServices { get; set; }
+    public DbSet<StandardExtraService> StandardExtraServices { get; set; }
     public DbSet<DurationBadge> DurationBadges { get; set; }
     public DbSet<QuestSchedule> QuestSchedules { get; set; }
     public DbSet<QuestPricingRule> QuestPricingRules { get; set; }

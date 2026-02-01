@@ -27,6 +27,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PricingRulesPage from './pages/admin/PricingRulesPage';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import ProductionCalendarPage from './pages/admin/ProductionCalendarPage';
+import StandardExtraServicesPage from './pages/admin/StandardExtraServicesPage';
 import { api } from './lib/api';
 import { Settings } from './lib/types';
 
@@ -86,6 +87,7 @@ function App() {
                 <Route path="certificate-orders" element={<CertificateOrdersAdminPage />} />
                 <Route path="reviews" element={<ReviewsAdminPage />} />
                 <Route path="promotions" element={<PromotionsAdminPage />} />
+                <Route path="extra-services" element={<StandardExtraServicesPage />} />
                 <Route path="promo-codes" element={<PromoCodesPage />} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="roles" element={<RolesPage />} />

@@ -129,6 +129,47 @@ public class DatabaseInitializer : IDatabaseInitializer
                 });
         }
 
+        if (!await _context.StandardExtraServices.AnyAsync())
+        {
+            _context.StandardExtraServices.AddRange(
+                new StandardExtraService
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Доплата за ночные сеансы начиная с 21:30",
+                    Price = 500,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new StandardExtraService
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Доплата за услуги детского аниматора",
+                    Price = 1000,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new StandardExtraService
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Аренда зоны отдыха для ожидающих гостей",
+                    Price = 500,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new StandardExtraService
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Аренда зоны для чаепития за 45 минут",
+                    Price = 500,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+        }
+
         var now = DateTime.UtcNow;
         var questData = new List<Quest>();
 
@@ -886,6 +927,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         _context.QuestScheduleSettings.RemoveRange(await _context.QuestScheduleSettings.ToListAsync());
         _context.QuestPricingRules.RemoveRange(await _context.QuestPricingRules.ToListAsync());
         _context.Quests.RemoveRange(await _context.Quests.ToListAsync());
+        _context.StandardExtraServices.RemoveRange(await _context.StandardExtraServices.ToListAsync());
         _context.DurationBadges.RemoveRange(await _context.DurationBadges.ToListAsync());
         _context.Rules.RemoveRange(await _context.Rules.ToListAsync());
         _context.Reviews.RemoveRange(await _context.Reviews.ToListAsync());

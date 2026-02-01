@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Quest, QuestUpsert, DurationBadge } from '../../lib/types';
+import { Quest, QuestUpsert, DurationBadge, StandardExtraService } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 import QuestScheduleEditor from '../../components/admin/QuestScheduleEditor';
 
@@ -8,6 +8,7 @@ export default function QuestsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [durationBadges, setDurationBadges] = useState<DurationBadge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [standardExtraServices, setStandardExtraServices] = useState<StandardExtraService[]>([]);
   const [editingQuest, setEditingQuest] = useState<(QuestUpsert & { id?: string }) | null>(
     null
   );
@@ -38,6 +39,7 @@ export default function QuestsPage() {
   useEffect(() => {
     loadQuests();
     loadDurationBadges();
+    loadStandardExtraServices();
   }, []);
 
   const loadDurationBadges = async () => {
@@ -57,6 +59,15 @@ export default function QuestsPage() {
       console.error('Error loading quests:', error);
     }
     setLoading(false);
+  };
+
+  const loadStandardExtraServices = async () => {
+    try {
+      const data = await api.getStandardExtraServices();
+      setStandardExtraServices(data || []);
+    } catch (error) {
+      console.error('Error loading standard extra services:', error);
+    }
   };
 
   const handleCreate = () => {
@@ -194,6 +205,64 @@ export default function QuestsPage() {
     const extraServices = [...(editingQuest.extraServices || [])];
     extraServices.splice(index, 1);
     setEditingQuest({ ...editingQuest, extraServices });
+  };
+
+  const addStandardExtraService = (service: StandardExtraService) => {
+    const normalizedTitle = service.title.trim();
+    if (!normalizedTitle) return;
+
+    setEditingQuest((prev) => {
+      if (!prev) return prev;
+      const extraServices = prev.extraServices || [];
+      const alreadyExists = extraServices.some(
+        (existing) =>
+          existing.title?.trim().toLowerCase() === normalizedTitle.toLowerCase() &&
+          Number(existing.price || 0) === service.price
+      );
+      if (alreadyExists) {
+        return prev;
+      }
+      return {
+        ...prev,
+        extraServices: [
+          ...extraServices,
+          {
+            title: normalizedTitle,
+            price: service.price,
+          },
+        ],
+      };
+    });
+  };
+
+  const addAllStandardExtras = () => {
+    setEditingQuest((prev) => {
+      if (!prev) return prev;
+      const extraServices = prev.extraServices || [];
+      const normalizedExisting = extraServices.map((service) => ({
+        title: service.title?.trim().toLowerCase() || '',
+        price: Number(service.price || 0),
+      }));
+      const toAdd = standardExtraServices
+        .filter((service) => service.isActive)
+        .filter((service) => {
+          const normalizedTitle = service.title.trim().toLowerCase();
+          return !normalizedExisting.some(
+            (existing) => existing.title === normalizedTitle && existing.price === service.price
+          );
+        })
+        .map((service) => ({
+          title: service.title.trim(),
+          price: service.price,
+        }));
+      if (toAdd.length === 0) {
+        return prev;
+      }
+      return {
+        ...prev,
+        extraServices: [...extraServices, ...toAdd],
+      };
+    });
   };
 
   if (loading) {
@@ -699,6 +768,51 @@ export default function QuestsPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Дополнительные услуги
               </label>
+              {standardExtraServices.some((service) => service.isActive) && (
+                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-800">
+                        Стандартные доп. услуги
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        Выберите из стандартного списка или добавьте все сразу.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addAllStandardExtras}
+                      className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-100"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Добавить все
+                    </button>
+                  </div>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    {standardExtraServices
+                      .filter((service) => service.isActive)
+                      .map((service) => (
+                      <div
+                        key={service.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <div>
+                          <div className="font-semibold text-gray-800">{service.title}</div>
+                          <div className="text-xs text-gray-500">{service.price} ₽</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addStandardExtraService(service)}
+                          className="inline-flex items-center gap-2 rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Добавить
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="space-y-3">
                 {(editingQuest.extraServices || []).map((service, index) => (
                   <div key={service.id ?? index} className="grid md:grid-cols-[2fr_1fr_auto] gap-3">
