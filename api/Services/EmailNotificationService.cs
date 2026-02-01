@@ -74,7 +74,7 @@ public class EmailNotificationService : IEmailNotificationService
             ["questPhone"] = FirstNonEmpty(questPhones, "не указан"),
             ["questPhones"] = string.IsNullOrWhiteSpace(questPhonesText) ? "не указан" : questPhonesText,
             ["totalPrice"] = bookingDetails.TotalPrice.ToString(),
-            ["status"] = bookingDetails.Status,
+            ["status"] = FormatBookingStatus(bookingDetails.Status),
             ["notes"] = bookingDetails.Notes ?? "нет",
             ["extraServices"] = extraServicesHtml,
             ["extraServicesText"] = extraServicesText,
@@ -128,8 +128,8 @@ public class EmailNotificationService : IEmailNotificationService
             ["customerName"] = order.CustomerName,
             ["customerPhone"] = order.CustomerPhone,
             ["customerEmail"] = order.CustomerEmail ?? "не указан",
-            ["deliveryType"] = order.DeliveryType ?? "не указан",
-            ["status"] = order.Status,
+            ["deliveryType"] = FormatDeliveryType(order.DeliveryType),
+            ["status"] = FormatCertificateStatus(order.Status),
             ["notes"] = order.Notes ?? "нет",
             ["companyAddress"] = settings.Address ?? "не указан",
             ["companyPhone"] = settings.Phone ?? "не указан"
@@ -364,6 +364,58 @@ public class EmailNotificationService : IEmailNotificationService
     {
         var value = values.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item));
         return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
+
+    private static string FormatBookingStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return "не указан";
+        }
+
+        return status switch
+        {
+            "pending" => "Ожидает",
+            "confirmed" => "Подтверждено",
+            "cancelled" => "Отменено",
+            "completed" => "Завершено",
+            "planned" => "Запланировано",
+            "created" => "Создано",
+            "not_confirmed" => "Не подтверждено",
+            _ => status
+        };
+    }
+
+    private static string FormatCertificateStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return "не указан";
+        }
+
+        return status switch
+        {
+            "pending" => "Новая",
+            "processed" => "Обработана",
+            "completed" => "Завершена",
+            "canceled" => "Отменена",
+            _ => status
+        };
+    }
+
+    private static string FormatDeliveryType(string? deliveryType)
+    {
+        if (string.IsNullOrWhiteSpace(deliveryType))
+        {
+            return "не указан";
+        }
+
+        return deliveryType switch
+        {
+            "paper" => "Бумажный",
+            "digital" => "Электронный",
+            _ => deliveryType
+        };
     }
 
     private static string ApplyTemplate(string? template, Dictionary<string, string> tokens, string fallback)
