@@ -1582,7 +1582,7 @@ export default function BookingsPage() {
       </div>
 
       <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2">
               {(
                 [
@@ -2412,6 +2412,7 @@ export default function BookingsPage() {
                     >
                       <option value="cash">Наличные</option>
                       <option value="certificate">Сертификат</option>
+                      <option value="aggregator">Агрегатор</option>
                     </select>
                   </div>
                   <div>

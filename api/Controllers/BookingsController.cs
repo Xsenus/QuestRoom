@@ -46,4 +46,17 @@ public class BookingsController : ControllerBase
         var deleted = await _bookingService.DeleteBookingAsync(id);
         return deleted ? NoContent() : NotFound();
     }
+
+    [Authorize(Roles = "admin")]
+    [HttpPost("import")]
+    public async Task<ActionResult<BookingImportResultDto>> ImportBookings([FromBody] BookingImportRequestDto request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Content))
+        {
+            return BadRequest(new { message = "Контент файла пустой." });
+        }
+
+        var result = await _bookingService.ImportBookingsAsync(request.Content);
+        return Ok(result);
+    }
 }

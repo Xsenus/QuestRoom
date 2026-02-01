@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuestRoomApi.Data;
@@ -11,9 +12,11 @@ using QuestRoomApi.Data;
 namespace QuestRoomApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260201145128_AddBookingLegacyId")]
+    partial class AddBookingLegacyId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1296,10 +1299,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("smtp_user");
 
-                    b.Property<int>("TeaZonesPerRow")
-                        .HasColumnType("integer")
-                        .HasColumnName("tea_zones_per_row");
-
                     b.Property<string>("TelegramIconBackground")
                         .HasColumnType("text")
                         .HasColumnName("telegram_icon_background");
@@ -1396,59 +1395,6 @@ namespace QuestRoomApi.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("standard_extra_services");
-                });
-
-            modelBuilder.Entity("QuestRoomApi.Models.TeaZone", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("address");
-
-                    b.Property<string>("Branch")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("branch");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.PrimitiveCollection<string[]>("Images")
-                        .IsRequired()
-                        .HasColumnType("text[]")
-                        .HasColumnName("images");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("tea_zones");
                 });
 
             modelBuilder.Entity("QuestRoomApi.Models.User", b =>

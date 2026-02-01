@@ -5,6 +5,7 @@ import type {
   AdminUserUpsert,
   Booking,
   BookingCreate,
+  BookingImportResult,
   BookingTablePreferences,
   BookingUpdate,
   Certificate,
@@ -522,6 +523,13 @@ class ApiClient {
   async deleteBooking(id: string) {
     return this.request(`/bookings/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async importBookings(content: string): Promise<BookingImportResult> {
+    return this.request('/bookings/import', {
+      method: 'POST',
+      body: JSON.stringify({ content }),
     });
   }
 

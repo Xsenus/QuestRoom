@@ -60,6 +60,9 @@ public class Booking
     [Column("status")]
     public string Status { get; set; } = "pending";
 
+    [Column("legacy_id")]
+    public int? LegacyId { get; set; }
+
     [Column("notes")]
     public string? Notes { get; set; }
 
