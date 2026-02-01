@@ -139,6 +139,26 @@ const bookingTemplateTokens = [
     example: 'Идеальное ограбление',
   },
   {
+    token: '{{questAddress}}',
+    description: 'Первый адрес из карточки квеста',
+    example: 'г. Красноярск, ул. Кирова, 43',
+  },
+  {
+    token: '{{questAddresses}}',
+    description: 'Все адреса из карточки квеста (через запятую)',
+    example: 'г. Красноярск, ул. Кирова, 43, ул. Ленина, 10',
+  },
+  {
+    token: '{{questPhone}}',
+    description: 'Первый телефон из карточки квеста',
+    example: '8 (391) 294-59-50',
+  },
+  {
+    token: '{{questPhones}}',
+    description: 'Все телефоны из карточки квеста (через запятую)',
+    example: '8 (391) 294-59-50, 8 (800) 555-35-35',
+  },
+  {
     token: '{{bookingDate}}',
     description: 'Дата бронирования (без времени)',
     example: '25.01.2026',

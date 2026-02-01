@@ -53,6 +53,11 @@ public class EmailNotificationService : IEmailNotificationService
             ? "нет"
             : string.Join(", ", bookingDetails.ExtraServices.Select(service => $"{service.Title} — {service.Price} ₽"));
 
+        var questAddresses = bookingDetails.Quest?.Addresses ?? Array.Empty<string>();
+        var questPhones = bookingDetails.Quest?.Phones ?? Array.Empty<string>();
+        var questAddressesText = JoinNonEmpty(questAddresses);
+        var questPhonesText = JoinNonEmpty(questPhones);
+
         var tokens = new Dictionary<string, string>
         {
             ["customerName"] = bookingDetails.CustomerName,
@@ -64,6 +69,10 @@ public class EmailNotificationService : IEmailNotificationService
             ["participantsCount"] = bookingDetails.ParticipantsCount.ToString(),
             ["extraParticipantsCount"] = bookingDetails.ExtraParticipantsCount.ToString(),
             ["questTitle"] = bookingDetails.Quest?.Title ?? "не указан",
+            ["questAddress"] = FirstNonEmpty(questAddresses, "не указан"),
+            ["questAddresses"] = string.IsNullOrWhiteSpace(questAddressesText) ? "не указан" : questAddressesText,
+            ["questPhone"] = FirstNonEmpty(questPhones, "не указан"),
+            ["questPhones"] = string.IsNullOrWhiteSpace(questPhonesText) ? "не указан" : questPhonesText,
             ["totalPrice"] = bookingDetails.TotalPrice.ToString(),
             ["status"] = bookingDetails.Status,
             ["notes"] = bookingDetails.Notes ?? "нет",
@@ -342,6 +351,19 @@ public class EmailNotificationService : IEmailNotificationService
             .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(email => email.Trim())
             .Where(email => !string.IsNullOrWhiteSpace(email));
+    }
+
+    private static string JoinNonEmpty(IEnumerable<string> values)
+    {
+        return string.Join(", ", values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim()));
+    }
+
+    private static string FirstNonEmpty(IEnumerable<string> values, string fallback)
+    {
+        var value = values.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item));
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 
     private static string ApplyTemplate(string? template, Dictionary<string, string> tokens, string fallback)
