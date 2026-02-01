@@ -11,6 +11,7 @@ public interface IEmailNotificationService
     Task SendBookingNotificationsAsync(Booking booking);
     Task SendCertificateOrderNotificationsAsync(CertificateOrder order);
     Task<TestEmailResult> SendTestEmailAsync();
+    Task<TestEmailResult> SendTestEmailAsync(string recipientEmail);
 }
 
 public class EmailNotificationService : IEmailNotificationService
@@ -192,6 +193,38 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         return new TestEmailResult(true, $"Тестовое письмо отправлено на {senderEmail}.");
+    }
+
+    public async Task<TestEmailResult> SendTestEmailAsync(string recipientEmail)
+    {
+        var settings = await GetSettingsAsync();
+        if (settings == null)
+        {
+            return new TestEmailResult(false, "Настройки почты не найдены.");
+        }
+
+        if (!HasSmtpConfiguration(settings))
+        {
+            return new TestEmailResult(false, "SMTP не настроен. Укажите SMTP host.");
+        }
+
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+        {
+            return new TestEmailResult(false, "Email получателя не указан.");
+        }
+
+        var subject = "Тестовое письмо";
+        var body = """
+                   <p>Это тестовое письмо. Если вы его получили, то настройки SMTP работают корректно.</p>
+                   """;
+
+        var success = await SendEmailAsync(settings, recipientEmail, subject, body);
+        if (!success)
+        {
+            return new TestEmailResult(false, "Не удалось отправить тестовое письмо. Проверьте настройки SMTP.");
+        }
+
+        return new TestEmailResult(true, $"Тестовое письмо отправлено на {recipientEmail}.");
     }
 
     private async Task<Settings?> GetSettingsAsync()
