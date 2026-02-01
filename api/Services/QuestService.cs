@@ -125,36 +125,27 @@ public class QuestService : IQuestService
             return false;
         }
 
-        quest.Title = dto.Title;
-        quest.Description = dto.Description;
-        var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? dto.Title : dto.Slug;
-        quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
-        quest.Addresses = dto.Addresses;
-        quest.Phones = dto.Phones;
-        quest.ParticipantsMin = dto.ParticipantsMin;
-        quest.ParticipantsMax = dto.ParticipantsMax;
-        quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
-        quest.ExtraParticipantPrice = dto.ExtraParticipantPrice;
-        quest.AgeRestriction = dto.AgeRestriction;
-        quest.AgeRating = dto.AgeRating;
-        quest.Price = dto.Price;
-        quest.Duration = dto.Duration;
-        quest.Difficulty = dto.Difficulty;
-        quest.DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5;
-        quest.IsNew = dto.IsNew;
-        quest.IsVisible = dto.IsVisible;
-        quest.MainImage = dto.MainImage;
-        quest.Images = dto.Images;
-        quest.GiftGameLabel = string.IsNullOrWhiteSpace(dto.GiftGameLabel) ? "Подарить игру" : dto.GiftGameLabel.Trim();
-        quest.GiftGameUrl = string.IsNullOrWhiteSpace(dto.GiftGameUrl) ? "/certificate" : dto.GiftGameUrl.Trim();
-        quest.VideoUrl = string.IsNullOrWhiteSpace(dto.VideoUrl) ? null : dto.VideoUrl.Trim();
-        quest.SortOrder = dto.SortOrder;
-        quest.UpdatedAt = DateTime.UtcNow;
+        await ApplyQuestUpdateAsync(quest, dto);
 
-        UpdateExtraServices(quest, dto.ExtraServices);
+        try
+        {
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            var refreshedQuest = await _context.Quests
+                .Include(q => q.ExtraServices)
+                .FirstOrDefaultAsync(q => q.Id == id);
+            if (refreshedQuest == null)
+            {
+                return false;
+            }
 
-        await _context.SaveChangesAsync();
-        return true;
+            await ApplyQuestUpdateAsync(refreshedQuest, dto);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 
     public async Task<bool> DeleteQuestAsync(Guid id)
@@ -270,6 +261,37 @@ public class QuestService : IQuestService
                 UpdatedAt = DateTime.UtcNow
             });
         }
+    }
+
+    private async Task ApplyQuestUpdateAsync(Quest quest, QuestUpsertDto dto)
+    {
+        quest.Title = dto.Title;
+        quest.Description = dto.Description;
+        var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? dto.Title : dto.Slug;
+        quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
+        quest.Addresses = dto.Addresses;
+        quest.Phones = dto.Phones;
+        quest.ParticipantsMin = dto.ParticipantsMin;
+        quest.ParticipantsMax = dto.ParticipantsMax;
+        quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
+        quest.ExtraParticipantPrice = dto.ExtraParticipantPrice;
+        quest.AgeRestriction = dto.AgeRestriction;
+        quest.AgeRating = dto.AgeRating;
+        quest.Price = dto.Price;
+        quest.Duration = dto.Duration;
+        quest.Difficulty = dto.Difficulty;
+        quest.DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5;
+        quest.IsNew = dto.IsNew;
+        quest.IsVisible = dto.IsVisible;
+        quest.MainImage = dto.MainImage;
+        quest.Images = dto.Images;
+        quest.GiftGameLabel = string.IsNullOrWhiteSpace(dto.GiftGameLabel) ? "Подарить игру" : dto.GiftGameLabel.Trim();
+        quest.GiftGameUrl = string.IsNullOrWhiteSpace(dto.GiftGameUrl) ? "/certificate" : dto.GiftGameUrl.Trim();
+        quest.VideoUrl = string.IsNullOrWhiteSpace(dto.VideoUrl) ? null : dto.VideoUrl.Trim();
+        quest.SortOrder = dto.SortOrder;
+        quest.UpdatedAt = DateTime.UtcNow;
+
+        UpdateExtraServices(quest, dto.ExtraServices);
     }
 
     private async Task<string> BuildUniqueSlugAsync(string title, Guid questId)
