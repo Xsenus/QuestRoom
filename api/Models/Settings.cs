@@ -184,6 +184,9 @@ public class Settings
     [Column("promotions_per_row")]
     public int PromotionsPerRow { get; set; } = 1;
 
+    [Column("tea_zones_per_row")]
+    public int TeaZonesPerRow { get; set; } = 2;
+
     [Column("video_modal_enabled")]
     public bool VideoModalEnabled { get; set; }
 

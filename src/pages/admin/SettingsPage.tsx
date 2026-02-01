@@ -415,6 +415,7 @@ export default function SettingsPage() {
         bookingCutoffMinutes: 10,
         timeZone: 'Asia/Krasnoyarsk',
         promotionsPerRow: 1,
+        teaZonesPerRow: 2,
         videoModalEnabled: false,
         backgroundGradientFrom: '#070816',
         backgroundGradientVia: '#160a2e',
@@ -488,6 +489,7 @@ export default function SettingsPage() {
       bookingCutoffMinutes: settings.bookingCutoffMinutes,
       timeZone: settings.timeZone,
       promotionsPerRow: settings.promotionsPerRow,
+      teaZonesPerRow: settings.teaZonesPerRow,
       videoModalEnabled: settings.videoModalEnabled,
       backgroundGradientFrom: settings.backgroundGradientFrom,
       backgroundGradientVia: settings.backgroundGradientVia,
@@ -1560,6 +1562,25 @@ export default function SettingsPage() {
               </select>
               <p className="mt-2 text-sm text-gray-500">
                 Настройка влияет на отображение карточек акций на публичной странице.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Количество зон для чаепития в строке
+              </label>
+              <select
+                value={settings.teaZonesPerRow || 2}
+                onChange={(e) =>
+                  setSettings({ ...settings, teaZonesPerRow: Number(e.target.value) })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              >
+                <option value={1}>1 зона в строке</option>
+                <option value={2}>2 зоны в строке</option>
+                <option value={3}>3 зоны в строке</option>
+              </select>
+              <p className="mt-2 text-sm text-gray-500">
+                Настройка влияет на отображение зон для чаепития на публичной странице.
               </p>
             </div>
           </div>

@@ -720,6 +720,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                 BookingCutoffMinutes = 10,
                 TimeZone = "Asia/Krasnoyarsk",
                 PromotionsPerRow = 1,
+                TeaZonesPerRow = 2,
                 SmtpHost = null,
                 SmtpPort = null,
                 SmtpUser = null,

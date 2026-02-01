@@ -102,6 +102,7 @@ export type Settings = {
   bookingCutoffMinutes: number;
   timeZone: string | null;
   promotionsPerRow: number | null;
+  teaZonesPerRow: number | null;
   videoModalEnabled: boolean;
   backgroundGradientFrom: string | null;
   backgroundGradientVia: string | null;
@@ -373,6 +374,10 @@ export type PromotionUpsert = Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>;
 export type TeaZone = {
   id: string;
   name: string;
+  description: string;
+  address: string;
+  branch: string;
+  images: string[];
   isActive: boolean;
   sortOrder: number;
   createdAt: string;

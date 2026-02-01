@@ -283,6 +283,10 @@ public class ContentService : IContentService
         {
             Id = Guid.NewGuid(),
             Name = dto.Name,
+            Description = dto.Description,
+            Address = dto.Address,
+            Branch = dto.Branch,
+            Images = dto.Images.ToArray(),
             IsActive = dto.IsActive,
             SortOrder = dto.SortOrder,
             CreatedAt = DateTime.UtcNow,
@@ -303,6 +307,10 @@ public class ContentService : IContentService
         }
 
         teaZone.Name = dto.Name;
+        teaZone.Description = dto.Description;
+        teaZone.Address = dto.Address;
+        teaZone.Branch = dto.Branch;
+        teaZone.Images = dto.Images.ToArray();
         teaZone.IsActive = dto.IsActive;
         teaZone.SortOrder = dto.SortOrder;
         teaZone.UpdatedAt = DateTime.UtcNow;
@@ -498,6 +506,7 @@ public class ContentService : IContentService
                 BookingCutoffMinutes = dto.BookingCutoffMinutes > 0 ? dto.BookingCutoffMinutes : 10,
                 TimeZone = dto.TimeZone,
                 PromotionsPerRow = dto.PromotionsPerRow > 0 ? dto.PromotionsPerRow : 1,
+                TeaZonesPerRow = dto.TeaZonesPerRow > 0 ? dto.TeaZonesPerRow : 2,
                 VideoModalEnabled = dto.VideoModalEnabled ?? false,
                 BackgroundGradientFrom = dto.BackgroundGradientFrom,
                 BackgroundGradientVia = dto.BackgroundGradientVia,
@@ -600,6 +609,10 @@ public class ContentService : IContentService
             {
                 existing.PromotionsPerRow = dto.PromotionsPerRow;
             }
+            if (dto.TeaZonesPerRow > 0)
+            {
+                existing.TeaZonesPerRow = dto.TeaZonesPerRow;
+            }
             if (dto.VideoModalEnabled.HasValue)
             {
                 existing.VideoModalEnabled = dto.VideoModalEnabled.Value;
@@ -675,6 +688,10 @@ public class ContentService : IContentService
         {
             Id = teaZone.Id,
             Name = teaZone.Name,
+            Description = teaZone.Description,
+            Address = teaZone.Address,
+            Branch = teaZone.Branch,
+            Images = teaZone.Images.ToList(),
             IsActive = teaZone.IsActive,
             SortOrder = teaZone.SortOrder,
             CreatedAt = teaZone.CreatedAt,
@@ -774,6 +791,7 @@ public class ContentService : IContentService
             BookingCutoffMinutes = settings.BookingCutoffMinutes,
             TimeZone = settings.TimeZone,
             PromotionsPerRow = settings.PromotionsPerRow,
+            TeaZonesPerRow = settings.TeaZonesPerRow,
             VideoModalEnabled = settings.VideoModalEnabled,
             BackgroundGradientFrom = settings.BackgroundGradientFrom,
             BackgroundGradientVia = settings.BackgroundGradientVia,
