@@ -132,14 +132,18 @@ public class QuestService : IQuestService
             await _context.SaveChangesAsync();
             return true;
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateConcurrencyException)
         {
-            var canRetry = await ResolveQuestConcurrencyAsync(ex, id);
-            if (!canRetry)
+            _context.Entry(quest).State = EntityState.Detached;
+            var refreshedQuest = await _context.Quests
+                .Include(q => q.ExtraServices)
+                .FirstOrDefaultAsync(q => q.Id == id);
+            if (refreshedQuest == null)
             {
                 return false;
             }
-            await ApplyQuestUpdateAsync(quest, dto);
+
+            await ApplyQuestUpdateAsync(refreshedQuest, dto);
             await _context.SaveChangesAsync();
             return true;
         }
@@ -258,32 +262,6 @@ public class QuestService : IQuestService
                 UpdatedAt = DateTime.UtcNow
             });
         }
-    }
-
-    private async Task<bool> ResolveQuestConcurrencyAsync(DbUpdateConcurrencyException ex, Guid questId)
-    {
-        foreach (var entry in ex.Entries)
-        {
-            if (entry.Entity is QuestExtraService && entry.State == EntityState.Deleted)
-            {
-                var databaseValues = await entry.GetDatabaseValuesAsync();
-                if (databaseValues == null)
-                {
-                    entry.State = EntityState.Detached;
-                }
-            }
-        }
-
-        var refreshedQuest = await _context.Quests
-            .Include(q => q.ExtraServices)
-            .FirstOrDefaultAsync(q => q.Id == questId);
-        if (refreshedQuest == null)
-        {
-            return false;
-        }
-
-        await _context.Entry(refreshedQuest).ReloadAsync();
-        return true;
     }
 
     private async Task ApplyQuestUpdateAsync(Quest quest, QuestUpsertDto dto)
