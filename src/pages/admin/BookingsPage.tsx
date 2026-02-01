@@ -76,6 +76,25 @@ type BookingColumnFilterDefinition = {
   options?: { value: string; label: string }[];
 };
 
+type SearchOperatorKey =
+  | 'status'
+  | 'quest'
+  | 'aggregator'
+  | 'promo'
+  | 'phone'
+  | 'email'
+  | 'name'
+  | 'id'
+  | 'date'
+  | 'created'
+  | 'total'
+  | 'notes';
+
+type ParsedSearchQuery = {
+  freeTerms: string[];
+  operators: Record<SearchOperatorKey, string[]>;
+};
+
 type BookingTableColumnConfig = {
   key: BookingTableColumnKey;
   label: string;
@@ -206,6 +225,7 @@ export default function BookingsPage() {
     }
     return !Number.isNaN(new Date(value).getTime());
   };
+  const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   const getEndOfNextMonth = (baseDate: Date) => {
     const date = new Date(baseDate.getFullYear(), baseDate.getMonth() + 2, 0);
@@ -1418,6 +1438,152 @@ export default function BookingsPage() {
     return isGuid ? value : '00000000-0000-0000-0000-000000000000';
   };
 
+  const parseSearchQuery = useCallback((value: string): ParsedSearchQuery => {
+    const operators: ParsedSearchQuery['operators'] = {
+      status: [],
+      quest: [],
+      aggregator: [],
+      promo: [],
+      phone: [],
+      email: [],
+      name: [],
+      id: [],
+      date: [],
+      created: [],
+      total: [],
+      notes: [],
+    };
+    const freeTerms: string[] = [];
+    if (!value.trim()) {
+      return { freeTerms, operators };
+    }
+    const tokens = value.match(/(?:[^\s"]+|"[^"]*")+/g) ?? [];
+    tokens.forEach((token) => {
+      const trimmed = token.trim();
+      if (!trimmed) {
+        return;
+      }
+      const match = trimmed.match(/^([a-zA-Z]+):(.+)$/);
+      if (match) {
+        const key = match[1].toLowerCase();
+        const rawValue = match[2].replace(/^"|"$/g, '');
+        const normalized = rawValue.trim();
+        if (!normalized) {
+          return;
+        }
+        const pushValue = (operator: SearchOperatorKey) => {
+          operators[operator].push(normalized);
+        };
+        switch (key) {
+          case 'status':
+            pushValue('status');
+            return;
+          case 'quest':
+            pushValue('quest');
+            return;
+          case 'aggregator':
+          case 'agg':
+            pushValue('aggregator');
+            return;
+          case 'promo':
+          case 'promocode':
+            pushValue('promo');
+            return;
+          case 'phone':
+          case 'tel':
+            pushValue('phone');
+            return;
+          case 'email':
+            pushValue('email');
+            return;
+          case 'name':
+          case 'customer':
+            pushValue('name');
+            return;
+          case 'id':
+            pushValue('id');
+            return;
+          case 'date':
+            pushValue('date');
+            return;
+          case 'created':
+            pushValue('created');
+            return;
+          case 'total':
+          case 'price':
+            pushValue('total');
+            return;
+          case 'notes':
+          case 'comment':
+            pushValue('notes');
+            return;
+          default:
+            break;
+        }
+      }
+      freeTerms.push(trimmed.replace(/^"|"$/g, ''));
+    });
+
+    return { freeTerms, operators };
+  }, []);
+
+  const fuzzyMatch = (term: string, text: string) => {
+    const normalizedTerm = term.toLowerCase();
+    const normalizedText = text.toLowerCase();
+    if (!normalizedTerm || !normalizedText) {
+      return false;
+    }
+    if (normalizedText.includes(normalizedTerm)) {
+      return true;
+    }
+    const maxDistance =
+      normalizedTerm.length <= 4 ? 1 : normalizedTerm.length <= 7 ? 2 : 3;
+    const computeDistance = (a: string, b: string) => {
+      const aLen = a.length;
+      const bLen = b.length;
+      const dp = Array.from({ length: aLen + 1 }, () => new Array(bLen + 1).fill(0));
+      for (let i = 0; i <= aLen; i += 1) dp[i][0] = i;
+      for (let j = 0; j <= bLen; j += 1) dp[0][j] = j;
+      for (let i = 1; i <= aLen; i += 1) {
+        for (let j = 1; j <= bLen; j += 1) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + cost
+          );
+        }
+      }
+      return dp[aLen][bLen];
+    };
+    if (normalizedText.length <= 40) {
+      return computeDistance(normalizedTerm, normalizedText) <= maxDistance;
+    }
+    const words = normalizedText.split(/\s+/);
+    return words.some((word) => computeDistance(normalizedTerm, word) <= maxDistance);
+  };
+
+  const highlightText = (value: string, terms: string[]) => {
+    if (!value || !terms.length) {
+      return value || '—';
+    }
+    const filteredTerms = terms.filter((term) => term);
+    if (!filteredTerms.length) {
+      return value;
+    }
+    const regex = new RegExp(`(${filteredTerms.map(escapeRegExp).join('|')})`, 'gi');
+    const parts = value.split(regex);
+    return parts.map((part, index) =>
+      index % 2 === 1 ? (
+        <mark key={`${part}-${index}`} className="rounded bg-yellow-200 px-0.5">
+          {part}
+        </mark>
+      ) : (
+        <span key={`${part}-${index}`}>{part}</span>
+      )
+    );
+  };
+
   const calculateDiscountAmount = (
     booking: {
       questPrice: number;
@@ -1609,11 +1775,73 @@ export default function BookingsPage() {
   };
 
   const listItemsPerPage = viewMode === 'table' ? 10 : 9;
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const parsedSearch = useMemo(() => parseSearchQuery(searchQuery), [parseSearchQuery, searchQuery]);
+  const highlightTerms = useMemo(() => {
+    const values = new Set<string>();
+    parsedSearch.freeTerms.forEach((term) => values.add(term));
+    Object.values(parsedSearch.operators).forEach((operatorValues) => {
+      operatorValues.forEach((term) => values.add(term));
+    });
+    return Array.from(values).filter(Boolean);
+  }, [parsedSearch]);
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
-      if (normalizedSearchQuery) {
-        const searchText = [
+      const questTitle = getQuestTitle(booking);
+      const statusLabel = getStatusText(booking.status);
+      const aggregatorValue = booking.aggregator || 'site';
+
+      const getOperatorText = (key: SearchOperatorKey) => {
+        switch (key) {
+          case 'status':
+            return [booking.status, statusLabel];
+          case 'quest':
+            return [booking.questId ?? '', questTitle];
+          case 'aggregator':
+            return [aggregatorValue];
+          case 'promo':
+            return [booking.promoCode || 'none'];
+          case 'phone':
+            return [booking.customerPhone];
+          case 'email':
+            return [booking.customerEmail || ''];
+          case 'name':
+            return [booking.customerName];
+          case 'id':
+            return [booking.id];
+          case 'date':
+            return [formatBookingDateTime(booking)];
+          case 'created':
+            return [formatDateTime(booking.createdAt)];
+          case 'total':
+            return [String(booking.totalPrice ?? '')];
+          case 'notes':
+            return [booking.notes || ''];
+          default:
+            return [''];
+        }
+      };
+
+      const checkOperator = (key: SearchOperatorKey, values: string[]) => {
+        if (!values.length) {
+          return true;
+        }
+        const candidates = getOperatorText(key)
+          .filter(Boolean)
+          .map((text) => text.toLowerCase());
+        return values.every((value) =>
+          candidates.some((candidate) => candidate.includes(value.toLowerCase()))
+        );
+      };
+
+      const operatorMatches = (Object.keys(parsedSearch.operators) as SearchOperatorKey[]).every(
+        (key) => checkOperator(key, parsedSearch.operators[key])
+      );
+      if (!operatorMatches) {
+        return false;
+      }
+
+      if (parsedSearch.freeTerms.length) {
+        const searchableFields = [
           booking.id,
           booking.customerName,
           booking.customerPhone,
@@ -1621,16 +1849,25 @@ export default function BookingsPage() {
           booking.promoCode,
           booking.aggregator,
           booking.notes,
-          getQuestTitle(booking),
-          getStatusText(booking.status),
+          questTitle,
+          statusLabel,
           formatBookingDateTime(booking),
           formatDateTime(booking.createdAt),
           String(booking.totalPrice ?? ''),
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!searchText.includes(normalizedSearchQuery)) {
+        ].filter(Boolean) as string[];
+
+        const matchesTerm = (term: string) => {
+          const normalizedTerm = term.toLowerCase();
+          return searchableFields.some((field) => field.toLowerCase().includes(normalizedTerm));
+        };
+
+        const matchesFuzzy = (term: string) =>
+          fuzzyMatch(term, booking.customerName) || fuzzyMatch(term, booking.customerPhone);
+
+        const matchesAllTerms = parsedSearch.freeTerms.every(
+          (term) => matchesTerm(term) || matchesFuzzy(term)
+        );
+        if (!matchesAllTerms) {
           return false;
         }
       }
@@ -1705,13 +1942,14 @@ export default function BookingsPage() {
     });
   }, [
     bookings,
-    normalizedSearchQuery,
+    parsedSearch,
     columnFilters,
     columnFilterDefinitionMap,
     formatBookingDateTime,
     formatDateTime,
     getQuestTitle,
     getStatusText,
+    fuzzyMatch,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / listItemsPerPage));
@@ -1791,15 +2029,15 @@ export default function BookingsPage() {
             className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
             style={getStatusBadgeStyle(booking.status)}
           >
-            {getStatusText(booking.status)}
+            {highlightText(getStatusText(booking.status), highlightTerms)}
           </span>
         );
       case 'bookingDate':
-        return <span>{formatBookingDateTime(booking)}</span>;
+        return <span>{highlightText(formatBookingDateTime(booking), highlightTerms)}</span>;
       case 'createdAt':
-        return <span>{formatDateTime(booking.createdAt)}</span>;
+        return <span>{highlightText(formatDateTime(booking.createdAt), highlightTerms)}</span>;
       case 'quest':
-        return <span>{getQuestTitle(booking)}</span>;
+        return <span>{highlightText(getQuestTitle(booking), highlightTerms)}</span>;
       case 'questPrice':
         return <span>{questPrice != null ? `${questPrice} ₽` : '—'}</span>;
       case 'participants':
@@ -1823,11 +2061,13 @@ export default function BookingsPage() {
       case 'extraServicesPrice':
         return <span>{extraServicesTotal ? `${extraServicesTotal} ₽` : '—'}</span>;
       case 'aggregator':
-        return <span>{getAggregatorLabel(booking)}</span>;
+        return <span>{highlightText(getAggregatorLabel(booking), highlightTerms)}</span>;
       case 'promoCode':
         return booking.promoCode ? (
           <div>
-            <div className="font-semibold">{booking.promoCode}</div>
+            <div className="font-semibold">
+              {highlightText(booking.promoCode, highlightTerms)}
+            </div>
             {booking.promoDiscountAmount != null && (
               <div className="text-xs text-gray-500">−{booking.promoDiscountAmount} ₽</div>
             )}
@@ -1836,27 +2076,33 @@ export default function BookingsPage() {
           '—'
         );
       case 'totalPrice':
-        return <span>{booking.totalPrice} ₽</span>;
+        return <span>{highlightText(`${booking.totalPrice} ₽`, highlightTerms)}</span>;
       case 'customer':
         return (
           <div>
-            <div className="font-semibold text-gray-900">{booking.customerName}</div>
+            <div className="font-semibold text-gray-900">
+              {highlightText(booking.customerName, highlightTerms)}
+            </div>
             <div>
               <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
-                {booking.customerPhone}
+                {highlightText(booking.customerPhone, highlightTerms)}
               </a>
             </div>
             {booking.customerEmail && (
               <div>
                 <a href={`mailto:${booking.customerEmail}`} className="hover:text-red-600">
-                  {booking.customerEmail}
+                  {highlightText(booking.customerEmail, highlightTerms)}
                 </a>
               </div>
             )}
           </div>
         );
       case 'notes':
-        return <p className="line-clamp-2">{booking.notes || '—'}</p>;
+        return (
+          <p className="line-clamp-2">
+            {highlightText(booking.notes || '—', highlightTerms)}
+          </p>
+        );
       case 'actions':
         return <div className="flex justify-end gap-2">{renderActionButtons(booking)}</div>;
       default:
@@ -2061,9 +2307,12 @@ export default function BookingsPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Имя, телефон, квест, статус..."
+                  placeholder="Имя, телефон, квест, статус... или status:confirmed"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Операторы: status:, quest:"Название", phone:, email:, promo:, id:.
+                </p>
               </div>
             </div>
             <div className="flex items-center justify-between mt-4">
@@ -2269,14 +2518,14 @@ export default function BookingsPage() {
                           className="px-3 py-1 rounded-full text-xs font-bold border"
                           style={getStatusBadgeStyle(booking.status)}
                         >
-                          {getStatusText(booking.status)}
+                          {highlightText(getStatusText(booking.status), highlightTerms)}
                         </span>
                         <span className="text-xs text-gray-500">
                           ID: {booking.id.slice(0, 8)}
                         </span>
                       </div>
                       <p className="text-sm font-semibold text-gray-900">
-                        {getQuestTitle(booking)}
+                        {highlightText(getQuestTitle(booking), highlightTerms)}
                       </p>
                       <p className="text-xs text-gray-500">
                         Цена квеста:{' '}
@@ -2291,26 +2540,26 @@ export default function BookingsPage() {
                     <div className="flex items-center gap-2 text-gray-700">
                       <User className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Клиент:</span>
-                      <span>{booking.customerName}</span>
+                      <span>{highlightText(booking.customerName, highlightTerms)}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
                       <Phone className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Телефон:</span>
                       <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
-                        {booking.customerPhone}
+                        {highlightText(booking.customerPhone, highlightTerms)}
                       </a>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
                       <Calendar className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Дата:</span>
-                      <span>{formatBookingDateTime(booking)}</span>
+                      <span>{highlightText(formatBookingDateTime(booking), highlightTerms)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <Calendar className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Создано:</span>
-                      <span>{formatDateTime(booking.createdAt)}</span>
+                      <span>{highlightText(formatDateTime(booking.createdAt), highlightTerms)}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
@@ -2335,16 +2584,16 @@ export default function BookingsPage() {
                     <div className="flex items-center gap-2 text-gray-700">
                       <BadgeDollarSign className="w-4 h-4 text-red-600" />
                       <span className="font-semibold">Сумма:</span>
-                      <span>{booking.totalPrice} ₽</span>
+                      <span>{highlightText(`${booking.totalPrice} ₽`, highlightTerms)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <span className="font-semibold">Агрегатор:</span>
-                      <span>{getAggregatorLabel(booking)}</span>
+                      <span>{highlightText(getAggregatorLabel(booking), highlightTerms)}</span>
                     </div>
                     {booking.promoCode && (
                       <div className="flex items-center gap-2 text-gray-700">
                         <span className="font-semibold">Промокод:</span>
-                        <span>{booking.promoCode}</span>
+                        <span>{highlightText(booking.promoCode, highlightTerms)}</span>
                         {booking.promoDiscountAmount != null && (
                           <span className="text-xs text-gray-500">
                             −{booking.promoDiscountAmount} ₽
@@ -2356,13 +2605,13 @@ export default function BookingsPage() {
                       <div className="flex items-center gap-2 text-gray-700">
                         <Mail className="w-4 h-4 text-red-600" />
                         <span className="font-semibold">Email:</span>
-                        <a
-                          href={`mailto:${booking.customerEmail}`}
-                          className="hover:text-red-600"
-                        >
-                          {booking.customerEmail}
-                        </a>
-                      </div>
+                      <a
+                        href={`mailto:${booking.customerEmail}`}
+                        className="hover:text-red-600"
+                      >
+                        {highlightText(booking.customerEmail, highlightTerms)}
+                      </a>
+                    </div>
                     )}
                     <div className="flex items-start gap-2 text-gray-700 sm:col-span-2">
                       <span className="font-semibold">Доп. услуги:</span>
@@ -2393,7 +2642,9 @@ export default function BookingsPage() {
                       <FileText className="w-4 h-4 text-red-600 mt-1" />
                       <div>
                         <span className="font-semibold">Комментарий:</span>
-                        <p className="text-xs mt-1">{booking.notes || '—'}</p>
+                        <p className="text-xs mt-1">
+                          {highlightText(booking.notes || '—', highlightTerms)}
+                        </p>
                       </div>
                     </div>
                   </div>
