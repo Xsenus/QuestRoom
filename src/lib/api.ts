@@ -491,8 +491,23 @@ class ApiClient {
   }
 
   // Bookings
-  async getBookings(): Promise<Booking[]> {
-    return this.request('/bookings');
+  async getBookings(params?: {
+    status?: string;
+    questId?: string;
+    aggregator?: string;
+    promoCode?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<Booking[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.questId) searchParams.set('questId', params.questId);
+    if (params?.aggregator) searchParams.set('aggregator', params.aggregator);
+    if (params?.promoCode) searchParams.set('promoCode', params.promoCode);
+    if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+    const query = searchParams.toString();
+    return this.request(`/bookings${query ? `?${query}` : ''}`);
   }
 
   async getBookingsTablePreferences(): Promise<BookingTablePreferences> {

@@ -40,8 +40,9 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
 
           <nav className="w-full bg-[#1c1438]/70 backdrop-blur-sm py-2 md:py-3">
             <div className="grid grid-cols-3 gap-2 md:gap-3 lg:grid-cols-7 px-2 md:px-4">
-              {navItems.map((item) => {
+              {navItems.map((item, index) => {
                 const Icon = item.icon;
+                const isLastItem = index === navItems.length - 1;
                 return (
                   <Link
                     key={item.id}
@@ -50,7 +51,7 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
                       isActive(item.path)
                         ? 'text-white md:bg-slate-800/80'
                         : 'text-white/80 md:hover:text-white md:hover:bg-slate-800/40'
-                    }`}
+                    } ${isLastItem ? 'col-span-3 md:col-span-1' : ''}`}
                   >
                     <Icon className="w-5 h-5 md:w-7 md:h-7" />
                     <span className="text-[11px] md:text-sm whitespace-nowrap text-center leading-tight font-display">
