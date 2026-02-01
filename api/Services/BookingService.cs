@@ -9,7 +9,13 @@ namespace QuestRoomApi.Services;
 
 public interface IBookingService
 {
-    Task<IReadOnlyList<BookingDto>> GetBookingsAsync();
+    Task<IReadOnlyList<BookingDto>> GetBookingsAsync(
+        string? status = null,
+        Guid? questId = null,
+        string? aggregator = null,
+        string? promoCode = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null);
     Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
     Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto);
     Task<bool> DeleteBookingAsync(Guid id);
@@ -33,11 +39,64 @@ public class BookingService : IBookingService
         _scopeFactory = scopeFactory;
     }
 
-    public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync()
+    public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync(
+        string? status = null,
+        Guid? questId = null,
+        string? aggregator = null,
+        string? promoCode = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null)
     {
-        return await _context.Bookings
+        var query = _context.Bookings
             .Include(b => b.ExtraServices)
             .Include(b => b.QuestSchedule)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(b => b.Status == status);
+        }
+
+        if (questId.HasValue)
+        {
+            query = query.Where(b => b.QuestId == questId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(aggregator))
+        {
+            if (aggregator == "site")
+            {
+                query = query.Where(b => b.Aggregator == null || b.Aggregator == string.Empty);
+            }
+            else
+            {
+                query = query.Where(b => b.Aggregator == aggregator);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(promoCode))
+        {
+            if (promoCode == "none")
+            {
+                query = query.Where(b => b.PromoCode == null || b.PromoCode == string.Empty);
+            }
+            else
+            {
+                query = query.Where(b => b.PromoCode == promoCode);
+            }
+        }
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(b => b.BookingDate >= dateFrom.Value);
+        }
+
+        if (dateTo.HasValue)
+        {
+            query = query.Where(b => b.BookingDate <= dateTo.Value);
+        }
+
+        return await query
             .OrderByDescending(b => b.CreatedAt)
             .ThenBy(b => b.BookingDate)
             .Select(b => ToDto(b))

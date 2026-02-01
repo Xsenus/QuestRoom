@@ -85,6 +85,7 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
 export default function BookingsPage() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [countBookings, setCountBookings] = useState<Booking[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -170,6 +171,7 @@ export default function BookingsPage() {
   const preferencesSaveTimeout = useRef<number | null>(null);
 
   const formatDate = (value: Date) => value.toISOString().split('T')[0];
+  const normalizeDateParam = (value: string) => (value ? value : undefined);
 
   const getEndOfNextMonth = (baseDate: Date) => {
     const date = new Date(baseDate.getFullYear(), baseDate.getMonth() + 2, 0);
@@ -325,7 +327,6 @@ export default function BookingsPage() {
 
     setListDateFrom(listFrom);
     setListDateTo(listTo);
-    loadBookings();
     loadQuests();
     loadSettings();
     loadPromoCodes();
@@ -513,20 +514,61 @@ export default function BookingsPage() {
     selectedQuestExtraServiceIds,
   ]);
 
-  const loadBookings = async () => {
-    try {
-      const data = await api.getBookings();
-      setBookings(data || []);
-    } catch (error) {
-      console.error('Error loading bookings:', error);
+  const dateFiltersEnabled = statusFilter !== 'pending';
+
+  const countFilterParams = useMemo(
+    () => ({
+      dateFrom: dateFiltersEnabled ? normalizeDateParam(listDateFrom) : undefined,
+      dateTo: dateFiltersEnabled ? normalizeDateParam(listDateTo) : undefined,
+    }),
+    [listDateFrom, listDateTo, dateFiltersEnabled]
+  );
+
+  const listFilterParams = useMemo(
+    () => ({
+      ...countFilterParams,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      questId: questFilter !== 'all' ? questFilter : undefined,
+      aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
+      promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+    }),
+    [countFilterParams, statusFilter, questFilter, aggregatorFilter, promoCodeFilter]
+  );
+
+  const loadBookings = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) {
+        setLoading(true);
+      }
+      try {
+        const [listData, countData] = await Promise.all([
+          api.getBookings(listFilterParams),
+          api.getBookings(countFilterParams),
+        ]);
+        setBookings(listData || []);
+        setCountBookings(countData || []);
+      } catch (error) {
+        console.error('Error loading bookings:', error);
+      }
+      if (showLoading) {
+        setLoading(false);
+      }
+    },
+    [listFilterParams, countFilterParams]
+  );
+
+  useEffect(() => {
+    const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
+    if (!canLoad) {
+      return;
     }
-    setLoading(false);
-  };
+    loadBookings();
+  }, [loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadBookings();
+      await loadBookings(false);
     } finally {
       setIsRefreshing(false);
     }
@@ -629,7 +671,7 @@ export default function BookingsPage() {
       setCreateResult('Бронь создана.');
       setEditingBooking(null);
       setBookingFormMode(null);
-      loadBookings();
+      await loadBookings(false);
     } catch (error) {
       setCreateResult('Ошибка создания брони: ' + (error as Error).message);
     }
@@ -668,7 +710,7 @@ export default function BookingsPage() {
       tone: 'danger',
       onConfirm: async () => {
         await api.deleteBooking(booking.id);
-        await loadBookings();
+        await loadBookings(false);
         setNotification({
           isOpen: true,
           title: 'Бронь удалена',
@@ -687,7 +729,7 @@ export default function BookingsPage() {
       confirmLabel: 'Подтвердить',
       onConfirm: async () => {
         await api.updateBooking(booking.id, { status, notes: booking.notes });
-        await loadBookings();
+        await loadBookings(false);
         setNotification({
           isOpen: true,
           title: 'Статус обновлён',
@@ -841,7 +883,7 @@ export default function BookingsPage() {
         })),
       });
       closeBookingForm();
-      loadBookings();
+      await loadBookings(false);
       setNotification({
         isOpen: true,
         title: 'Бронь обновлена',
@@ -1052,7 +1094,11 @@ export default function BookingsPage() {
   }, [quests]);
 
   const statusCounts = useMemo(() => {
-    return bookings.reduce(
+    const source =
+      questFilter === 'all'
+        ? countBookings
+        : countBookings.filter((booking) => booking.questId === questFilter);
+    return source.reduce(
       (acc, booking) => {
         acc.all += 1;
         acc[booking.status] += 1;
@@ -1069,37 +1115,41 @@ export default function BookingsPage() {
         not_confirmed: 0,
       }
     );
-  }, [bookings]);
+  }, [countBookings, questFilter]);
 
   const questCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: bookings.length };
-    bookings.forEach((booking) => {
+    const source =
+      statusFilter === 'all'
+        ? countBookings
+        : countBookings.filter((booking) => booking.status === statusFilter);
+    const counts: Record<string, number> = { all: source.length };
+    source.forEach((booking) => {
       if (booking.questId) {
         counts[booking.questId] = (counts[booking.questId] || 0) + 1;
       }
     });
     return counts;
-  }, [bookings]);
+  }, [countBookings, statusFilter]);
 
   const aggregatorOptions = useMemo(() => {
     const values = new Set<string>();
-    bookings.forEach((booking) => {
+    countBookings.forEach((booking) => {
       if (booking.aggregator) {
         values.add(booking.aggregator);
       }
     });
     return Array.from(values);
-  }, [bookings]);
+  }, [countBookings]);
 
   const promoCodeOptions = useMemo(() => {
     const values = new Set<string>();
-    bookings.forEach((booking) => {
+    countBookings.forEach((booking) => {
       if (booking.promoCode) {
         values.add(booking.promoCode);
       }
     });
     return Array.from(values);
-  }, [bookings]);
+  }, [countBookings]);
 
   const formatDateTime = (value?: string | null) => {
     if (!value) {
@@ -1351,67 +1401,8 @@ export default function BookingsPage() {
     [bookingFormMode, editingBooking?.questId, questLookup, selectedQuestExtraServiceIds]
   );
 
-  const parseBookingDate = (booking: Booking) => {
-    if (booking.bookingDateTime) {
-      return new Date(booking.bookingDateTime);
-    }
-    if (booking.bookingTime) {
-      return new Date(`${booking.bookingDate}T${booking.bookingTime}`);
-    }
-    if (booking.bookingDate) {
-      return new Date(`${booking.bookingDate}T00:00:00`);
-    }
-    return null;
-  };
-
   const listItemsPerPage = viewMode === 'table' ? 10 : 9;
-  const rangeStart = listDateFrom ? new Date(`${listDateFrom}T00:00:00`) : null;
-  const rangeEnd = listDateTo ? new Date(`${listDateTo}T23:59:59`) : null;
-
-  const filteredBookings = bookings.filter((booking) => {
-    if (statusFilter !== 'all' && booking.status !== statusFilter) {
-      return false;
-    }
-
-    if (questFilter !== 'all' && booking.questId !== questFilter) {
-      return false;
-    }
-
-    if (aggregatorFilter !== 'all') {
-      if (aggregatorFilter === 'site') {
-        if (booking.aggregator) {
-          return false;
-        }
-      } else if (booking.aggregator !== aggregatorFilter) {
-        return false;
-      }
-    }
-
-    if (promoCodeFilter !== 'all') {
-      if (promoCodeFilter === 'none') {
-        if (booking.promoCode) {
-          return false;
-        }
-      } else if (booking.promoCode !== promoCodeFilter) {
-        return false;
-      }
-    }
-
-    if (statusFilter !== 'pending' && (rangeStart || rangeEnd)) {
-      const bookingDate = parseBookingDate(booking);
-      if (!bookingDate) {
-        return false;
-      }
-      if (rangeStart && bookingDate < rangeStart) {
-        return false;
-      }
-      if (rangeEnd && bookingDate > rangeEnd) {
-        return false;
-      }
-    }
-
-    return true;
-  });
+  const filteredBookings = bookings;
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / listItemsPerPage));
   const safePage = Math.min(currentPage, totalPages);
@@ -1419,6 +1410,18 @@ export default function BookingsPage() {
     (safePage - 1) * listItemsPerPage,
     safePage * listItemsPerPage
   );
+  const paginationItems = useMemo<(number | 'ellipsis')[]>(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+    if (safePage <= 4) {
+      return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
+    }
+    if (safePage >= totalPages - 3) {
+      return [1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, 'ellipsis', safePage - 1, safePage, safePage + 1, 'ellipsis', totalPages];
+  }, [safePage, totalPages]);
 
   useEffect(() => {
     if (safePage !== currentPage) {
@@ -1984,19 +1987,28 @@ export default function BookingsPage() {
                 >
                   Назад
                 </button>
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                      page === safePage
-                        ? 'bg-red-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {paginationItems.map((page, index) =>
+                  page === 'ellipsis' ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-3 py-2 text-sm font-semibold text-gray-500"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                        page === safePage
+                          ? 'bg-red-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={safePage === totalPages}

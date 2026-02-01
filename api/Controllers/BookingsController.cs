@@ -18,9 +18,21 @@ public class BookingsController : ControllerBase
 
     [Authorize(Roles = "admin")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<BookingDto>>> GetBookings()
+    public async Task<ActionResult<IEnumerable<BookingDto>>> GetBookings(
+        [FromQuery] string? status = null,
+        [FromQuery] Guid? questId = null,
+        [FromQuery] string? aggregator = null,
+        [FromQuery] string? promoCode = null,
+        [FromQuery] DateOnly? dateFrom = null,
+        [FromQuery] DateOnly? dateTo = null)
     {
-        var bookings = await _bookingService.GetBookingsAsync();
+        var bookings = await _bookingService.GetBookingsAsync(
+            status,
+            questId,
+            aggregator,
+            promoCode,
+            dateFrom,
+            dateTo);
         return Ok(bookings);
     }
 
