@@ -10,6 +10,10 @@ public class Booking
     [Column("id")]
     public Guid Id { get; set; }
 
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("legacy_id")]
+    public int LegacyId { get; set; }
+
     [Column("quest_id")]
     public Guid? QuestId { get; set; }
 

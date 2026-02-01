@@ -3,6 +3,7 @@ namespace QuestRoomApi.DTOs.Bookings;
 public class BookingDto
 {
     public Guid Id { get; set; }
+    public int LegacyId { get; set; }
     public Guid? QuestId { get; set; }
     public Guid? QuestScheduleId { get; set; }
     public string CustomerName { get; set; } = string.Empty;

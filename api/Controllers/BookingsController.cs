@@ -1,4 +1,6 @@
+using System.IO;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using QuestRoomApi.DTOs.Bookings;
 using QuestRoomApi.Services;
@@ -45,5 +47,21 @@ public class BookingsController : ControllerBase
     {
         var deleted = await _bookingService.DeleteBookingAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPost("import")]
+    [RequestSizeLimit(25_000_000)]
+    public async Task<ActionResult<BookingImportResultDto>> ImportBookings([FromForm] IFormFile file)
+    {
+        if (file.Length == 0)
+        {
+            return BadRequest("Файл пуст.");
+        }
+
+        using var reader = new StreamReader(file.OpenReadStream());
+        var content = await reader.ReadToEndAsync();
+        var result = await _bookingService.ImportLegacyBookingsAsync(content);
+        return Ok(result);
     }
 }

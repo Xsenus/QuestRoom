@@ -114,6 +114,7 @@ export type SettingsUpdate = Omit<Settings, 'id' | 'updatedAt'>;
 
 export type Booking = {
   id: string;
+  legacyId?: number;
   questId: string | null;
   questScheduleId: string | null;
   aggregator: string | null;
@@ -189,6 +190,14 @@ export type BookingUpdate = Partial<
     | 'extraServices'
   >
 >;
+
+export type BookingImportResult = {
+  totalRows: number;
+  imported: number;
+  skipped: number;
+  duplicates: number;
+  errors: number;
+};
 
 export type QuestExtraService = {
   id: string;

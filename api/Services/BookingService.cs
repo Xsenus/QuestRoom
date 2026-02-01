@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuestRoomApi.Data;
@@ -12,6 +14,7 @@ public interface IBookingService
     Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
     Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto);
     Task<bool> DeleteBookingAsync(Guid id);
+    Task<BookingImportResultDto> ImportLegacyBookingsAsync(string content);
 }
 
 public class BookingService : IBookingService
@@ -405,6 +408,158 @@ public class BookingService : IBookingService
         }
     }
 
+    public async Task<BookingImportResultDto> ImportLegacyBookingsAsync(string content)
+    {
+        var parsedRows = ParseLegacyRows(content);
+        var result = new BookingImportResultDto
+        {
+            TotalRows = parsedRows.Count
+        };
+
+        if (parsedRows.Count == 0)
+        {
+            return result;
+        }
+
+        var existingLegacyIds = await _context.Bookings
+            .Select(b => b.LegacyId)
+            .ToListAsync();
+        var knownLegacyIds = existingLegacyIds.ToHashSet();
+        var bookedScheduleIds = await _context.Bookings
+            .Where(b => b.QuestScheduleId.HasValue)
+            .Select(b => b.QuestScheduleId!.Value)
+            .ToHashSetAsync();
+
+        var questsBySlug = await _context.Quests
+            .AsNoTracking()
+            .ToDictionaryAsync(q => q.Slug, StringComparer.OrdinalIgnoreCase);
+
+        var scheduleCache = new Dictionary<(Guid QuestId, DateOnly Date, TimeOnly Time), QuestSchedule>();
+
+        foreach (var row in parsedRows)
+        {
+            if (row.IsEmpty)
+            {
+                result.Skipped++;
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(row.Phone) && string.IsNullOrWhiteSpace(row.Email))
+            {
+                result.Skipped++;
+                continue;
+            }
+
+            if (!row.LegacyId.HasValue)
+            {
+                result.Errors++;
+                continue;
+            }
+
+            if (!knownLegacyIds.Add(row.LegacyId.Value))
+            {
+                result.Duplicates++;
+                continue;
+            }
+
+            var bookingDateTime = row.BookingDateTime;
+            if (!bookingDateTime.HasValue)
+            {
+                result.Errors++;
+                continue;
+            }
+
+            var quest = row.QuestSlug != null && questsBySlug.TryGetValue(row.QuestSlug, out var questValue)
+                ? questValue
+                : null;
+
+            QuestSchedule? schedule = null;
+            if (quest != null)
+            {
+                var date = DateOnly.FromDateTime(bookingDateTime.Value);
+                var time = TimeOnly.FromDateTime(bookingDateTime.Value);
+                var cacheKey = (quest.Id, date, time);
+
+                if (!scheduleCache.TryGetValue(cacheKey, out schedule))
+                {
+                    schedule = await _context.QuestSchedules
+                        .FirstOrDefaultAsync(s =>
+                            s.QuestId == quest.Id && s.Date == date && s.TimeSlot == time);
+
+                    if (schedule == null)
+                    {
+                        schedule = new QuestSchedule
+                        {
+                            Id = Guid.NewGuid(),
+                            QuestId = quest.Id,
+                            Date = date,
+                            TimeSlot = time,
+                            Price = row.Price ?? quest.Price,
+                            IsBooked = row.Status != "cancelled",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        _context.QuestSchedules.Add(schedule);
+                    }
+                    else
+                    {
+                        schedule.Price = schedule.Price == 0 ? row.Price ?? quest.Price : schedule.Price;
+                        schedule.IsBooked = row.Status != "cancelled" || schedule.IsBooked;
+                        schedule.UpdatedAt = DateTime.UtcNow;
+                    }
+
+                    scheduleCache[cacheKey] = schedule;
+                }
+
+                if (schedule != null && bookedScheduleIds.Contains(schedule.Id))
+                {
+                    schedule = null;
+                }
+            }
+
+            var notes = row.Comment;
+            if (schedule == null && bookingDateTime.HasValue)
+            {
+                notes = AppendTimeNote(notes, bookingDateTime.Value);
+            }
+
+            var createdAt = row.CreatedAt ?? bookingDateTime.Value;
+            var createdAtUtc = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+            var participantsCount = Math.Max(1, quest?.ParticipantsMin ?? 1);
+
+            var booking = new Booking
+            {
+                Id = Guid.NewGuid(),
+                LegacyId = row.LegacyId.Value,
+                QuestId = quest?.Id,
+                QuestScheduleId = schedule?.Id,
+                CustomerName = row.CustomerName ?? string.Empty,
+                CustomerPhone = row.Phone ?? string.Empty,
+                CustomerEmail = string.IsNullOrWhiteSpace(row.Email) ? null : row.Email,
+                BookingDate = DateOnly.FromDateTime(bookingDateTime.Value),
+                ParticipantsCount = participantsCount,
+                ExtraParticipantsCount = 0,
+                TotalPrice = row.Price ?? 0,
+                PaymentType = row.PaymentType,
+                Status = row.Status,
+                Notes = string.IsNullOrWhiteSpace(notes) ? null : notes,
+                Aggregator = row.Aggregator,
+                CreatedAt = createdAtUtc,
+                UpdatedAt = createdAtUtc
+            };
+
+            _context.Bookings.Add(booking);
+            if (schedule != null)
+            {
+                bookedScheduleIds.Add(schedule.Id);
+            }
+            result.Imported++;
+        }
+
+        await _context.SaveChangesAsync();
+        return result;
+    }
+
     private static BookingDto ToDto(Booking booking)
     {
         var bookingTime = booking.QuestSchedule?.TimeSlot;
@@ -417,6 +572,7 @@ public class BookingService : IBookingService
         return new BookingDto
         {
             Id = booking.Id,
+            LegacyId = booking.LegacyId,
             QuestId = booking.QuestId,
             QuestScheduleId = booking.QuestScheduleId,
             CustomerName = booking.CustomerName,
@@ -485,5 +641,254 @@ public class BookingService : IBookingService
             totalPrice = Math.Max(0, totalPrice - discountAmount);
         }
         booking.TotalPrice = totalPrice;
+    }
+
+    private static List<LegacyBookingRow> ParseLegacyRows(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return new List<LegacyBookingRow>();
+        }
+
+        var reader = new StringReader(content);
+        string? line;
+        var rows = new List<LegacyBookingRow>();
+
+        var headerLine = ReadNextNonEmptyLine(reader, out var delimiter);
+        if (headerLine == null)
+        {
+            return rows;
+        }
+
+        var headers = SplitDelimitedLine(headerLine, delimiter);
+        var columnMap = headers
+            .Select((header, index) => new { Header = header.Trim().TrimStart('\uFEFF').ToLowerInvariant(), Index = index })
+            .ToDictionary(item => item.Header, item => item.Index);
+
+        while ((line = reader.ReadLine()) != null)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            var values = SplitDelimitedLine(line, delimiter);
+            var row = new LegacyBookingRow
+            {
+                LegacyId = TryGetInt(values, columnMap, "id"),
+                CreatedAt = TryGetDateTime(values, columnMap, "time_create", "dd.MM.yyyy HH:mm"),
+                Status = NormalizeStatus(TryGetString(values, columnMap, "status")),
+                QuestSlug = NormalizeSlug(TryGetString(values, columnMap, "eve")),
+                BookingDateTime = TryGetDateTime(values, columnMap, "time", "yyyy-MM-dd HH:mm:ss.fff", "yyyy-MM-dd HH:mm:ss"),
+                Email = NormalizeText(TryGetString(values, columnMap, "email")),
+                CustomerName = NormalizeText(TryGetString(values, columnMap, "name")),
+                Phone = NormalizeText(TryGetString(values, columnMap, "phone")),
+                Comment = NormalizeText(TryGetString(values, columnMap, "coment")),
+                Price = TryGetInt(values, columnMap, "price"),
+                PaymentType = NormalizePaymentType(TryGetString(values, columnMap, "oplata")),
+                Aggregator = NormalizeAggregator(TryGetString(values, columnMap, "oplata"))
+            };
+
+            row.IsEmpty = values.All(string.IsNullOrWhiteSpace);
+            rows.Add(row);
+        }
+
+        return rows;
+    }
+
+    private static string? ReadNextNonEmptyLine(StringReader reader, out char delimiter)
+    {
+        delimiter = ';';
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            delimiter = line.Contains(';', StringComparison.Ordinal) ? ';' : '\t';
+            return line;
+        }
+
+        return null;
+    }
+
+    private static List<string> SplitDelimitedLine(string line, char delimiter)
+    {
+        var result = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var inQuotes = false;
+
+        for (var i = 0; i < line.Length; i++)
+        {
+            var ch = line[i];
+            if (ch == '"')
+            {
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+                continue;
+            }
+
+            if (ch == delimiter && !inQuotes)
+            {
+                result.Add(current.ToString());
+                current.Clear();
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        result.Add(current.ToString());
+        return result;
+    }
+
+    private static string? TryGetString(IReadOnlyList<string> values, Dictionary<string, int> map, string key)
+    {
+        if (!map.TryGetValue(key, out var index))
+        {
+            return null;
+        }
+
+        if (index < 0 || index >= values.Count)
+        {
+            return null;
+        }
+
+        return values[index];
+    }
+
+    private static int? TryGetInt(IReadOnlyList<string> values, Dictionary<string, int> map, string key)
+    {
+        var raw = TryGetString(values, map, key);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        return int.TryParse(raw.Trim(), out var parsed) ? parsed : null;
+    }
+
+    private static DateTime? TryGetDateTime(IReadOnlyList<string> values, Dictionary<string, int> map, string key, params string[] formats)
+    {
+        var raw = TryGetString(values, map, key);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        raw = raw.Trim();
+        foreach (var format in formats)
+        {
+            if (DateTime.TryParseExact(raw, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fallback)
+            ? fallback
+            : null;
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return "pending";
+        }
+
+        var normalized = status.Trim().ToLowerInvariant();
+        if (normalized.Contains("исполн"))
+        {
+            return "completed";
+        }
+
+        if (normalized.Contains("отмен"))
+        {
+            return "cancelled";
+        }
+
+        return "pending";
+    }
+
+    private static string NormalizePaymentType(string? paymentRaw)
+    {
+        if (string.IsNullOrWhiteSpace(paymentRaw))
+        {
+            return "cash";
+        }
+
+        return paymentRaw.Trim() switch
+        {
+            "2" => "certificate",
+            _ => "cash"
+        };
+    }
+
+    private static string? NormalizeAggregator(string? paymentRaw)
+    {
+        if (string.IsNullOrWhiteSpace(paymentRaw))
+        {
+            return null;
+        }
+
+        return paymentRaw.Trim() == "3" ? "МИР КВЕСТОВ" : null;
+    }
+
+    private static string? NormalizeSlug(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        return raw.Trim();
+    }
+
+    private static string? NormalizeText(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        return raw.Trim().Trim('"');
+    }
+
+    private static string? AppendTimeNote(string? notes, DateTime dateTime)
+    {
+        var timeNote = $"Время: {dateTime:HH:mm}";
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            return timeNote;
+        }
+
+        return $"{notes}\n{timeNote}";
+    }
+
+    private sealed class LegacyBookingRow
+    {
+        public int? LegacyId { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public string Status { get; set; } = "pending";
+        public string? QuestSlug { get; set; }
+        public DateTime? BookingDateTime { get; set; }
+        public string? Email { get; set; }
+        public string? CustomerName { get; set; }
+        public string? Phone { get; set; }
+        public string? Comment { get; set; }
+        public int? Price { get; set; }
+        public string PaymentType { get; set; } = "cash";
+        public string? Aggregator { get; set; }
+        public bool IsEmpty { get; set; }
     }
 }

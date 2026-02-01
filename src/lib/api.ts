@@ -5,6 +5,7 @@ import type {
   AdminUserUpsert,
   Booking,
   BookingCreate,
+  BookingImportResult,
   BookingTablePreferences,
   BookingUpdate,
   Certificate,
@@ -500,6 +501,26 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(booking),
     });
+  }
+
+  async importBookings(file: File): Promise<BookingImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/bookings/import`, {
+      method: 'POST',
+      headers: {
+        ...(getAuthToken() ? { 'Authorization': `Bearer ${getAuthToken()}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Import failed' }));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
   }
 
   async updateBooking(id: string, booking: BookingUpdate) {

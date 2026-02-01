@@ -117,6 +117,7 @@ Swagger UI: `http://localhost:5000/swagger`
 
 - `GET /api/bookings` - Получить все бронирования (требуется авторизация admin)
 - `POST /api/bookings` - Создать бронирование (публичный доступ)
+- `POST /api/bookings/import` - Импортировать бронирования из CSV/TSV (требуется авторизация admin, multipart/form-data с полем file)
 - `PUT /api/bookings/{id}` - Обновить бронирование (требуется авторизация admin)
 - `DELETE /api/bookings/{id}` - Удалить бронирование (требуется авторизация admin)
 
