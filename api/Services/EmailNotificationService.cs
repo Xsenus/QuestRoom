@@ -258,9 +258,14 @@ public class EmailNotificationService : IEmailNotificationService
             EnableSsl = settings.SmtpUseSsl
         };
 
-        if (!string.IsNullOrWhiteSpace(settings.SmtpUser))
+        var smtpUser = string.IsNullOrWhiteSpace(settings.SmtpUser)
+            ? fromEmail
+            : settings.SmtpUser;
+
+        if (!string.IsNullOrWhiteSpace(settings.SmtpPassword)
+            || !string.IsNullOrWhiteSpace(settings.SmtpUser))
         {
-            client.Credentials = new NetworkCredential(settings.SmtpUser, settings.SmtpPassword);
+            client.Credentials = new NetworkCredential(smtpUser, settings.SmtpPassword);
         }
 
         try
