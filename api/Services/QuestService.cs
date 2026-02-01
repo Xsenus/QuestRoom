@@ -96,7 +96,8 @@ public class QuestService : IQuestService
 
         var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? quest.Title : dto.Slug;
         quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
-        quest.ExtraServices = dto.ExtraServices
+        var extraServices = dto.ExtraServices ?? new List<QuestExtraServiceUpsertDto>();
+        quest.ExtraServices = extraServices
             .Where(service => !string.IsNullOrWhiteSpace(service.Title))
             .Select(service => new QuestExtraService
             {
@@ -233,8 +234,9 @@ public class QuestService : IQuestService
         };
     }
 
-    private static void UpdateExtraServices(Quest quest, List<QuestExtraServiceUpsertDto> services)
+    private static void UpdateExtraServices(Quest quest, List<QuestExtraServiceUpsertDto>? services)
     {
+        services ??= new List<QuestExtraServiceUpsertDto>();
         var existing = quest.ExtraServices.ToList();
         var incomingIds = services
             .Where(s => s.Id.HasValue)
@@ -248,6 +250,11 @@ public class QuestService : IQuestService
 
         foreach (var dto in services)
         {
+            if (string.IsNullOrWhiteSpace(dto.Title))
+            {
+                continue;
+            }
+
             var trimmedTitle = dto.Title.Trim();
             if (string.IsNullOrWhiteSpace(trimmedTitle))
             {
