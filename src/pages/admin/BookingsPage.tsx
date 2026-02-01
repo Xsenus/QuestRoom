@@ -5,6 +5,7 @@ import {
   BookingTableColumnPreference,
   BookingTableFilter,
   BookingTablePreferences,
+  BookingTableSort,
   PromoCode,
   Quest,
   QuestSchedule,
@@ -26,6 +27,9 @@ import {
   Plus,
   SlidersHorizontal,
   GripVertical,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
 } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -151,6 +155,7 @@ export default function BookingsPage() {
   const [listDateToInput, setListDateToInput] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [columnFilters, setColumnFilters] = useState<BookingTableFilter[]>([]);
+  const [tableSorts, setTableSorts] = useState<BookingTableSort[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
@@ -198,6 +203,7 @@ export default function BookingsPage() {
     extraServices: Booking['extraServices'];
   } | null>(null);
   const listRangeStorageKey = 'admin_bookings_list_range';
+  const showCustomFilters = false;
   const tableColumnsStorageKey = useMemo(
     () => `admin_bookings_table_columns_${user?.email ?? 'guest'}`,
     [user?.email]
@@ -238,7 +244,8 @@ export default function BookingsPage() {
     (
       columns: BookingTableColumnConfig[],
       filters: BookingTableFilter[],
-      search: string
+      search: string,
+      sorts: BookingTableSort[]
     ): BookingTablePreferences => ({
       columns: columns.map((column) => ({
         key: column.key,
@@ -251,6 +258,10 @@ export default function BookingsPage() {
         key: filter.key,
         value: filter.value ?? '',
         values: filter.values ?? [],
+      })),
+      sorts: sorts.map((sort) => ({
+        key: sort.key,
+        direction: sort.direction,
       })),
     }),
     []
@@ -299,6 +310,31 @@ export default function BookingsPage() {
     }));
   }, []);
 
+  const normalizeSorts = useCallback((sorts?: BookingTableSort[] | null) => {
+    if (!sorts?.length) {
+      return [];
+    }
+    const seen = new Set<string>();
+    return sorts.reduce<BookingTableSort[]>((acc, sort) => {
+      if (!sort?.key || seen.has(sort.key)) {
+        return acc;
+      }
+      seen.add(sort.key);
+      acc.push({
+        key: sort.key,
+        direction: sort.direction === 'desc' ? 'desc' : 'asc',
+      });
+      return acc;
+    }, []);
+  }, []);
+
+  const serializeSorts = useCallback((sorts: BookingTableSort[]) => {
+    if (!sorts.length) {
+      return '';
+    }
+    return sorts.map((sort) => `${sort.key}:${sort.direction}`).join(',');
+  }, []);
+
   const normalizeStoredPreferences = useCallback(
     (
       stored:
@@ -327,9 +363,10 @@ export default function BookingsPage() {
         columns: normalizedColumns,
         searchQuery: stored.searchQuery ?? '',
         columnFilters: normalizeColumnFilters(stored.columnFilters),
+        sorts: normalizeSorts(stored.sorts),
       };
     },
-    [normalizeColumnFilters]
+    [normalizeColumnFilters, normalizeSorts]
   );
 
   const updateTableColumn = useCallback(
@@ -506,6 +543,7 @@ export default function BookingsPage() {
       if (!hasUserEditedPreferences.current) {
         setSearchQuery(preferences?.searchQuery ?? '');
         setColumnFilters(normalizeColumnFilters(preferences?.columnFilters));
+        setTableSorts(normalizeSorts(preferences?.sorts));
       }
       setColumnsLoadedKey(tableColumnsStorageKey);
     };
@@ -520,15 +558,26 @@ export default function BookingsPage() {
     user?.email,
     mergeTablePreferences,
     normalizeColumnFilters,
+    normalizeSorts,
     normalizeStoredPreferences,
   ]);
+
+  const activeColumnFilters = useMemo(
+    () => (showCustomFilters ? columnFilters : []),
+    [showCustomFilters, columnFilters]
+  );
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (columnsLoadedKey !== tableColumnsStorageKey) {
         return;
       }
-      const preferences = buildTablePreferences(tableColumns, columnFilters, searchQuery);
+      const preferences = buildTablePreferences(
+        tableColumns,
+        activeColumnFilters,
+        searchQuery,
+        tableSorts
+      );
       localStorage.setItem(tableColumnsStorageKey, JSON.stringify(preferences));
       if (preferencesSaveTimeout.current) {
         window.clearTimeout(preferencesSaveTimeout.current);
@@ -548,8 +597,9 @@ export default function BookingsPage() {
     };
   }, [
     tableColumns,
-    columnFilters,
+    activeColumnFilters,
     searchQuery,
+    tableSorts,
     tableColumnsStorageKey,
     columnsLoadedKey,
     user?.email,
@@ -566,7 +616,8 @@ export default function BookingsPage() {
     listDateFrom,
     listDateTo,
     searchQuery,
-    columnFilters,
+    activeColumnFilters,
+    tableSorts,
     viewMode,
   ]);
 
@@ -657,6 +708,7 @@ export default function BookingsPage() {
   ]);
 
   const dateFiltersEnabled = statusFilter !== 'pending';
+  const sortParam = useMemo(() => serializeSorts(tableSorts), [serializeSorts, tableSorts]);
 
   const countFilterParams = useMemo(
     () => ({
@@ -673,8 +725,9 @@ export default function BookingsPage() {
       questId: questFilter !== 'all' ? questFilter : undefined,
       aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
       promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+      sort: sortParam || undefined,
     }),
-    [countFilterParams, statusFilter, questFilter, aggregatorFilter, promoCodeFilter]
+    [countFilterParams, statusFilter, questFilter, aggregatorFilter, promoCodeFilter, sortParam]
   );
 
   const loadBookings = useCallback(
@@ -1791,6 +1844,62 @@ export default function BookingsPage() {
     setColumnFilters([]);
   };
 
+  const sortableColumnKeys = useMemo(
+    () =>
+      new Set<BookingTableColumnKey>([
+        'status',
+        'bookingDate',
+        'createdAt',
+        'quest',
+        'questPrice',
+        'participants',
+        'extraParticipants',
+        'extraParticipantPrice',
+        'extraServicesPrice',
+        'aggregator',
+        'promoCode',
+        'totalPrice',
+        'customer',
+        'notes',
+      ]),
+    []
+  );
+
+  const handleSortToggle = useCallback(
+    (key: BookingTableColumnKey, multi: boolean) => {
+      if (!sortableColumnKeys.has(key)) {
+        return;
+      }
+      hasUserEditedPreferences.current = true;
+      setTableSorts((prev) => {
+        const existingIndex = prev.findIndex((sort) => sort.key === key);
+        if (!multi) {
+          if (existingIndex === -1) {
+            return [{ key, direction: 'asc' }];
+          }
+          const existing = prev[existingIndex];
+          if (existing.direction === 'asc') {
+            return [{ key, direction: 'desc' }];
+          }
+          return [];
+        }
+        if (existingIndex === -1) {
+          return [...prev, { key, direction: 'asc' }];
+        }
+        const existing = prev[existingIndex];
+        if (existing.direction === 'asc') {
+          const next = [...prev];
+          next[existingIndex] = { ...existing, direction: 'desc' };
+          return next;
+        }
+        const next = [...prev];
+        next.splice(existingIndex, 1);
+        return next;
+      });
+    },
+    [sortableColumnKeys]
+  );
+
   const listItemsPerPage = viewMode === 'table' ? 10 : 9;
   const parsedSearch = useMemo(() => parseSearchQuery(searchQuery), [parseSearchQuery, searchQuery]);
   const highlightTerms = useMemo(() => {
@@ -1889,7 +1998,7 @@ export default function BookingsPage() {
         }
       }
 
-      for (const filter of columnFilters) {
+      for (const filter of activeColumnFilters) {
         const definition = columnFilterDefinitionMap.get(filter.key as BookingColumnFilterKey);
         if (!definition) {
           continue;
@@ -1960,7 +2069,7 @@ export default function BookingsPage() {
   }, [
     bookings,
     parsedSearch,
-    columnFilters,
+    activeColumnFilters,
     columnFilterDefinitionMap,
     formatBookingDateTime,
     formatDateTime,
@@ -2356,106 +2465,110 @@ export default function BookingsPage() {
                 Сбросить фильтры
               </button>
             </div>
-            <div className="mt-4 border-t border-gray-200 pt-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-gray-700">Пользовательские фильтры</p>
-                  <p className="text-xs text-gray-500">
-                    Можно выбрать несколько значений в списке, удерживая Ctrl/⌘.
-                  </p>
+            {showCustomFilters && (
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">
+                      Пользовательские фильтры
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Можно выбрать несколько значений в списке, удерживая Ctrl/⌘.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addColumnFilter}
+                    className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                  >
+                    Добавить фильтр
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={addColumnFilter}
-                  className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-                >
-                  Добавить фильтр
-                </button>
-              </div>
-              {columnFilters.length === 0 ? (
-                <p className="text-xs text-gray-500 mt-3">
-                  Добавьте фильтры по нужным колонкам — они сохранятся в профиле.
-                </p>
-              ) : (
-                <div className="mt-3 space-y-3">
-                  {columnFilters.map((filter) => {
-                    const definition = columnFilterDefinitionMap.get(
-                      filter.key as BookingColumnFilterKey
-                    );
-                    return (
-                      <div
-                        key={filter.id}
-                        className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto] items-start"
-                      >
-                        <select
-                          value={filter.key}
-                          onChange={(e) => {
-                            const nextKey = e.target.value as BookingColumnFilterKey;
-                            updateColumnFilter(filter.id, {
-                              key: nextKey,
-                              value: '',
-                              values: [],
-                            });
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                {columnFilters.length === 0 ? (
+                  <p className="text-xs text-gray-500 mt-3">
+                    Добавьте фильтры по нужным колонкам — они сохранятся в профиле.
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {columnFilters.map((filter) => {
+                      const definition = columnFilterDefinitionMap.get(
+                        filter.key as BookingColumnFilterKey
+                      );
+                      return (
+                        <div
+                          key={filter.id}
+                          className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto] items-start"
                         >
-                          {columnFilterDefinitions.map((item) => (
-                            <option key={item.key} value={item.key}>
-                              {item.label}
-                            </option>
-                          ))}
-                        </select>
-                        {definition?.kind === 'multi' ? (
                           <select
-                            multiple
-                            value={filter.values ?? []}
+                            value={filter.key}
                             onChange={(e) => {
-                              const selected = Array.from(e.target.selectedOptions).map(
-                                (option) => option.value
-                              );
-                              updateColumnFilter(filter.id, { values: selected });
+                              const nextKey = e.target.value as BookingColumnFilterKey;
+                              updateColumnFilter(filter.id, {
+                                key: nextKey,
+                                value: '',
+                                values: [],
+                              });
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none min-h-[42px]"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                           >
-                            {definition.options?.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
+                            {columnFilterDefinitions.map((item) => (
+                              <option key={item.key} value={item.key}>
+                                {item.label}
                               </option>
                             ))}
                           </select>
-                        ) : (
-                          <input
-                            type="text"
-                            value={filter.value ?? ''}
-                            onChange={(e) =>
-                              updateColumnFilter(filter.id, { value: e.target.value })
-                            }
-                            placeholder="Содержит..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeColumnFilter(filter.id)}
-                          className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    );
-                  })}
-                  <div>
-                    <button
-                      type="button"
-                      onClick={clearColumnFilters}
-                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
-                    >
-                      Сбросить пользовательские фильтры
-                    </button>
+                          {definition?.kind === 'multi' ? (
+                            <select
+                              multiple
+                              value={filter.values ?? []}
+                              onChange={(e) => {
+                                const selected = Array.from(e.target.selectedOptions).map(
+                                  (option) => option.value
+                                );
+                                updateColumnFilter(filter.id, { values: selected });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none min-h-[42px]"
+                            >
+                              {definition.options?.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={filter.value ?? ''}
+                              onChange={(e) =>
+                                updateColumnFilter(filter.id, { value: e.target.value })
+                              }
+                              placeholder="Содержит..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeColumnFilter(filter.id)}
+                            className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={clearColumnFilters}
+                        className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        Сбросить пользовательские фильтры
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
             {statusFilter === 'pending' && (
               <p className="text-xs text-gray-500 mt-3">
                 Для ожидающих броней период не применяется — показываются все записи.
@@ -2474,39 +2587,71 @@ export default function BookingsPage() {
               >
                 <thead className="bg-gray-50 text-gray-700">
                   <tr>
-                    {visibleTableColumns.map((column) => (
-                      <th
-                        key={column.key}
-                        className={`group relative px-4 py-3 font-semibold ${
-                          column.key === 'actions' ? 'text-right' : 'text-left'
-                        } ${column.locked ? 'cursor-default' : 'cursor-move'}`}
-                        style={{ width: column.width }}
-                        draggable={!column.locked}
-                        onDragStart={handleColumnDragStart(column.key, column.locked)}
-                        onDragOver={handleColumnDragOver(column.key, column.locked)}
-                        onDrop={handleColumnDrop(column.key, column.locked)}
-                        onDragEnd={handleColumnDragEnd}
-                      >
-                        <div className="flex items-center gap-2">
-                          {!column.locked && <GripVertical className="h-4 w-4 text-gray-400" />}
-                          <span>{column.label}</span>
-                        </div>
-                        <button
-                          type="button"
-                          aria-label={`Изменить ширину колонки ${column.label}`}
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            setResizeState({
-                              key: column.key,
-                              startX: event.clientX,
-                              startWidth: column.width,
-                            });
-                          }}
-                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize opacity-0 transition-opacity group-hover:opacity-100"
-                        />
-                      </th>
-                    ))}
+                    {visibleTableColumns.map((column) => {
+                      const sortIndex = tableSorts.findIndex((sort) => sort.key === column.key);
+                      const sort = sortIndex >= 0 ? tableSorts[sortIndex] : null;
+                      const isSortable = sortableColumnKeys.has(column.key);
+                      return (
+                        <th
+                          key={column.key}
+                          className={`group relative px-4 py-3 font-semibold ${
+                            column.key === 'actions' ? 'text-right' : 'text-left'
+                          } ${column.locked ? 'cursor-default' : 'cursor-move'}`}
+                          style={{ width: column.width }}
+                          draggable={!column.locked}
+                          onDragStart={handleColumnDragStart(column.key, column.locked)}
+                          onDragOver={handleColumnDragOver(column.key, column.locked)}
+                          onDrop={handleColumnDrop(column.key, column.locked)}
+                          onDragEnd={handleColumnDragEnd}
+                        >
+                          <div className="flex items-center gap-2">
+                            {!column.locked && <GripVertical className="h-4 w-4 text-gray-400" />}
+                            <span>{column.label}</span>
+                            {isSortable && (
+                              <button
+                                type="button"
+                                aria-label={`Сортировать по колонке ${column.label}`}
+                                title="Сортировка"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleSortToggle(column.key, event.ctrlKey || event.metaKey);
+                                }}
+                                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 transition-colors"
+                              >
+                                {sort ? (
+                                  sort.direction === 'asc' ? (
+                                    <ArrowUp className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <ArrowDown className="h-3.5 w-3.5" />
+                                  )
+                                ) : (
+                                  <ArrowUpDown className="h-3.5 w-3.5" />
+                                )}
+                                {sort && tableSorts.length > 1 && (
+                                  <span className="text-[10px] text-gray-500">
+                                    {sortIndex + 1}
+                                  </span>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            aria-label={`Изменить ширину колонки ${column.label}`}
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setResizeState({
+                                key: column.key,
+                                startX: event.clientX,
+                                startWidth: column.width,
+                              });
+                            }}
+                            className="absolute right-0 top-0 h-full w-2 cursor-col-resize opacity-0 transition-opacity group-hover:opacity-100"
+                          />
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">

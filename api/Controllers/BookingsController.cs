@@ -24,7 +24,8 @@ public class BookingsController : ControllerBase
         [FromQuery] string? aggregator = null,
         [FromQuery] string? promoCode = null,
         [FromQuery] DateOnly? dateFrom = null,
-        [FromQuery] DateOnly? dateTo = null)
+        [FromQuery] DateOnly? dateTo = null,
+        [FromQuery] string? sort = null)
     {
         var bookings = await _bookingService.GetBookingsAsync(
             status,
@@ -32,7 +33,8 @@ public class BookingsController : ControllerBase
             aggregator,
             promoCode,
             dateFrom,
-            dateTo);
+            dateTo,
+            sort);
         return Ok(bookings);
     }
 

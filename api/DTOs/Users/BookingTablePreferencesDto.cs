@@ -12,6 +12,7 @@ public class BookingTablePreferencesDto
     public List<BookingTableColumnPreferenceDto> Columns { get; set; } = new();
     public string? SearchQuery { get; set; }
     public List<BookingTableFilterDto> ColumnFilters { get; set; } = new();
+    public List<BookingTableSortDto> Sorts { get; set; } = new();
 }
 
 public class BookingTableFilterDto
@@ -20,4 +21,10 @@ public class BookingTableFilterDto
     public string Key { get; set; } = string.Empty;
     public string? Value { get; set; }
     public List<string> Values { get; set; } = new();
+}
+
+public class BookingTableSortDto
+{
+    public string Key { get; set; } = string.Empty;
+    public string Direction { get; set; } = "asc";
 }

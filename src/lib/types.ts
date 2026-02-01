@@ -259,10 +259,16 @@ export type BookingTableFilter = {
   values?: string[];
 };
 
+export type BookingTableSort = {
+  key: string;
+  direction: 'asc' | 'desc';
+};
+
 export type BookingTablePreferences = {
   columns: BookingTableColumnPreference[];
   searchQuery?: string;
   columnFilters?: BookingTableFilter[];
+  sorts?: BookingTableSort[];
 };
 
 export type Rule = {
