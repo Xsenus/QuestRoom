@@ -252,8 +252,17 @@ export type BookingTableColumnPreference = {
   visible: boolean;
 };
 
+export type BookingTableFilter = {
+  id: string;
+  key: string;
+  value?: string | null;
+  values?: string[];
+};
+
 export type BookingTablePreferences = {
   columns: BookingTableColumnPreference[];
+  searchQuery?: string;
+  columnFilters?: BookingTableFilter[];
 };
 
 export type Rule = {
