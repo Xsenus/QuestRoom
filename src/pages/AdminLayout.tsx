@@ -19,6 +19,7 @@ import {
   CalendarDays,
   Users,
   ShieldCheck,
+  Coffee,
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -175,6 +176,10 @@ export default function AdminLayout() {
             <NavLink to="/adm/promotions" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Tag className="w-5 h-5" />
               {!isMenuCollapsed && 'Акции'}
+            </NavLink>
+            <NavLink to="/adm/tea-zones" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <Coffee className="w-5 h-5" />
+              {!isMenuCollapsed && 'Зоны для чаепития'}
             </NavLink>
             <NavLink to="/adm/promo-codes" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <TicketPercent className="w-5 h-5" />

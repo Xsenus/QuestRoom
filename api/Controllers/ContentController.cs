@@ -85,6 +85,45 @@ public class PromotionsController : ControllerBase
 
 [ApiController]
 [Route("api/[controller]")]
+public class TeaZonesController : ControllerBase
+{
+    private readonly IContentService _contentService;
+    public TeaZonesController(IContentService contentService) => _contentService = contentService;
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<TeaZoneDto>>> GetTeaZones([FromQuery] bool? active = null)
+    {
+        var teaZones = await _contentService.GetTeaZonesAsync(active);
+        return Ok(teaZones);
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPost]
+    public async Task<ActionResult<TeaZoneDto>> CreateTeaZone([FromBody] TeaZoneUpsertDto teaZone)
+    {
+        var created = await _contentService.CreateTeaZoneAsync(teaZone);
+        return CreatedAtAction(nameof(GetTeaZones), new { id = created.Id }, created);
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTeaZone(Guid id, [FromBody] TeaZoneUpsertDto teaZone)
+    {
+        var updated = await _contentService.UpdateTeaZoneAsync(id, teaZone);
+        return updated ? NoContent() : NotFound();
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTeaZone(Guid id)
+    {
+        var deleted = await _contentService.DeleteTeaZoneAsync(id);
+        return deleted ? NoContent() : NotFound();
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
 public class CertificatesController : ControllerBase
 {
     private readonly IContentService _contentService;

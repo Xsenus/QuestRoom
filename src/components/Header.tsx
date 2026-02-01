@@ -1,4 +1,4 @@
-import { Home, Info, FileText, Gift, KeyRound, Flag } from 'lucide-react';
+import { Home, Info, FileText, Gift, KeyRound, Flag, Coffee } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
@@ -16,6 +16,7 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
     { id: 'certificate', label: 'Подарочные сертификаты', icon: Gift, path: '/certificate' },
     { id: 'reviews', label: 'Отзывы', icon: KeyRound, path: '/reviews' },
     { id: 'promotions', label: 'Акции', icon: Flag, path: '/promotions' },
+    { id: 'tea-zones', label: 'Зоны для чаепития', icon: Coffee, path: '/tea-zones' },
   ];
 
   const isActive = (path: string) => {
@@ -38,7 +39,7 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
           </Link>
 
           <nav className="w-full bg-[#1c1438]/70 backdrop-blur-sm py-2 md:py-3">
-            <div className="grid grid-cols-3 gap-2 md:gap-3 lg:grid-cols-6 px-2 md:px-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-3 lg:grid-cols-7 px-2 md:px-4">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (

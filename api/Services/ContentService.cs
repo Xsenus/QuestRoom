@@ -22,6 +22,11 @@ public interface IContentService
     Task<bool> UpdatePromotionAsync(Guid id, PromotionUpsertDto dto);
     Task<bool> DeletePromotionAsync(Guid id);
 
+    Task<IReadOnlyList<TeaZoneDto>> GetTeaZonesAsync(bool? active);
+    Task<TeaZoneDto> CreateTeaZoneAsync(TeaZoneUpsertDto dto);
+    Task<bool> UpdateTeaZoneAsync(Guid id, TeaZoneUpsertDto dto);
+    Task<bool> DeleteTeaZoneAsync(Guid id);
+
     Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(bool? visible);
     Task<CertificateDto> CreateCertificateAsync(CertificateUpsertDto dto);
     Task<bool> UpdateCertificateAsync(Guid id, CertificateUpsertDto dto);
@@ -254,6 +259,75 @@ public class ContentService : IContentService
         }
 
         _context.Promotions.Remove(promotion);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<IReadOnlyList<TeaZoneDto>> GetTeaZonesAsync(bool? active)
+    {
+        var query = _context.TeaZones.AsQueryable();
+        if (active.HasValue)
+        {
+            query = query.Where(z => z.IsActive == active.Value);
+        }
+
+        return await query
+            .OrderBy(z => z.SortOrder)
+            .Select(z => ToDto(z))
+            .ToListAsync();
+    }
+
+    public async Task<TeaZoneDto> CreateTeaZoneAsync(TeaZoneUpsertDto dto)
+    {
+        var teaZone = new TeaZone
+        {
+            Id = Guid.NewGuid(),
+            Name = dto.Name,
+            Address = dto.Address,
+            Description = dto.Description,
+            Branch = dto.Branch,
+            Images = dto.Images.ToArray(),
+            IsActive = dto.IsActive,
+            SortOrder = dto.SortOrder,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.TeaZones.Add(teaZone);
+        await _context.SaveChangesAsync();
+        return ToDto(teaZone);
+    }
+
+    public async Task<bool> UpdateTeaZoneAsync(Guid id, TeaZoneUpsertDto dto)
+    {
+        var teaZone = await _context.TeaZones.FindAsync(id);
+        if (teaZone == null)
+        {
+            return false;
+        }
+
+        teaZone.Name = dto.Name;
+        teaZone.Address = dto.Address;
+        teaZone.Description = dto.Description;
+        teaZone.Branch = dto.Branch;
+        teaZone.Images = dto.Images.ToArray();
+        teaZone.IsActive = dto.IsActive;
+        teaZone.SortOrder = dto.SortOrder;
+        teaZone.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteTeaZoneAsync(Guid id)
+    {
+        var teaZone = await _context.TeaZones.FindAsync(id);
+        if (teaZone == null)
+        {
+            return false;
+        }
+
+        _context.TeaZones.Remove(teaZone);
         await _context.SaveChangesAsync();
         return true;
     }
@@ -600,6 +674,23 @@ public class ContentService : IContentService
             SortOrder = promotion.SortOrder,
             CreatedAt = promotion.CreatedAt,
             UpdatedAt = promotion.UpdatedAt
+        };
+    }
+
+    private static TeaZoneDto ToDto(TeaZone teaZone)
+    {
+        return new TeaZoneDto
+        {
+            Id = teaZone.Id,
+            Name = teaZone.Name,
+            Address = teaZone.Address,
+            Description = teaZone.Description,
+            Branch = teaZone.Branch,
+            Images = teaZone.Images.ToList(),
+            IsActive = teaZone.IsActive,
+            SortOrder = teaZone.SortOrder,
+            CreatedAt = teaZone.CreatedAt,
+            UpdatedAt = teaZone.UpdatedAt
         };
     }
 
