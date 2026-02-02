@@ -302,7 +302,8 @@ public class EmailNotificationService : IEmailNotificationService
 
         using var client = new SmtpClient(settings.SmtpHost!, settings.SmtpPort ?? 25)
         {
-            EnableSsl = settings.SmtpUseSsl
+            EnableSsl = settings.SmtpUseSsl,
+            Timeout = 15000
         };
 
         var smtpUser = string.IsNullOrWhiteSpace(settings.SmtpUser)
@@ -317,8 +318,14 @@ public class EmailNotificationService : IEmailNotificationService
 
         try
         {
-            await client.SendMailAsync(message);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            await client.SendMailAsync(message, cts.Token);
             return true;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex, "SMTP send timed out for {Recipient}.", recipient);
+            return false;
         }
         catch (Exception ex)
         {
