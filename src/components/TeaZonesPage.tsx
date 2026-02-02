@@ -6,6 +6,7 @@ type ScrollDirection = 'left' | 'right';
 
 const TeaZoneGallery = ({ name, images }: { name: string; images: string[] }) => {
   const [selectedImage, setSelectedImage] = useState(images[0] || '');
+  const [isOpen, setIsOpen] = useState(false);
   const thumbnailsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -33,11 +34,18 @@ const TeaZoneGallery = ({ name, images }: { name: string; images: string[] }) =>
   return (
     <div className="space-y-3">
       <div className="h-56 overflow-hidden rounded-lg bg-white/5">
-        <img
-          src={selectedImage}
-          alt={name}
-          className="h-full w-full object-cover"
-        />
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="h-full w-full"
+          aria-label={`Открыть фото зоны ${name}`}
+        >
+          <img
+            src={selectedImage}
+            alt={name}
+            className="h-full w-full object-cover"
+          />
+        </button>
       </div>
       {images.length > 1 && (
         <div className="flex items-center gap-3">
@@ -71,6 +79,31 @@ const TeaZoneGallery = ({ name, images }: { name: string; images: string[] }) =>
           >
             ›
           </button>
+        </div>
+      )}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Фото зоны ${name}`}
+          onClick={() => setIsOpen(false)}
+        >
+          <div className="relative max-h-full max-w-5xl w-full" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="absolute -top-10 right-0 text-white text-3xl leading-none"
+              aria-label="Закрыть"
+            >
+              ×
+            </button>
+            <img
+              src={selectedImage}
+              alt={name}
+              className="max-h-[80vh] w-full rounded-lg object-contain bg-black/30"
+            />
+          </div>
         </div>
       )}
     </div>
