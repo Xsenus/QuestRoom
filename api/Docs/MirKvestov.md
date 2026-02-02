@@ -36,6 +36,7 @@ GET /api/mir-kvestov/{questSlug}.json
 ```
 
 Поле `discount_price` возвращается только если будет добавлена логика скидок (по умолчанию `null`).
+Поле `your_slot_id` может возвращаться в виде GUID или числового кода `YYYYMMDDHHMM` (по умолчанию используется числовой формат, настраивается параметром `MirKvestov:SlotIdFormat`).
 
 ## 2) Бронирование слота
 
@@ -62,7 +63,7 @@ POST /api/mir-kvestov/{questSlug}/order
 - `time` — время игры в формате `HH:MM`.
 - `price` — цена, переданная агрегатором.
 - `unique_id` — уникальный ID брони в системе mir-kvestov.
-- `your_slot_id` — ID слота, который был возвращён в расписании.
+- `your_slot_id` — ID слота, который был возвращён в расписании. Поддерживается GUID или числовой формат `YYYYMMDDHHMM`.
 - `players` — ожидаемое количество участников.
 - `tariff` — выбранный тариф.
 
@@ -85,6 +86,8 @@ POST /api/mir-kvestov/{questSlug}/order
 ```json
 {"success": false, "message": "Указанное время занято"}
 ```
+
+При бронировании сначала используется `your_slot_id`, если он передан (GUID или `YYYYMMDDHHMM`), и только затем дата/время из запроса.
 
 ## 3) Получение тарифов
 
@@ -129,9 +132,11 @@ GET /api/mir-kvestov/{questSlug}/prepay?md5=...&unique_id=...&prepay=...
   "MirKvestov": {
     "Md5Key": "секретный_ключ_для_md5",
     "PrepayMd5Key": "секретный_ключ_для_предоплаты",
-    "TimeZone": "Asia/Krasnoyarsk"
+    "TimeZone": "Asia/Krasnoyarsk",
+    "SlotIdFormat": "numeric"
   }
 }
 ```
 
 Если `Md5Key` пустой — проверка md5 отключается.
+`SlotIdFormat` принимает значения `guid` или `numeric` (по умолчанию) для формата `YYYYMMDDHHMM`.

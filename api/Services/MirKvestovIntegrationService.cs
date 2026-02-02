@@ -44,6 +44,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
     private readonly IScheduleService _scheduleService;
     private readonly IBookingService _bookingService;
     private readonly IConfiguration _configuration;
+    private const string SlotIdFormatGuid = "guid";
+    private const string SlotIdFormatNumeric = "numeric";
 
     public MirKvestovIntegrationService(
         AppDbContext context,
@@ -90,7 +92,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                     IsFree = !slot.IsBooked && isFuture,
                     Price = slot.Price,
                     DiscountPrice = null,
-                    YourSlotId = slot.Id.ToString()
+                    YourSlotId = BuildSlotId(slot)
                 };
             })
             .ToList();
@@ -114,26 +116,12 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return new MirKvestovBookingResult(false, "Некорректные дата или время");
         }
 
-        QuestSchedule? schedule = null;
-        if (!string.IsNullOrWhiteSpace(request.YourSlotId)
-            && Guid.TryParse(request.YourSlotId, out var slotId))
-        {
-            schedule = await _context.QuestSchedules
-                .FirstOrDefaultAsync(s => s.Id == slotId && s.QuestId == quest.Id, cancellationToken);
-        }
-
-        schedule ??= await _context.QuestSchedules
-            .FirstOrDefaultAsync(
-                s => s.QuestId == quest.Id && s.Date == date && s.TimeSlot == time,
-                cancellationToken);
+        var schedule = await ResolveScheduleAsync(quest.Id, request.YourSlotId, date, time, cancellationToken);
 
         if (schedule == null)
         {
             await _scheduleService.GetScheduleForQuestAsync(quest.Id, date, date);
-            schedule = await _context.QuestSchedules
-                .FirstOrDefaultAsync(
-                    s => s.QuestId == quest.Id && s.Date == date && s.TimeSlot == time,
-                    cancellationToken);
+            schedule = await ResolveScheduleAsync(quest.Id, request.YourSlotId, date, time, cancellationToken);
         }
 
         if (schedule == null)
@@ -322,6 +310,91 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         }
 
         return parts.Count > 0 ? string.Join(". ", parts) : null;
+    }
+
+    private async Task<QuestSchedule?> ResolveScheduleAsync(
+        Guid questId,
+        string? yourSlotId,
+        DateOnly date,
+        TimeOnly time,
+        CancellationToken cancellationToken)
+    {
+        if (TryParseSlotId(yourSlotId, out var slotGuid, out var slotDate, out var slotTime))
+        {
+            if (slotGuid.HasValue)
+            {
+                var schedule = await _context.QuestSchedules
+                    .FirstOrDefaultAsync(s => s.Id == slotGuid.Value && s.QuestId == questId, cancellationToken);
+                if (schedule != null)
+                {
+                    return schedule;
+                }
+            }
+
+            if (slotDate.HasValue && slotTime.HasValue)
+            {
+                var schedule = await _context.QuestSchedules
+                    .FirstOrDefaultAsync(
+                        s => s.QuestId == questId && s.Date == slotDate.Value && s.TimeSlot == slotTime.Value,
+                        cancellationToken);
+                if (schedule != null)
+                {
+                    return schedule;
+                }
+            }
+        }
+
+        return await _context.QuestSchedules
+            .FirstOrDefaultAsync(
+                s => s.QuestId == questId && s.Date == date && s.TimeSlot == time,
+                cancellationToken);
+    }
+
+    private string BuildSlotId(QuestSchedule slot)
+    {
+        var format = _configuration["MirKvestov:SlotIdFormat"]?.Trim().ToLowerInvariant();
+        if (string.Equals(format, SlotIdFormatNumeric, StringComparison.OrdinalIgnoreCase))
+        {
+            var datePart = slot.Date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+            var timePart = slot.TimeSlot.ToString("HHmm", CultureInfo.InvariantCulture);
+            return $"{datePart}{timePart}";
+        }
+
+        return slot.Id.ToString();
+    }
+
+    private static bool TryParseSlotId(string? value, out Guid? slotGuid, out DateOnly? date, out TimeOnly? time)
+    {
+        slotGuid = null;
+        date = null;
+        time = null;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        if (Guid.TryParse(value, out var parsedGuid))
+        {
+            slotGuid = parsedGuid;
+            return true;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.Length == 12 && trimmed.All(char.IsDigit))
+        {
+            var datePart = trimmed[..8];
+            var timePart = trimmed[8..];
+            if (DateOnly.TryParseExact(datePart, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate)
+                && TimeOnly.TryParseExact(timePart, "HHmm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedTime))
+            {
+                date = parsedDate;
+                time = parsedTime;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool IsMd5Valid(MirKvestovOrderRequest request)

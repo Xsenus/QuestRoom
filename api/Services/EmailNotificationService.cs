@@ -270,54 +270,64 @@ public class EmailNotificationService : IEmailNotificationService
             }
         }
 
-        if (notifyCustomer && !string.IsNullOrWhiteSpace(customerEmail))
+        if (notifyCustomer && TryNormalizeEmail(customerEmail, out var normalizedCustomerEmail))
         {
-            await SendEmailAsync(settings, customerEmail, subject, customerBody);
+            await SendEmailAsync(settings, normalizedCustomerEmail, subject, customerBody);
+        }
+        else if (notifyCustomer && !string.IsNullOrWhiteSpace(customerEmail))
+        {
+            _logger.LogWarning("Customer email address is invalid: {Email}", customerEmail);
         }
     }
 
     private async Task<bool> SendEmailAsync(Settings settings, string recipient, string subject, string body)
     {
-        var fromEmail = GetSenderEmail(settings);
-
-        if (string.IsNullOrWhiteSpace(fromEmail))
-        {
-            _logger.LogWarning("Email notifications skipped: sender email is not configured.");
-            return false;
-        }
-
-        var fromName = string.IsNullOrWhiteSpace(settings.SmtpFromName)
-            ? "Quest Room"
-            : settings.SmtpFromName;
-
-        using var message = new MailMessage
-        {
-            From = new MailAddress(fromEmail, fromName),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = true
-        };
-
-        message.To.Add(recipient);
-
-        using var client = new SmtpClient(settings.SmtpHost!, settings.SmtpPort ?? 25)
-        {
-            EnableSsl = settings.SmtpUseSsl,
-            Timeout = 15000
-        };
-
-        var smtpUser = string.IsNullOrWhiteSpace(settings.SmtpUser)
-            ? fromEmail
-            : settings.SmtpUser;
-
-        if (!string.IsNullOrWhiteSpace(settings.SmtpPassword)
-            || !string.IsNullOrWhiteSpace(settings.SmtpUser))
-        {
-            client.Credentials = new NetworkCredential(smtpUser, settings.SmtpPassword);
-        }
-
         try
         {
+            var fromEmail = GetSenderEmail(settings);
+
+            if (!TryNormalizeEmail(fromEmail, out var normalizedFromEmail))
+            {
+                _logger.LogWarning("Email notifications skipped: sender email is not configured or invalid.");
+                return false;
+            }
+
+            if (!TryNormalizeEmail(recipient, out var normalizedRecipient))
+            {
+                _logger.LogWarning("Email notifications skipped: recipient email is invalid.");
+                return false;
+            }
+
+            var fromName = string.IsNullOrWhiteSpace(settings.SmtpFromName)
+                ? "Quest Room"
+                : settings.SmtpFromName;
+
+            using var message = new MailMessage
+            {
+                From = new MailAddress(normalizedFromEmail, fromName),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+
+            message.To.Add(normalizedRecipient);
+
+            using var client = new SmtpClient(settings.SmtpHost!, settings.SmtpPort ?? 25)
+            {
+                EnableSsl = settings.SmtpUseSsl,
+                Timeout = 15000
+            };
+
+            var smtpUser = string.IsNullOrWhiteSpace(settings.SmtpUser)
+                ? normalizedFromEmail
+                : settings.SmtpUser;
+
+            if (!string.IsNullOrWhiteSpace(settings.SmtpPassword)
+                || !string.IsNullOrWhiteSpace(settings.SmtpUser))
+            {
+                client.Credentials = new NetworkCredential(smtpUser, settings.SmtpPassword);
+            }
+
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             await client.SendMailAsync(message, cts.Token);
             return true;
@@ -357,7 +367,32 @@ public class EmailNotificationService : IEmailNotificationService
         return recipients
             .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(email => email.Trim())
-            .Where(email => !string.IsNullOrWhiteSpace(email));
+            .Where(email => TryNormalizeEmail(email, out _))
+            .Select(email =>
+            {
+                TryNormalizeEmail(email, out var normalized);
+                return normalized;
+            });
+    }
+
+    private static bool TryNormalizeEmail(string? value, out string normalized)
+    {
+        normalized = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var address = new MailAddress(value.Trim());
+            normalized = address.Address;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string JoinNonEmpty(IEnumerable<string> values)
