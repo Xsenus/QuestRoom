@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   ClipboardList,
   Mail,
@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import NotificationModal from '../../components/NotificationModal';
 import type { CertificateOrder, CertificateOrderUpdate, Settings } from '../../lib/types';
 
 const statusLabels: Record<string, string> = {
@@ -49,6 +50,19 @@ export default function CertificateOrdersAdminPage() {
   >(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: ReactNode;
+    tone?: 'success' | 'error' | 'info';
+    showToneLabel?: boolean;
+    actions?: ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
+  });
 
   const defaultStatusColors: Record<string, string> = {
     pending: '#f59e0b',
@@ -135,19 +149,66 @@ export default function CertificateOrdersAdminPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить эту заявку?')) {
-      return;
-    }
+  const closeNotification = () => {
+    setNotification((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const confirmDelete = async (order: CertificateOrder) => {
     setIsDeleting(true);
     try {
-      await api.deleteCertificateOrder(id);
-      setOrders((prev) => prev.filter((order) => order.id !== id));
+      await api.deleteCertificateOrder(order.id);
+      setOrders((prev) => prev.filter((item) => item.id !== order.id));
+      setNotification({
+        isOpen: true,
+        title: 'Заявка удалена',
+        message: `Заявка на сертификат «${order.certificateTitle}» удалена.`,
+        tone: 'success',
+      });
     } catch (deleteError) {
-      alert('Ошибка при удалении заявки: ' + (deleteError as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Ошибка удаления',
+        message: (deleteError as Error).message,
+        tone: 'error',
+      });
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleDelete = (order: CertificateOrder) => {
+    setNotification({
+      isOpen: true,
+      title: 'Удалить заявку?',
+      message: (
+        <div className="space-y-2">
+          <p>Вы действительно хотите удалить эту заявку?</p>
+          <p className="text-xs text-gray-500">{order.certificateTitle}</p>
+        </div>
+      ),
+      tone: 'info',
+      showToneLabel: false,
+      actions: (
+        <>
+          <button
+            type="button"
+            onClick={closeNotification}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            disabled={isDeleting}
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={() => confirmDelete(order)}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Удаление...' : 'Удалить'}
+          </button>
+        </>
+      ),
+    });
   };
 
   const getStatusColorValue = (status: string) => {
@@ -321,7 +382,7 @@ export default function CertificateOrdersAdminPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(order.id)}
+                        onClick={() => handleDelete(order)}
                         disabled={isDeleting}
                         className="inline-flex items-center rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-60"
                         title="Удалить"
@@ -407,7 +468,7 @@ export default function CertificateOrdersAdminPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDelete(order.id)}
+                  onClick={() => handleDelete(order)}
                   disabled={isDeleting}
                   className="inline-flex items-center rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-60"
                   title="Удалить"
@@ -543,6 +604,15 @@ export default function CertificateOrdersAdminPage() {
           </div>
         </div>
       )}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        showToneLabel={notification.showToneLabel}
+        actions={notification.actions}
+        onClose={closeNotification}
+      />
     </div>
   );
 }
