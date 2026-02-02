@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.MirKvestov;
@@ -106,26 +107,40 @@ public class MirKvestovController : ControllerBase
 
     private async Task<MirKvestovOrderRequest?> ReadOrderRequestAsync()
     {
+        Request.EnableBuffering();
+
         if (Request.HasFormContentType)
         {
             var form = await Request.ReadFormAsync();
-            return new MirKvestovOrderRequest
+            return BuildOrderRequest(form);
+        }
+
+        var rawBody = await ReadBodyAsync();
+        if (!string.IsNullOrWhiteSpace(rawBody))
+        {
+            try
             {
-                FirstName = form["first_name"],
-                FamilyName = form["family_name"],
-                Phone = form["phone"],
-                Email = form["email"],
-                Comment = form["comment"],
-                Source = form["source"],
-                Md5 = form["md5"],
-                Date = form["date"],
-                Time = form["time"],
-                Price = TryParseInt(form["price"]),
-                UniqueId = form["unique_id"],
-                YourSlotId = form["your_slot_id"],
-                Players = TryParseInt(form["players"]),
-                Tariff = form["tariff"]
-            };
+                var request = JsonSerializer.Deserialize<MirKvestovOrderRequest>(
+                    rawBody,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                if (request != null)
+                {
+                    return request;
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignore JSON parse errors and try form-encoded fallback.
+            }
+
+            var parsed = QueryHelpers.ParseQuery(rawBody);
+            if (parsed.Count > 0)
+            {
+                return BuildOrderRequest(parsed);
+            }
         }
 
         try
@@ -142,6 +157,41 @@ public class MirKvestovController : ControllerBase
         {
             return null;
         }
+    }
+
+    private static MirKvestovOrderRequest BuildOrderRequest(IReadOnlyDictionary<string, Microsoft.Extensions.Primitives.StringValues> data)
+    {
+        return new MirKvestovOrderRequest
+        {
+            FirstName = data["first_name"],
+            FamilyName = data["family_name"],
+            Phone = data["phone"],
+            Email = data["email"],
+            Comment = data["comment"],
+            Source = data["source"],
+            Md5 = data["md5"],
+            Date = data["date"],
+            Time = data["time"],
+            Price = TryParseInt(data["price"]),
+            UniqueId = data["unique_id"],
+            YourSlotId = data["your_slot_id"],
+            Players = TryParseInt(data["players"]),
+            Tariff = data["tariff"]
+        };
+    }
+
+    private async Task<string> ReadBodyAsync()
+    {
+        if (Request.Body == null || !Request.Body.CanRead)
+        {
+            return string.Empty;
+        }
+
+        Request.Body.Position = 0;
+        using var reader = new StreamReader(Request.Body, leaveOpen: true);
+        var body = await reader.ReadToEndAsync();
+        Request.Body.Position = 0;
+        return body;
     }
 
     private static int? TryParseInt(string value)
