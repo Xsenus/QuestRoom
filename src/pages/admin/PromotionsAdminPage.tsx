@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Promotion, PromotionUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
+import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 
 export default function PromotionsAdminPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -188,6 +189,12 @@ export default function PromotionsAdminPage() {
                   {isUploadingImage ? 'Загрузка...' : 'Загрузить файл'}
                 </label>
               </div>
+              <ImageLibraryPanel
+                onSelect={(url) => setEditingPromo({ ...editingPromo, imageUrl: url })}
+                toggleLabelClosed="Выбрать из библиотеки"
+                toggleLabelOpen="Скрыть библиотеку"
+                title="Библиотека изображений"
+              />
               {editingPromo.imageUrl && (
                 <img
                   src={editingPromo.imageUrl}

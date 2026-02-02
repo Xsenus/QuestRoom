@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TeaZone, TeaZoneUpsert } from '../../lib/types';
+import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 
 export default function TeaZonesAdminPage() {
   const [teaZones, setTeaZones] = useState<TeaZone[]>([]);
@@ -202,6 +203,15 @@ export default function TeaZonesAdminPage() {
                     Можно загрузить несколько изображений или вставить URL вручную.
                   </span>
                 </div>
+                <ImageLibraryPanel
+                  onSelect={(url) => {
+                    const images = editingZone?.images || [];
+                    setEditingZone({ ...editingZone, images: [...images, url] });
+                  }}
+                  toggleLabelClosed="Выбрать из библиотеки"
+                  toggleLabelOpen="Скрыть библиотеку"
+                  title="Библиотека изображений"
+                />
                 {(editingZone.images || []).map((img, index) => (
                   <div key={`${img}-${index}`} className="flex items-center gap-3">
                     <input

@@ -20,6 +20,7 @@ import {
   Users,
   ShieldCheck,
   Coffee,
+  Images,
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -190,6 +191,10 @@ export default function AdminLayout() {
             <NavLink to="/adm/tea-zones" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <Coffee className="w-5 h-5" />
               {!isMenuCollapsed && 'Зоны для чаепития'}
+            </NavLink>
+            <NavLink to="/adm/images" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <Images className="w-5 h-5" />
+              {!isMenuCollapsed && 'Библиотека изображений'}
             </NavLink>
             <NavLink to="/adm/promo-codes" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
               <TicketPercent className="w-5 h-5" />

@@ -26,6 +26,7 @@ import TeaZonesAdminPage from './pages/admin/TeaZonesAdminPage';
 import PromoCodesPage from './pages/admin/PromoCodesPage';
 import UsersPage from './pages/admin/UsersPage';
 import RolesPage from './pages/admin/RolesPage';
+import ImageLibraryPage from './pages/admin/ImageLibraryPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PricingRulesPage from './pages/admin/PricingRulesPage';
 import ScrollToTopButton from './components/ScrollToTopButton';
@@ -92,6 +93,7 @@ function App() {
                 <Route path="reviews" element={<ReviewsAdminPage />} />
                 <Route path="promotions" element={<PromotionsAdminPage />} />
                 <Route path="tea-zones" element={<TeaZonesAdminPage />} />
+                <Route path="images" element={<ImageLibraryPage />} />
                 <Route path="extra-services" element={<StandardExtraServicesPage />} />
                 <Route path="promo-codes" element={<PromoCodesPage />} />
                 <Route path="users" element={<UsersPage />} />
