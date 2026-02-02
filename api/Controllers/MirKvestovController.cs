@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
@@ -159,24 +160,36 @@ public class MirKvestovController : ControllerBase
         }
     }
 
-    private static MirKvestovOrderRequest BuildOrderRequest(IReadOnlyDictionary<string, Microsoft.Extensions.Primitives.StringValues> data)
+    private static MirKvestovOrderRequest BuildOrderRequest(IFormCollection data)
+    {
+        return BuildOrderRequest(key => data[key]);
+    }
+
+    private static MirKvestovOrderRequest BuildOrderRequest(
+        IReadOnlyDictionary<string, Microsoft.Extensions.Primitives.StringValues> data)
+    {
+        return BuildOrderRequest(key => data[key]);
+    }
+
+    private static MirKvestovOrderRequest BuildOrderRequest(
+        Func<string, Microsoft.Extensions.Primitives.StringValues> getValue)
     {
         return new MirKvestovOrderRequest
         {
-            FirstName = data["first_name"],
-            FamilyName = data["family_name"],
-            Phone = data["phone"],
-            Email = data["email"],
-            Comment = data["comment"],
-            Source = data["source"],
-            Md5 = data["md5"],
-            Date = data["date"],
-            Time = data["time"],
-            Price = TryParseInt(data["price"]),
-            UniqueId = data["unique_id"],
-            YourSlotId = data["your_slot_id"],
-            Players = TryParseInt(data["players"]),
-            Tariff = data["tariff"]
+            FirstName = getValue("first_name"),
+            FamilyName = getValue("family_name"),
+            Phone = getValue("phone"),
+            Email = getValue("email"),
+            Comment = getValue("comment"),
+            Source = getValue("source"),
+            Md5 = getValue("md5"),
+            Date = getValue("date"),
+            Time = getValue("time"),
+            Price = TryParseInt(getValue("price")),
+            UniqueId = getValue("unique_id"),
+            YourSlotId = getValue("your_slot_id"),
+            Players = TryParseInt(getValue("players")),
+            Tariff = getValue("tariff")
         };
     }
 
@@ -194,8 +207,13 @@ public class MirKvestovController : ControllerBase
         return body;
     }
 
-    private static int? TryParseInt(string value)
+    private static int? TryParseInt(string? value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : null;

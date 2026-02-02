@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Bookings;
 using QuestRoomApi.DTOs.MirKvestov;
+using QuestRoomApi.DTOs.Schedule;
 using QuestRoomApi.Models;
 
 namespace QuestRoomApi.Services;
@@ -351,6 +352,19 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
     }
 
     private string BuildSlotId(QuestSchedule slot)
+    {
+        var format = _configuration["MirKvestov:SlotIdFormat"]?.Trim().ToLowerInvariant();
+        if (string.Equals(format, SlotIdFormatNumeric, StringComparison.OrdinalIgnoreCase))
+        {
+            var datePart = slot.Date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+            var timePart = slot.TimeSlot.ToString("HHmm", CultureInfo.InvariantCulture);
+            return $"{datePart}{timePart}";
+        }
+
+        return slot.Id.ToString();
+    }
+
+    private string BuildSlotId(QuestScheduleDto slot)
     {
         var format = _configuration["MirKvestov:SlotIdFormat"]?.Trim().ToLowerInvariant();
         if (string.Equals(format, SlotIdFormatNumeric, StringComparison.OrdinalIgnoreCase))
