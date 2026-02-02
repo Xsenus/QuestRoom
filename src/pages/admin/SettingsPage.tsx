@@ -14,6 +14,7 @@ const tabs = [
   { id: 'reviews', label: 'Отзывы' },
   { id: 'booking', label: 'Бронирование' },
   { id: 'promotions', label: 'Акции' },
+  { id: 'api', label: 'API' },
 ];
 
 type SettingsTab = (typeof tabs)[number]['id'];
@@ -283,6 +284,19 @@ const certificateTemplateTokens = [
   },
 ];
 
+const mirKvestovScheduleFieldOptions = [
+  { key: 'date', label: 'Дата' },
+  { key: 'time', label: 'Время' },
+  { key: 'is_free', label: 'Доступность' },
+  { key: 'price', label: 'Цена' },
+  { key: 'discount_price', label: 'Скидочная цена' },
+  { key: 'your_slot_id', label: 'ID слота (your_slot_id)' },
+];
+
+const defaultMirKvestovScheduleFields = mirKvestovScheduleFieldOptions.map(
+  (option) => option.key,
+);
+
 export default function SettingsPage() {
   const timeZoneOptions = [
     { value: 'Europe/Kaliningrad', label: 'Europe/Kaliningrad (Калининград, UTC+2)' },
@@ -375,6 +389,14 @@ export default function SettingsPage() {
         certificateStatusProcessedColor: data.certificateStatusProcessedColor ?? null,
         certificateStatusCompletedColor: data.certificateStatusCompletedColor ?? null,
         certificateStatusCanceledColor: data.certificateStatusCanceledColor ?? null,
+        mirKvestovMd5Key: data.mirKvestovMd5Key ?? null,
+        mirKvestovPrepayMd5Key: data.mirKvestovPrepayMd5Key ?? null,
+        mirKvestovSlotIdFormat: data.mirKvestovSlotIdFormat ?? 'numeric',
+        mirKvestovScheduleDaysAhead: data.mirKvestovScheduleDaysAhead ?? 14,
+        mirKvestovScheduleFields:
+          data.mirKvestovScheduleFields?.length > 0
+            ? data.mirKvestovScheduleFields
+            : defaultMirKvestovScheduleFields,
       });
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -442,6 +464,11 @@ export default function SettingsPage() {
         backgroundGradientVia: '#160a2e',
         backgroundGradientTo: '#2c0b3f',
         scheduleBackground: null,
+        mirKvestovMd5Key: null,
+        mirKvestovPrepayMd5Key: null,
+        mirKvestovSlotIdFormat: 'numeric',
+        mirKvestovScheduleDaysAhead: 14,
+        mirKvestovScheduleFields: defaultMirKvestovScheduleFields,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -516,6 +543,11 @@ export default function SettingsPage() {
       backgroundGradientVia: settings.backgroundGradientVia,
       backgroundGradientTo: settings.backgroundGradientTo,
       scheduleBackground: settings.scheduleBackground,
+      mirKvestovMd5Key: settings.mirKvestovMd5Key,
+      mirKvestovPrepayMd5Key: settings.mirKvestovPrepayMd5Key,
+      mirKvestovSlotIdFormat: settings.mirKvestovSlotIdFormat,
+      mirKvestovScheduleDaysAhead: settings.mirKvestovScheduleDaysAhead,
+      mirKvestovScheduleFields: settings.mirKvestovScheduleFields,
     };
 
     try {
@@ -1643,6 +1675,125 @@ export default function SettingsPage() {
               <p className="mt-2 text-sm text-gray-500">
                 Настройка влияет на отображение зон для чаепития на публичной странице.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'api' && (
+        <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
+          <h3 className="text-xl font-bold text-gray-900">Интеграции API</h3>
+          <div className="grid gap-6">
+            <div className="rounded-lg border border-gray-200 p-4 space-y-4">
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900">mir-kvestov.ru</h4>
+                <p className="text-sm text-gray-500">
+                  Управление параметрами расписания и проверок для интеграции.
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Md5 key для бронирований
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.mirKvestovMd5Key || ''}
+                    onChange={(e) =>
+                      setSettings({ ...settings, mirKvestovMd5Key: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="Оставьте пустым, чтобы отключить проверку"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Md5 key для предоплаты
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.mirKvestovPrepayMd5Key || ''}
+                    onChange={(e) =>
+                      setSettings({ ...settings, mirKvestovPrepayMd5Key: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Формат your_slot_id
+                  </label>
+                  <select
+                    value={settings.mirKvestovSlotIdFormat || 'numeric'}
+                    onChange={(e) =>
+                      setSettings({ ...settings, mirKvestovSlotIdFormat: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  >
+                    <option value="numeric">Числовой (YYYYMMDDHHMM)</option>
+                    <option value="guid">GUID</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Дней расписания по умолчанию
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={settings.mirKvestovScheduleDaysAhead ?? 14}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        mirKvestovScheduleDaysAhead: parseInt(e.target.value, 10) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    Применяется, когда запрос идёт без параметров from/to.
+                  </p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Поля расписания, которые отдаём в API
+                </label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {mirKvestovScheduleFieldOptions.map((option) => {
+                    const isChecked = settings.mirKvestovScheduleFields.includes(option.key);
+                    return (
+                      <label
+                        key={option.key}
+                        className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-red-600"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                              ? [...settings.mirKvestovScheduleFields, option.key]
+                              : settings.mirKvestovScheduleFields.filter(
+                                  (field) => field !== option.key,
+                                );
+                            setSettings({
+                              ...settings,
+                              mirKvestovScheduleFields: next,
+                            });
+                          }}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Если снять все галочки, будут применены поля по умолчанию.
+                </p>
+              </div>
             </div>
           </div>
         </div>

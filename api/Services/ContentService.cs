@@ -41,6 +41,16 @@ public interface IContentService
 
 public class ContentService : IContentService
 {
+    private static readonly string[] DefaultMirKvestovScheduleFields =
+    {
+        "date",
+        "time",
+        "is_free",
+        "price",
+        "discount_price",
+        "your_slot_id"
+    };
+
     private readonly AppDbContext _context;
 
     public ContentService(AppDbContext context)
@@ -512,6 +522,12 @@ public class ContentService : IContentService
                 BackgroundGradientVia = dto.BackgroundGradientVia,
                 BackgroundGradientTo = dto.BackgroundGradientTo,
                 ScheduleBackground = dto.ScheduleBackground,
+                MirKvestovMd5Key = dto.MirKvestovMd5Key,
+                MirKvestovPrepayMd5Key = dto.MirKvestovPrepayMd5Key,
+                MirKvestovSlotIdFormat = dto.MirKvestovSlotIdFormat,
+                MirKvestovScheduleDaysAhead =
+                    dto.MirKvestovScheduleDaysAhead > 0 ? dto.MirKvestovScheduleDaysAhead : 14,
+                MirKvestovScheduleFields = NormalizeMirKvestovScheduleFields(dto.MirKvestovScheduleFields),
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -621,6 +637,18 @@ public class ContentService : IContentService
             existing.BackgroundGradientVia = dto.BackgroundGradientVia;
             existing.BackgroundGradientTo = dto.BackgroundGradientTo;
             existing.ScheduleBackground = dto.ScheduleBackground;
+            existing.MirKvestovMd5Key = dto.MirKvestovMd5Key;
+            existing.MirKvestovPrepayMd5Key = dto.MirKvestovPrepayMd5Key;
+            existing.MirKvestovSlotIdFormat = dto.MirKvestovSlotIdFormat;
+            if (dto.MirKvestovScheduleDaysAhead > 0)
+            {
+                existing.MirKvestovScheduleDaysAhead = dto.MirKvestovScheduleDaysAhead;
+            }
+            if (dto.MirKvestovScheduleFields != null)
+            {
+                existing.MirKvestovScheduleFields =
+                    NormalizeMirKvestovScheduleFields(dto.MirKvestovScheduleFields);
+            }
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -797,7 +825,47 @@ public class ContentService : IContentService
             BackgroundGradientVia = settings.BackgroundGradientVia,
             BackgroundGradientTo = settings.BackgroundGradientTo,
             ScheduleBackground = settings.ScheduleBackground,
+            MirKvestovMd5Key = settings.MirKvestovMd5Key,
+            MirKvestovPrepayMd5Key = settings.MirKvestovPrepayMd5Key,
+            MirKvestovSlotIdFormat = settings.MirKvestovSlotIdFormat,
+            MirKvestovScheduleDaysAhead = settings.MirKvestovScheduleDaysAhead,
+            MirKvestovScheduleFields = ParseMirKvestovScheduleFields(settings.MirKvestovScheduleFields),
             UpdatedAt = settings.UpdatedAt
         };
+    }
+
+    private static string? NormalizeMirKvestovScheduleFields(IEnumerable<string>? fields)
+    {
+        if (fields == null)
+        {
+            return string.Join(",", DefaultMirKvestovScheduleFields);
+        }
+
+        var normalized = fields
+            .Select(field => field?.Trim().ToLowerInvariant())
+            .Where(field => !string.IsNullOrWhiteSpace(field))
+            .Distinct()
+            .ToArray();
+
+        if (normalized.Length == 0)
+        {
+            return string.Join(",", DefaultMirKvestovScheduleFields);
+        }
+
+        return string.Join(",", normalized);
+    }
+
+    private static List<string> ParseMirKvestovScheduleFields(string? fields)
+    {
+        if (string.IsNullOrWhiteSpace(fields))
+        {
+            return DefaultMirKvestovScheduleFields.ToList();
+        }
+
+        return fields
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(field => field.ToLowerInvariant())
+            .Distinct()
+            .ToList();
     }
 }
