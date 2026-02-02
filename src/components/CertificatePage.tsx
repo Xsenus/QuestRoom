@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api';
 import { Certificate, Settings } from '../lib/types';
+import NotificationModal from './NotificationModal';
 
 export default function CertificatePage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -18,6 +19,17 @@ export default function CertificatePage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [showThanks, setShowThanks] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    tone: 'info',
+  });
 
   useEffect(() => {
     loadCertificates();
@@ -73,7 +85,12 @@ export default function CertificatePage() {
       setTimeout(() => setShowThanks(false), 5000);
     } catch (error) {
       console.error('Error creating certificate order:', error);
-      alert('Ошибка при создании заказа. Попробуйте еще раз.');
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось оформить сертификат',
+        message: 'Ошибка при создании заказа. Попробуйте еще раз.',
+        tone: 'error',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -94,7 +111,12 @@ export default function CertificatePage() {
 
     const certificate = certificates.find((item) => item.id === selectedCertificateId);
     if (!certificate) {
-      alert('Выберите сертификат.');
+      setNotification({
+        isOpen: true,
+        title: 'Выберите сертификат',
+        message: 'Пожалуйста, укажите сертификат перед отправкой заявки.',
+        tone: 'info',
+      });
       return;
     }
 
@@ -360,6 +382,13 @@ export default function CertificatePage() {
             </div>
           </div>
         )}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          title={notification.title}
+          message={notification.message}
+          tone={notification.tone}
+          onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+        />
       </div>
     </div>
   );
