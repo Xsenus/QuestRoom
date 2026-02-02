@@ -88,11 +88,11 @@ export default function AdminLayout() {
           aria-hidden="true"
         />
         <aside
-          className={`fixed left-0 top-0 z-40 h-full w-64 bg-white shadow-lg transition-all md:static md:z-auto md:min-h-[calc(100vh-4rem)] md:translate-x-0 ${
+          className={`fixed left-0 top-0 z-40 h-full w-64 overflow-y-auto bg-white shadow-lg transition-all md:static md:z-auto md:min-h-[calc(100vh-4rem)] md:translate-x-0 md:overflow-visible ${
             isMenuOpen ? 'translate-x-0' : '-translate-x-full'
           } ${isMenuCollapsed ? 'md:w-20' : 'md:w-64'}`}
         >
-          <nav className="py-6">
+          <nav className="py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <div className={`mb-4 flex items-center px-6 ${isMenuCollapsed ? 'justify-center px-3' : ''}`}>
               <button
                 type="button"
