@@ -736,6 +736,11 @@ public class DatabaseInitializer : IDatabaseInitializer
                 BackgroundGradientVia = "#160a2e",
                 BackgroundGradientTo = "#2c0b3f",
                 ScheduleBackground = null,
+                MirKvestovMd5Key = null,
+                MirKvestovPrepayMd5Key = null,
+                MirKvestovSlotIdFormat = "numeric",
+                MirKvestovScheduleDaysAhead = 14,
+                MirKvestovScheduleFields = "date,time,is_free,price,discount_price,your_slot_id",
                 BookingEmailTemplateAdmin = """
                                             <p><strong>Информация о квесте:</strong></p>
                                             <p>

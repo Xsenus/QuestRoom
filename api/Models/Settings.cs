@@ -202,6 +202,21 @@ public class Settings
     [Column("schedule_background")]
     public string? ScheduleBackground { get; set; }
 
+    [Column("mir_kvestov_md5_key")]
+    public string? MirKvestovMd5Key { get; set; }
+
+    [Column("mir_kvestov_prepay_md5_key")]
+    public string? MirKvestovPrepayMd5Key { get; set; }
+
+    [Column("mir_kvestov_slot_id_format")]
+    public string? MirKvestovSlotIdFormat { get; set; }
+
+    [Column("mir_kvestov_schedule_days_ahead")]
+    public int MirKvestovScheduleDaysAhead { get; set; } = 14;
+
+    [Column("mir_kvestov_schedule_fields")]
+    public string? MirKvestovScheduleFields { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }

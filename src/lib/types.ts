@@ -108,6 +108,11 @@ export type Settings = {
   backgroundGradientVia: string | null;
   backgroundGradientTo: string | null;
   scheduleBackground: string | null;
+  mirKvestovMd5Key: string | null;
+  mirKvestovPrepayMd5Key: string | null;
+  mirKvestovSlotIdFormat: string | null;
+  mirKvestovScheduleDaysAhead: number;
+  mirKvestovScheduleFields: string[];
   updatedAt: string;
 };
 

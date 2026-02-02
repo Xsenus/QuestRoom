@@ -66,4 +66,9 @@ public class SettingsUpdateDto
     public string? BackgroundGradientVia { get; set; }
     public string? BackgroundGradientTo { get; set; }
     public string? ScheduleBackground { get; set; }
+    public string? MirKvestovMd5Key { get; set; }
+    public string? MirKvestovPrepayMd5Key { get; set; }
+    public string? MirKvestovSlotIdFormat { get; set; }
+    public int MirKvestovScheduleDaysAhead { get; set; }
+    public List<string>? MirKvestovScheduleFields { get; set; }
 }

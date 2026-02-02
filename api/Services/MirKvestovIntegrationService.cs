@@ -47,6 +47,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
     private readonly IConfiguration _configuration;
     private const string SlotIdFormatGuid = "guid";
     private const string SlotIdFormatNumeric = "numeric";
+    private const string DefaultTimeZone = "Asia/Krasnoyarsk";
 
     public MirKvestovIntegrationService(
         AppDbContext context,
@@ -74,10 +75,12 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return Array.Empty<MirKvestovScheduleSlotDto>();
         }
 
+        var settings = await GetSettingsSnapshotAsync(cancellationToken);
         var schedule = await _scheduleService.GetScheduleForQuestAsync(quest.Id, fromDate, toDate);
-        var now = GetLocalNow();
+        var now = GetLocalNow(settings.TimeZone);
         var cutoffMinutes = await GetBookingCutoffMinutesAsync(cancellationToken);
         var cutoffTime = now.AddMinutes(cutoffMinutes);
+        var slotIdFormat = NormalizeSlotIdFormat(settings.SlotIdFormat);
 
         return schedule
             .OrderBy(slot => slot.Date)
@@ -93,7 +96,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                     IsFree = !slot.IsBooked && isFuture,
                     Price = slot.Price,
                     DiscountPrice = null,
-                    YourSlotId = BuildSlotId(slot)
+                    YourSlotId = BuildSlotId(slot, slotIdFormat)
                 };
             })
             .ToList();
@@ -104,6 +107,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         MirKvestovOrderRequest request,
         CancellationToken cancellationToken = default)
     {
+        var settings = await GetSettingsSnapshotAsync(cancellationToken);
         var quest = await _context.Quests
             .AsNoTracking()
             .FirstOrDefaultAsync(q => q.Slug == questSlug, cancellationToken);
@@ -135,7 +139,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return new MirKvestovBookingResult(false, "Указанное время занято");
         }
 
-        var now = GetLocalNow();
+        var now = GetLocalNow(settings.TimeZone);
         var cutoffMinutes = await GetBookingCutoffMinutesAsync(cancellationToken);
         var cutoffTime = now.AddMinutes(cutoffMinutes);
         var slotDateTime = schedule.Date.ToDateTime(schedule.TimeSlot);
@@ -144,7 +148,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return new MirKvestovBookingResult(false, "Указанное время занято");
         }
 
-        if (!IsMd5Valid(request))
+        if (!IsMd5Valid(request, settings.Md5Key))
         {
             return new MirKvestovBookingResult(false, "Ошибка проверки md5");
         }
@@ -231,7 +235,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return false;
         }
 
-        var prepayKey = _configuration["MirKvestov:PrepayMd5Key"] ?? string.Empty;
+        var settings = await GetSettingsSnapshotAsync(cancellationToken);
+        var prepayKey = settings.PrepayMd5Key ?? string.Empty;
         var payload = $"{prepayKey}{uniqueId}{prepay}";
         var expected = ComputeMd5(payload);
         return expected.Equals(md5, StringComparison.OrdinalIgnoreCase);
@@ -351,9 +356,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                 cancellationToken);
     }
 
-    private string BuildSlotId(QuestSchedule slot)
+    private string BuildSlotId(QuestSchedule slot, string format)
     {
-        var format = _configuration["MirKvestov:SlotIdFormat"]?.Trim().ToLowerInvariant();
         if (string.Equals(format, SlotIdFormatNumeric, StringComparison.OrdinalIgnoreCase))
         {
             var datePart = slot.Date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
@@ -364,9 +368,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         return slot.Id.ToString();
     }
 
-    private string BuildSlotId(QuestScheduleDto slot)
+    private string BuildSlotId(QuestScheduleDto slot, string format)
     {
-        var format = _configuration["MirKvestov:SlotIdFormat"]?.Trim().ToLowerInvariant();
         if (string.Equals(format, SlotIdFormatNumeric, StringComparison.OrdinalIgnoreCase))
         {
             var datePart = slot.Date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
@@ -411,9 +414,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         return false;
     }
 
-    private bool IsMd5Valid(MirKvestovOrderRequest request)
+    private bool IsMd5Valid(MirKvestovOrderRequest request, string? md5Key)
     {
-        var md5Key = _configuration["MirKvestov:Md5Key"];
         if (string.IsNullOrWhiteSpace(md5Key))
         {
             return true;
@@ -442,13 +444,11 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         return builder.ToString();
     }
 
-    private DateTime GetLocalNow()
+    private DateTime GetLocalNow(string? timeZoneId)
     {
-        var timeZoneId = _configuration["MirKvestov:TimeZone"];
         if (string.IsNullOrWhiteSpace(timeZoneId))
         {
-            timeZoneId = _context.Settings.AsNoTracking().Select(s => s.TimeZone).FirstOrDefault()
-                ?? "Asia/Krasnoyarsk";
+            timeZoneId = DefaultTimeZone;
         }
 
         var timeZone = ResolveTimeZone(timeZoneId);
@@ -479,4 +479,52 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             .FirstOrDefaultAsync(cancellationToken);
         return cutoff > 0 ? cutoff : 10;
     }
+
+    private async Task<MirKvestovSettingsSnapshot> GetSettingsSnapshotAsync(
+        CancellationToken cancellationToken)
+    {
+        var settings = await _context.Settings
+            .AsNoTracking()
+            .Select(s => new MirKvestovSettingsSnapshot(
+                s.MirKvestovMd5Key,
+                s.MirKvestovPrepayMd5Key,
+                s.MirKvestovSlotIdFormat,
+                s.TimeZone))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var md5Key = string.IsNullOrWhiteSpace(settings?.Md5Key)
+            ? _configuration["MirKvestov:Md5Key"]
+            : settings.Md5Key;
+        var prepayMd5Key = string.IsNullOrWhiteSpace(settings?.PrepayMd5Key)
+            ? _configuration["MirKvestov:PrepayMd5Key"]
+            : settings.PrepayMd5Key;
+        var slotIdFormat = string.IsNullOrWhiteSpace(settings?.SlotIdFormat)
+            ? _configuration["MirKvestov:SlotIdFormat"]
+            : settings.SlotIdFormat;
+        var timeZone = string.IsNullOrWhiteSpace(settings?.TimeZone)
+            ? _configuration["MirKvestov:TimeZone"]
+            : settings.TimeZone;
+
+        return new MirKvestovSettingsSnapshot(
+            md5Key,
+            prepayMd5Key,
+            slotIdFormat,
+            timeZone);
+    }
+
+    private static string NormalizeSlotIdFormat(string? format)
+    {
+        if (string.IsNullOrWhiteSpace(format))
+        {
+            return SlotIdFormatNumeric;
+        }
+
+        return format.Trim().ToLowerInvariant();
+    }
+
+    private sealed record MirKvestovSettingsSnapshot(
+        string? Md5Key,
+        string? PrepayMd5Key,
+        string? SlotIdFormat,
+        string? TimeZone);
 }
