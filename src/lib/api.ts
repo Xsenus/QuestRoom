@@ -490,6 +490,12 @@ class ApiClient {
     return this.request(`/images${query ? `?${query}` : ''}`);
   }
 
+  async deleteImage(id: string) {
+    return this.request(`/images/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Bookings
   async getBookings(params?: {
     status?: string;

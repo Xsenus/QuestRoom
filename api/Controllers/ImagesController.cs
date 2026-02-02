@@ -75,6 +75,20 @@ public class ImagesController : ControllerBase
         return File(image.Data, image.ContentType, image.FileName);
     }
 
+    [Authorize(Roles = "admin")]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteImage(Guid id)
+    {
+        var image = await _context.ImageAssets.FirstOrDefaultAsync(i => i.Id == id);
+        if (image == null)
+            return NotFound();
+
+        _context.ImageAssets.Remove(image);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     private static ImageAssetDto ToDto(ImageAsset image, HttpRequest request)
     {
         var baseUrl = $"{request.Scheme}://{request.Host}";

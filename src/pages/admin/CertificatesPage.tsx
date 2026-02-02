@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Certificate, CertificateUpsert } from '../../lib/types';
-import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
+import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 
 type ActionModalState = {
   title: string;
@@ -20,6 +21,7 @@ export default function CertificatesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     loadCertificates();
@@ -261,14 +263,44 @@ export default function CertificatesPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   URL изображения
                 </label>
-                <input
-                  type="text"
-                  value={editingCert.imageUrl || ''}
-                  onChange={(e) =>
-                    setEditingCert({ ...editingCert, imageUrl: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                  placeholder="/images/certificates/cert1.jpg"
+                <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
+                  <input
+                    type="text"
+                    value={editingCert.imageUrl || ''}
+                    onChange={(e) =>
+                      setEditingCert({ ...editingCert, imageUrl: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="/images/certificates/cert1.jpg"
+                  />
+                  <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors cursor-pointer">
+                    <Upload className="w-4 h-4" />
+                    {isUploadingImage ? 'Загрузка...' : 'Загрузить файл'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        setIsUploadingImage(true);
+                        try {
+                          const uploaded = await api.uploadImage(file);
+                          setEditingCert({ ...editingCert, imageUrl: uploaded.url });
+                        } catch (error) {
+                          alert('Ошибка загрузки изображения: ' + (error as Error).message);
+                        } finally {
+                          setIsUploadingImage(false);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                <ImageLibraryPanel
+                  onSelect={(url) => setEditingCert({ ...editingCert, imageUrl: url })}
+                  toggleLabelClosed="Выбрать из библиотеки"
+                  toggleLabelOpen="Скрыть библиотеку"
+                  title="Библиотека изображений"
                 />
                 {editingCert.imageUrl && (
                   <img
