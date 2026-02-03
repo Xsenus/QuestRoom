@@ -23,6 +23,7 @@ public class BookingDto
     public int? LegacyId { get; set; }
     public string? Notes { get; set; }
     public string? Aggregator { get; set; }
+    public string? AggregatorUniqueId { get; set; }
     public List<BookingExtraServiceDto> ExtraServices { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

@@ -11,6 +11,7 @@ public class BookingCreateDto
     public int ParticipantsCount { get; set; }
     public string? Notes { get; set; }
     public string? Aggregator { get; set; }
+    public string? AggregatorUniqueId { get; set; }
     public Guid[] ExtraServiceIds { get; set; } = Array.Empty<Guid>();
     public List<BookingExtraServiceCreateDto>? ExtraServices { get; set; }
     public string? PaymentType { get; set; }

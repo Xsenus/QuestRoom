@@ -35,6 +35,7 @@ public class AppDbContext : DbContext
     public DbSet<Settings> Settings { get; set; }
     public DbSet<PromoCode> PromoCodes { get; set; }
     public DbSet<ProductionCalendarDay> ProductionCalendarDays { get; set; }
+    public DbSet<ApiRequestLog> ApiRequestLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

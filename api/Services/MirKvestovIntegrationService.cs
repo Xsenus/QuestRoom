@@ -175,7 +175,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                 BookingDate = date,
                 ParticipantsCount = participantsCount,
                 Notes = notes,
-                Aggregator = "МИР КВЕСТОВ"
+                Aggregator = "МИР КВЕСТОВ",
+                AggregatorUniqueId = request.UniqueId
             });
         }
         catch (InvalidOperationException ex)

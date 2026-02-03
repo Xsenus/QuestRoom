@@ -528,6 +528,7 @@ public class ContentService : IContentService
                 MirKvestovScheduleDaysAhead =
                     dto.MirKvestovScheduleDaysAhead > 0 ? dto.MirKvestovScheduleDaysAhead : 14,
                 MirKvestovScheduleFields = NormalizeMirKvestovScheduleFields(dto.MirKvestovScheduleFields),
+                MirKvestovApiLoggingEnabled = dto.MirKvestovApiLoggingEnabled ?? false,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -648,6 +649,10 @@ public class ContentService : IContentService
             {
                 existing.MirKvestovScheduleFields =
                     NormalizeMirKvestovScheduleFields(dto.MirKvestovScheduleFields);
+            }
+            if (dto.MirKvestovApiLoggingEnabled.HasValue)
+            {
+                existing.MirKvestovApiLoggingEnabled = dto.MirKvestovApiLoggingEnabled.Value;
             }
             existing.UpdatedAt = DateTime.UtcNow;
         }
@@ -830,6 +835,7 @@ public class ContentService : IContentService
             MirKvestovSlotIdFormat = settings.MirKvestovSlotIdFormat,
             MirKvestovScheduleDaysAhead = settings.MirKvestovScheduleDaysAhead,
             MirKvestovScheduleFields = ParseMirKvestovScheduleFields(settings.MirKvestovScheduleFields),
+            MirKvestovApiLoggingEnabled = settings.MirKvestovApiLoggingEnabled,
             UpdatedAt = settings.UpdatedAt
         };
     }
