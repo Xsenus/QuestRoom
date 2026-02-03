@@ -529,10 +529,10 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                 s.TimeZone))
             .FirstOrDefaultAsync(cancellationToken);
 
-        var md5Key = string.IsNullOrWhiteSpace(settings?.Md5Key)
+        var md5Key = settings is null
             ? _configuration["MirKvestov:Md5Key"]
             : settings.Md5Key;
-        var prepayMd5Key = string.IsNullOrWhiteSpace(settings?.PrepayMd5Key)
+        var prepayMd5Key = settings is null
             ? _configuration["MirKvestov:PrepayMd5Key"]
             : settings.PrepayMd5Key;
         var slotIdFormat = string.IsNullOrWhiteSpace(settings?.SlotIdFormat)
