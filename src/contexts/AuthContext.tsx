@@ -78,13 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasPermission = (permission: string) => {
     if (!user) return false;
-    if (user.role === 'admin') return true;
+    if (isAdmin()) return true;
     return user.permissions.includes(permission);
   };
 
   const hasAnyPermission = (permissions: string[]) => {
     if (!user) return false;
-    if (user.role === 'admin') return true;
+    if (isAdmin()) return true;
     return permissions.some((permission) => user.permissions.includes(permission));
   };
 

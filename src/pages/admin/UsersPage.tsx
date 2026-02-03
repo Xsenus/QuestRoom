@@ -796,7 +796,8 @@ export default function UsersPage() {
                 <select
                   value={editor.roleId}
                   onChange={(event) => setEditor({ ...editor, roleId: event.target.value })}
-                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  disabled={!canEdit || roleMap[editor.roleId]?.code === 'admin'}
+                  className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                 >
                   {roles.map((role) => (
                     <option key={role.id} value={role.id}>

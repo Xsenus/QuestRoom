@@ -95,7 +95,7 @@ export default function RolesPage() {
       name: role.name,
       description: role.description,
       permissions: [...role.permissions],
-      system: role.isSystem,
+      system: role.code === 'admin',
     });
     setIsCreating(false);
   };
@@ -253,66 +253,69 @@ export default function RolesPage() {
                   </tr>
                 )}
                 {!loading &&
-                  roles.map((role) => (
-                  <tr
-                    key={role.id}
-                    className={`cursor-pointer transition hover:bg-gray-50 ${
-                      selectedId === role.id ? 'bg-red-50' : ''
-                    }`}
-                    onClick={() => setSelectedId(role.id)}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-gray-900">{role.name}</div>
-                      <div className="text-xs text-gray-500">{role.description}</div>
-                      {role.isSystem && (
-                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-500">
-                          <Shield className="h-3 w-3" />
-                          Системная
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {role.permissions.length} прав
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{role.updatedAt}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            startEdit(role);
-                          }}
-                          className={`rounded-lg border p-1.5 text-xs font-semibold ${
-                            role.isSystem
-                              ? 'cursor-not-allowed border-gray-200 text-gray-300'
-                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                          }`}
-                          disabled={role.isSystem}
-                          title="Изменить"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            deleteRole(role);
-                          }}
-                          className={`rounded-lg border p-1.5 text-xs font-semibold ${
-                            role.isSystem
-                              ? 'cursor-not-allowed border-red-100 text-red-200'
-                              : 'border-red-200 text-red-600 hover:bg-red-50'
-                          }`}
-                          disabled={role.isSystem}
-                          title="Удалить"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                  roles.map((role) => {
+                    const isAdminRole = role.code === 'admin';
+                    return (
+                      <tr
+                        key={role.id}
+                        className={`cursor-pointer transition hover:bg-gray-50 ${
+                          selectedId === role.id ? 'bg-red-50' : ''
+                        }`}
+                        onClick={() => setSelectedId(role.id)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-gray-900">{role.name}</div>
+                          <div className="text-xs text-gray-500">{role.description}</div>
+                          {role.isSystem && (
+                            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-500">
+                              <Shield className="h-3 w-3" />
+                              Системная
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">
+                          {role.permissions.length} прав
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">{role.updatedAt}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                startEdit(role);
+                              }}
+                              className={`rounded-lg border p-1.5 text-xs font-semibold ${
+                                isAdminRole
+                                  ? 'cursor-not-allowed border-gray-200 text-gray-300'
+                                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                              }`}
+                              disabled={isAdminRole}
+                              title="Изменить"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                deleteRole(role);
+                              }}
+                              className={`rounded-lg border p-1.5 text-xs font-semibold ${
+                                role.isSystem
+                                  ? 'cursor-not-allowed border-red-100 text-red-200'
+                                  : 'border-red-200 text-red-600 hover:bg-red-50'
+                              }`}
+                              disabled={role.isSystem}
+                              title="Удалить"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

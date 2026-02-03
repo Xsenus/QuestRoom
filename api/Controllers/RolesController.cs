@@ -93,9 +93,9 @@ public class RolesController : ControllerBase
             return NotFound();
         }
 
-        if (role.IsSystem)
+        if (string.Equals(role.Code, "admin", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest("Системные роли нельзя изменять.");
+            return BadRequest("Роль администратора нельзя изменять.");
         }
 
         role.Name = dto.Name.Trim();
