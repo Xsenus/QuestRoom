@@ -17,6 +17,17 @@ public class MirKvestovController : ControllerBase
     private readonly IMirKvestovIntegrationService _integrationService;
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
+    private static readonly string[] DefaultScheduleFields =
+    {
+        "date",
+        "time",
+        "is_free",
+        "price",
+        "discount_price",
+        "your_slot_id"
+    };
+    private const int DefaultScheduleDaysAhead = 14;
+    private const string DefaultTimeZone = "Asia/Krasnoyarsk";
 
     public MirKvestovController(
         IMirKvestovIntegrationService integrationService,
@@ -30,20 +41,29 @@ public class MirKvestovController : ControllerBase
 
     [HttpGet("{questSlug}")]
     [HttpGet("{questSlug}.json")]
-    public async Task<ActionResult<IEnumerable<MirKvestovScheduleSlotDto>>> GetSchedule(
+    public async Task<ActionResult<IEnumerable<IDictionary<string, object?>>>> GetSchedule(
         string questSlug,
         [FromQuery] string? from = null,
         [FromQuery] string? to = null)
     {
-        var today = GetLocalToday();
+        var settings = await GetScheduleSettingsAsync(HttpContext.RequestAborted);
+        var today = GetLocalToday(settings.TimeZone);
         var fromDate = ParseDateOrDefault(from, today);
-        var toDate = ParseDateOrDefault(to, fromDate.AddDays(13));
+        var scheduleDaysAhead = settings.ScheduleDaysAhead > 0
+            ? settings.ScheduleDaysAhead
+            : DefaultScheduleDaysAhead;
+        var toDate = ParseDateOrDefault(to, fromDate.AddDays(scheduleDaysAhead - 1));
 
         var schedule = await _integrationService.GetScheduleAsync(questSlug, fromDate, toDate, HttpContext.RequestAborted);
-        return Ok(schedule);
+        var fields = settings.ScheduleFields;
+        var response = schedule
+            .Select(slot => BuildSchedulePayload(slot, fields))
+            .ToList();
+        return Ok(response);
     }
 
     [HttpPost("{questSlug}/order")]
+    [HttpPost("{questSlug}.json/order")]
     public async Task<IActionResult> CreateOrder(string questSlug)
     {
         var request = await ReadOrderRequestAsync();
@@ -66,6 +86,7 @@ public class MirKvestovController : ControllerBase
     }
 
     [HttpGet("{questSlug}/get_price")]
+    [HttpGet("{questSlug}.json/get_price")]
     public async Task<IActionResult> GetTariffs(
         string questSlug,
         [FromQuery] string date,
@@ -85,6 +106,7 @@ public class MirKvestovController : ControllerBase
     }
 
     [HttpGet("{questSlug}/prepay")]
+    [HttpGet("{questSlug}.json/prepay")]
     public async Task<IActionResult> Prepay(
         string questSlug,
         [FromQuery] string md5,
@@ -257,13 +279,11 @@ public class MirKvestovController : ControllerBase
             : fallback;
     }
 
-    private DateOnly GetLocalToday()
+    private DateOnly GetLocalToday(string? timeZoneId)
     {
-        var timeZoneId = _configuration["MirKvestov:TimeZone"];
         if (string.IsNullOrWhiteSpace(timeZoneId))
         {
-            timeZoneId = _context.Settings.AsNoTracking().Select(s => s.TimeZone).FirstOrDefault()
-                ?? "Asia/Krasnoyarsk";
+            timeZoneId = DefaultTimeZone;
         }
 
         var timeZone = ResolveTimeZone(timeZoneId);
@@ -286,4 +306,86 @@ public class MirKvestovController : ControllerBase
             return TimeZoneInfo.Utc;
         }
     }
+
+    private async Task<MirKvestovScheduleSettingsSnapshot> GetScheduleSettingsAsync(
+        CancellationToken cancellationToken)
+    {
+        var settings = await _context.Settings
+            .AsNoTracking()
+            .Select(s => new
+            {
+                s.MirKvestovScheduleDaysAhead,
+                s.MirKvestovScheduleFields,
+                s.TimeZone
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var timeZone = string.IsNullOrWhiteSpace(settings?.TimeZone)
+            ? _configuration["MirKvestov:TimeZone"]
+            : settings.TimeZone;
+
+        return new MirKvestovScheduleSettingsSnapshot(
+            settings?.MirKvestovScheduleDaysAhead ?? DefaultScheduleDaysAhead,
+            ParseScheduleFields(settings?.MirKvestovScheduleFields),
+            string.IsNullOrWhiteSpace(timeZone) ? DefaultTimeZone : timeZone);
+    }
+
+    private static IReadOnlySet<string> ParseScheduleFields(string? fields)
+    {
+        if (string.IsNullOrWhiteSpace(fields))
+        {
+            return new HashSet<string>(DefaultScheduleFields, StringComparer.OrdinalIgnoreCase);
+        }
+
+        var parsed = fields
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(field => field.ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (parsed.Count == 0)
+        {
+            return new HashSet<string>(DefaultScheduleFields, StringComparer.OrdinalIgnoreCase);
+        }
+
+        return parsed;
+    }
+
+    private static IDictionary<string, object?> BuildSchedulePayload(
+        MirKvestovScheduleSlotDto slot,
+        IReadOnlySet<string> fields)
+    {
+        var payload = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        if (fields.Contains("date"))
+        {
+            payload["date"] = slot.Date;
+        }
+        if (fields.Contains("time"))
+        {
+            payload["time"] = slot.Time;
+        }
+        if (fields.Contains("is_free"))
+        {
+            payload["is_free"] = slot.IsFree;
+        }
+        if (fields.Contains("price"))
+        {
+            payload["price"] = slot.Price;
+        }
+        if (fields.Contains("discount_price"))
+        {
+            payload["discount_price"] = slot.DiscountPrice;
+        }
+        if (fields.Contains("your_slot_id"))
+        {
+            payload["your_slot_id"] = slot.YourSlotId;
+        }
+
+        return payload;
+    }
+
+    private sealed record MirKvestovScheduleSettingsSnapshot(
+        int ScheduleDaysAhead,
+        IReadOnlySet<string> ScheduleFields,
+        string? TimeZone);
 }
