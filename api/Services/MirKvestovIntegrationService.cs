@@ -301,7 +301,22 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
 
         if (!string.IsNullOrWhiteSpace(request.Comment))
         {
-            parts.Add($"Комментарий: {request.Comment}");
+            var comment = request.Comment.Trim();
+
+            if (comment.StartsWith("Комментарий", StringComparison.OrdinalIgnoreCase))
+            {
+                comment = comment["Комментарий".Length..].TrimStart();
+
+                if (comment.StartsWith(":", StringComparison.Ordinal))
+                {
+                    comment = comment[1..].TrimStart();
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(comment))
+            {
+                parts.Add(comment);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.Source))
