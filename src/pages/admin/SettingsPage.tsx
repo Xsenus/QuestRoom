@@ -402,6 +402,7 @@ export default function SettingsPage() {
           data.mirKvestovScheduleFields?.length > 0
             ? data.mirKvestovScheduleFields
             : defaultMirKvestovScheduleFields,
+        mirKvestovApiLoggingEnabled: data.mirKvestovApiLoggingEnabled ?? false,
       });
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -474,6 +475,7 @@ export default function SettingsPage() {
         mirKvestovSlotIdFormat: 'numeric',
         mirKvestovScheduleDaysAhead: 14,
         mirKvestovScheduleFields: defaultMirKvestovScheduleFields,
+        mirKvestovApiLoggingEnabled: false,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -553,6 +555,7 @@ export default function SettingsPage() {
       mirKvestovSlotIdFormat: settings.mirKvestovSlotIdFormat,
       mirKvestovScheduleDaysAhead: settings.mirKvestovScheduleDaysAhead,
       mirKvestovScheduleFields: settings.mirKvestovScheduleFields,
+      mirKvestovApiLoggingEnabled: settings.mirKvestovApiLoggingEnabled,
     };
 
     try {
@@ -1816,6 +1819,42 @@ export default function SettingsPage() {
                 <p className="mt-2 text-xs text-gray-500">
                   Если снять все галочки, будут применены поля по умолчанию.
                 </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">
+                    Логирование запросов mir-kvestov
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Сохранять IP, параметры и тело запросов интеграции в базе данных.
+                  </p>
+                </div>
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={settings.mirKvestovApiLoggingEnabled}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        mirKvestovApiLoggingEnabled: e.target.checked,
+                      })
+                    }
+                  />
+                  <span
+                    className={`relative h-6 w-11 rounded-full transition ${
+                      settings.mirKvestovApiLoggingEnabled ? 'bg-red-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition ${
+                        settings.mirKvestovApiLoggingEnabled
+                          ? 'translate-x-5'
+                          : 'translate-x-0'
+                      }`}
+                    />
+                  </span>
+                </label>
               </div>
             </div>
           </div>

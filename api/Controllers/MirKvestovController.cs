@@ -17,6 +17,7 @@ public class MirKvestovController : ControllerBase
     private readonly IMirKvestovIntegrationService _integrationService;
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IApiRequestLogService _requestLogService;
     private static readonly string[] DefaultScheduleFields =
     {
         "date",
@@ -32,11 +33,13 @@ public class MirKvestovController : ControllerBase
     public MirKvestovController(
         IMirKvestovIntegrationService integrationService,
         AppDbContext context,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IApiRequestLogService requestLogService)
     {
         _integrationService = integrationService;
         _context = context;
         _configuration = configuration;
+        _requestLogService = requestLogService;
     }
 
     [HttpGet("{questSlug}")]
@@ -46,6 +49,14 @@ public class MirKvestovController : ControllerBase
         [FromQuery] string? from = null,
         [FromQuery] string? to = null)
     {
+        await _requestLogService.LogMirKvestovAsync(
+            Request.Path,
+            Request.Method,
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Request.QueryString.Value,
+            null,
+            HttpContext.RequestAborted);
+
         var settings = await GetScheduleSettingsAsync(HttpContext.RequestAborted);
         var today = GetLocalToday(settings.TimeZone);
         var fromDate = ParseDateOrDefault(from, today);
@@ -67,6 +78,21 @@ public class MirKvestovController : ControllerBase
     public async Task<IActionResult> CreateOrder(string questSlug)
     {
         var request = await ReadOrderRequestAsync();
+        var payload = request == null
+            ? await ReadBodyAsync()
+            : JsonSerializer.Serialize(
+                request,
+                new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                });
+        await _requestLogService.LogMirKvestovAsync(
+            Request.Path,
+            Request.Method,
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Request.QueryString.Value,
+            payload,
+            HttpContext.RequestAborted);
         if (request == null)
         {
             return Ok(new { success = false, message = "Некорректный запрос" });
@@ -92,6 +118,14 @@ public class MirKvestovController : ControllerBase
         [FromQuery] string date,
         [FromQuery] string time)
     {
+        await _requestLogService.LogMirKvestovAsync(
+            Request.Path,
+            Request.Method,
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Request.QueryString.Value,
+            null,
+            HttpContext.RequestAborted);
+
         if (!TryParseDateTime(date, time, out var dateOnly, out var timeOnly))
         {
             return BadRequest(new { message = "Некорректные дата или время" });
@@ -113,6 +147,14 @@ public class MirKvestovController : ControllerBase
         [FromQuery(Name = "unique_id")] string uniqueId,
         [FromQuery] int prepay)
     {
+        await _requestLogService.LogMirKvestovAsync(
+            Request.Path,
+            Request.Method,
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Request.QueryString.Value,
+            null,
+            HttpContext.RequestAborted);
+
         var isValid = await _integrationService.HandlePrepayAsync(
             questSlug,
             md5,

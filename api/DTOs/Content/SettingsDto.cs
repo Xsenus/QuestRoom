@@ -72,5 +72,6 @@ public class SettingsDto
     public string? MirKvestovSlotIdFormat { get; set; }
     public int MirKvestovScheduleDaysAhead { get; set; }
     public List<string> MirKvestovScheduleFields { get; set; } = new();
+    public bool MirKvestovApiLoggingEnabled { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

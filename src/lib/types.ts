@@ -113,6 +113,7 @@ export type Settings = {
   mirKvestovSlotIdFormat: string | null;
   mirKvestovScheduleDaysAhead: number;
   mirKvestovScheduleFields: string[];
+  mirKvestovApiLoggingEnabled: boolean;
   updatedAt: string;
 };
 
@@ -150,6 +151,7 @@ export type Booking = {
     | 'created'
     | 'not_confirmed';
   notes: string | null;
+  aggregatorUniqueId: string | null;
   extraServices: BookingExtraService[];
   createdAt: string;
   updatedAt: string;
@@ -210,6 +212,7 @@ export type BookingUpdate = Partial<
     | 'questPrice'
     | 'extraParticipantPrice'
     | 'extraServices'
+    | 'aggregatorUniqueId'
   >
 >;
 

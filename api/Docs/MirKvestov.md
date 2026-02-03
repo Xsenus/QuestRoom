@@ -90,6 +90,7 @@ POST /api/mir-kvestov/{questSlug}.json/order
 ```
 
 При бронировании сначала используется `your_slot_id`, если он передан (GUID или `YYYYMMDDHHMM`), и только затем дата/время из запроса.
+`unique_id` сохраняется в бронировании как идентификатор агрегатора (поле `aggregator_unique_id`).
 
 ## 3) Получение тарифов
 
@@ -136,5 +137,6 @@ GET /api/mir-kvestov/{questSlug}.json/prepay?md5=...&unique_id=...&prepay=...
 - `SlotIdFormat` — формат `your_slot_id`: `numeric` (по умолчанию) или `guid`.
 - `ScheduleDaysAhead` — количество дней, которое возвращается по умолчанию (если `from/to` не переданы).
 - `ScheduleFields` — список полей, которые возвращаются в расписании.
+- `ApiLoggingEnabled` — включает сохранение логов запросов mir-kvestov (IP, параметры, тело запроса).
 
 Параметр `TimeZone` используется из настроек сайта (`settings.time_zone`) для вычисления локальной даты.

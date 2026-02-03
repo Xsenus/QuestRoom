@@ -219,6 +219,9 @@ public class BookingService : IBookingService
                 LegacyId = await GetNextLegacyIdAsync(),
                 Notes = dto.Notes,
                 Aggregator = string.IsNullOrWhiteSpace(dto.Aggregator) ? null : dto.Aggregator,
+                AggregatorUniqueId = string.IsNullOrWhiteSpace(dto.AggregatorUniqueId)
+                    ? null
+                    : dto.AggregatorUniqueId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -330,6 +333,12 @@ public class BookingService : IBookingService
             booking.Aggregator = string.IsNullOrWhiteSpace(dto.Aggregator)
                 ? null
                 : dto.Aggregator;
+        }
+        if (dto.AggregatorUniqueId != null)
+        {
+            booking.AggregatorUniqueId = string.IsNullOrWhiteSpace(dto.AggregatorUniqueId)
+                ? null
+                : dto.AggregatorUniqueId;
         }
         if (dto.BookingDate.HasValue)
         {
@@ -504,6 +513,7 @@ public class BookingService : IBookingService
             LegacyId = booking.LegacyId,
             Notes = booking.Notes,
             Aggregator = booking.Aggregator,
+            AggregatorUniqueId = booking.AggregatorUniqueId,
             ExtraServices = booking.ExtraServices
                 .Select(service => new BookingExtraServiceDto
                 {

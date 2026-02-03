@@ -217,6 +217,9 @@ public class Settings
     [Column("mir_kvestov_schedule_fields")]
     public string? MirKvestovScheduleFields { get; set; }
 
+    [Column("mir_kvestov_api_logging_enabled")]
+    public bool MirKvestovApiLoggingEnabled { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }

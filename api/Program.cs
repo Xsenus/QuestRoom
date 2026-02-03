@@ -61,6 +61,7 @@ builder.Services.AddScoped<IQuestService, QuestService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IMirKvestovIntegrationService, MirKvestovIntegrationService>();
+builder.Services.AddScoped<IApiRequestLogService, ApiRequestLogService>();
 builder.Services.AddScoped<ICertificateOrderService, CertificateOrderService>();
 builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<IStandardExtraServiceService, StandardExtraServiceService>();

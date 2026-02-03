@@ -69,6 +69,9 @@ public class Booking
     [Column("aggregator")]
     public string? Aggregator { get; set; }
 
+    [Column("aggregator_unique_id")]
+    public string? AggregatorUniqueId { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
