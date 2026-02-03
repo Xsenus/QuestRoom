@@ -184,6 +184,10 @@ class ApiClient {
     };
   }
 
+  async getCurrentUser() {
+    return this.request('/auth/me');
+  }
+
   logout() {
     clearAuthStorage();
   }

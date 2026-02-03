@@ -24,33 +24,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const email = localStorage.getItem('user_email');
-    const role = localStorage.getItem('user_role');
-    const permissionsRaw = localStorage.getItem('user_permissions');
-    let permissions: string[] = [];
-    if (permissionsRaw) {
-      try {
-        const parsed = JSON.parse(permissionsRaw);
-        permissions = Array.isArray(parsed) ? parsed : [];
-      } catch {
-        permissions = [];
+    const loadCurrentUser = async () => {
+      if (!api.isAuthenticated()) {
+        setLoading(false);
+        return;
       }
-    }
-    const expiresAt = Number(localStorage.getItem('auth_expires_at'));
 
-    const isExpired = Number.isFinite(expiresAt) && Date.now() > expiresAt;
+      try {
+        const profile = await api.getCurrentUser();
+        const permissions = Array.isArray(profile.permissions) ? profile.permissions : [];
+        setUser({
+          email: profile.email,
+          role: profile.role,
+          permissions,
+        });
+        localStorage.setItem('user_email', profile.email);
+        localStorage.setItem('user_role', profile.role);
+        localStorage.setItem('user_permissions', JSON.stringify(permissions));
+      } catch {
+        api.logout();
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (isExpired) {
-      api.logout();
-      setLoading(false);
-      return;
-    }
-
-    if (token && email && role) {
-      setUser({ email, role, permissions: Array.isArray(permissions) ? permissions : [] });
-    }
-    setLoading(false);
+    loadCurrentUser();
   }, []);
 
   const signIn = async (email: string, password: string) => {

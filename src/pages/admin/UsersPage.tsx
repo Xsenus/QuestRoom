@@ -90,7 +90,8 @@ export default function UsersPage() {
     }, {});
   }, [roles]);
 
-  const isAdminUser = (user: AdminUser) => roleMap[user.roleId]?.code === 'admin';
+  const isProtectedAdmin = (user: { email: string }) =>
+    user.email.toLowerCase() === protectedAdminEmail;
 
   const loadData = async () => {
     try {
@@ -270,11 +271,11 @@ export default function UsersPage() {
   };
 
   const updateRole = async (user: AdminUser, roleId: string) => {
-    if (isAdminUser(user)) {
+    if (isProtectedAdmin(user)) {
       setNotification({
         isOpen: true,
         title: 'Роль закреплена',
-        message: 'У администратора роль менять нельзя.',
+        message: 'У главного администратора роль менять нельзя.',
         tone: 'error',
       });
       return;
@@ -600,7 +601,7 @@ export default function UsersPage() {
                   <select
                     value={selectedUser.roleId || roles[0]?.id || ''}
                     onChange={(event) => updateRole(selectedUser, event.target.value)}
-                    disabled={!canEdit || isAdminUser(selectedUser)}
+                    disabled={!canEdit || isProtectedAdmin(selectedUser)}
                     className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                   >
                     {roles.map((role) => (
@@ -796,7 +797,7 @@ export default function UsersPage() {
                 <select
                   value={editor.roleId}
                   onChange={(event) => setEditor({ ...editor, roleId: event.target.value })}
-                  disabled={!canEdit || (!isCreating && roleMap[editor.roleId]?.code === 'admin')}
+                  disabled={!canEdit || (!isCreating && isProtectedAdmin(editor))}
                   className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                 >
                   {roles.map((role) => (

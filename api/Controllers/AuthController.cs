@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.IdentityModel.Tokens.Jwt;
 using System.Collections.Generic;
+using System.Security.Claims;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Auth;
 using QuestRoomApi.Models;
@@ -47,6 +50,35 @@ public class AuthController : ControllerBase
         return Ok(new LoginResponse
         {
             Token = token,
+            Email = user.Email,
+            Role = user.Role?.Code ?? string.Empty,
+            Permissions = user.Role?.Permissions?.ToList() ?? new List<string>()
+        });
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<CurrentUserResponse>> GetCurrentUser()
+    {
+        var rawUserId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(new CurrentUserResponse
+        {
             Email = user.Email,
             Role = user.Role?.Code ?? string.Empty,
             Permissions = user.Role?.Permissions?.ToList() ?? new List<string>()
