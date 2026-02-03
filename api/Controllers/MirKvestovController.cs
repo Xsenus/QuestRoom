@@ -309,10 +309,12 @@ public class MirKvestovController : ControllerBase
     {
         var settings = await _context.Settings
             .AsNoTracking()
-            .Select(s => new MirKvestovScheduleSettingsSnapshot(
+            .Select(s => new
+            {
                 s.MirKvestovScheduleDaysAhead,
                 s.MirKvestovScheduleFields,
-                s.TimeZone))
+                s.TimeZone
+            })
             .FirstOrDefaultAsync(cancellationToken);
 
         var timeZone = string.IsNullOrWhiteSpace(settings?.TimeZone)
@@ -320,8 +322,8 @@ public class MirKvestovController : ControllerBase
             : settings.TimeZone;
 
         return new MirKvestovScheduleSettingsSnapshot(
-            settings?.ScheduleDaysAhead ?? DefaultScheduleDaysAhead,
-            ParseScheduleFields(settings?.ScheduleFields),
+            settings?.MirKvestovScheduleDaysAhead ?? DefaultScheduleDaysAhead,
+            ParseScheduleFields(settings?.MirKvestovScheduleFields),
             string.IsNullOrWhiteSpace(timeZone) ? DefaultTimeZone : timeZone);
     }
 
@@ -381,6 +383,6 @@ public class MirKvestovController : ControllerBase
 
     private sealed record MirKvestovScheduleSettingsSnapshot(
         int ScheduleDaysAhead,
-        string? ScheduleFields,
+        IReadOnlySet<string> ScheduleFields,
         string? TimeZone);
 }
