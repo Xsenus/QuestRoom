@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../../lib/imageOptimizations';
 import { Promotion, PromotionUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
@@ -214,9 +215,13 @@ export default function PromotionsAdminPage() {
               />
               {editingPromo.imageUrl && (
                 <img
-                  src={editingPromo.imageUrl}
+                  src={getOptimizedImageUrl(editingPromo.imageUrl, { width: 480 })}
+                  srcSet={getResponsiveSrcSet(editingPromo.imageUrl, [240, 360, 480, 720])}
+                  sizes="320px"
                   alt="Preview"
                   className="mt-3 max-w-xs rounded-lg border"
+                  loading="lazy"
+                  decoding="async"
                 />
               )}
             </div>
@@ -439,9 +444,13 @@ export default function PromotionsAdminPage() {
 
             {promo.imageUrl && (
               <img
-                src={promo.imageUrl}
+                src={getOptimizedImageUrl(promo.imageUrl, { width: 720 })}
+                srcSet={getResponsiveSrcSet(promo.imageUrl, [360, 540, 720, 960])}
+                sizes="(min-width: 768px) 50vw, 100vw"
                 alt={promo.title}
                 className="mt-4 h-48 w-full object-cover rounded-lg"
+                loading="lazy"
+                decoding="async"
               />
             )}
 

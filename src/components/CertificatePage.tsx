@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../lib/imageOptimizations';
 import { Certificate, Settings } from '../lib/types';
 import NotificationModal from './NotificationModal';
 
@@ -257,9 +258,13 @@ export default function CertificatePage() {
               >
                 {cert.imageUrl ? (
                   <img
-                    src={cert.imageUrl}
+                    src={getOptimizedImageUrl(cert.imageUrl, { width: 1200 })}
+                    srcSet={getResponsiveSrcSet(cert.imageUrl, [600, 900, 1200, 1600])}
+                    sizes="(min-width: 1024px) 66vw, 100vw"
                     alt={cert.title}
                     className="w-full max-h-[520px] object-contain rounded-lg"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div className="text-white/80 text-center py-10">

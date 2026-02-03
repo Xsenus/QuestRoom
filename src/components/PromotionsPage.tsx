@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../lib/imageOptimizations';
 import { Promotion, Settings } from '../lib/types';
 
 export default function PromotionsPage() {
@@ -68,13 +69,17 @@ export default function PromotionsPage() {
                   <>
                     {promo.imageUrl ? (
                       <img
-                        src={promo.imageUrl}
+                        src={getOptimizedImageUrl(promo.imageUrl, { width: 1200 })}
+                        srcSet={getResponsiveSrcSet(promo.imageUrl, [600, 900, 1200, 1600])}
+                        sizes="(min-width: 1024px) 33vw, 100vw"
                         alt={promo.title}
                         className={`w-full rounded-lg bg-white/5 ${
                           promotionsPerRow === 1
                             ? 'max-h-[420px] object-contain'
                             : 'max-h-[320px] object-cover'
                         }`}
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="h-56 rounded-lg border border-dashed border-white/40 flex items-center justify-center text-white/70">
