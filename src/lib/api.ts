@@ -820,10 +820,39 @@ class ApiClient {
     });
   }
 
-  async createDatabaseBackup(): Promise<{ message: string; fileName?: string }> {
-    return this.request('/settings/backup', {
+  async createDatabaseBackup(): Promise<{ blob: Blob; fileName: string }> {
+    const options: RequestInit = {
       method: 'POST',
+    };
+    const response = await fetch(`${API_URL}/settings/backup`, {
+      ...options,
+      headers: buildAuthHeaders(options),
     });
+
+    if (!response.ok) {
+      const rawText = await response.text();
+      try {
+        const error = rawText ? JSON.parse(rawText) : { message: 'Request failed' };
+        if (typeof error === 'string') {
+          throw new Error(error);
+        }
+        throw new Error(error.message || `HTTP ${response.status}`);
+      } catch (parseError) {
+        throw new Error(rawText || `HTTP ${response.status}`);
+      }
+    }
+
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get('content-disposition') || '';
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const asciiMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+    const fileName = utf8Match
+      ? decodeURIComponent(utf8Match[1])
+      : asciiMatch
+        ? asciiMatch[1]
+        : 'questroom.backup';
+
+    return { blob, fileName };
   }
 }
 

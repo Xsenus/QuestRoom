@@ -635,11 +635,19 @@ export default function SettingsPage() {
     setBackupCreating(true);
 
     try {
-      const response = await api.createDatabaseBackup();
+      const { blob, fileName } = await api.createDatabaseBackup();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
       setNotification({
         isOpen: true,
         title: 'Резервная копия создана',
-        message: response.message || 'Резервная копия базы данных сохранена.',
+        message: `Резервная копия базы данных сохранена как ${fileName}.`,
         tone: 'success',
       });
     } catch (error) {

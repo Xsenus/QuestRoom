@@ -255,6 +255,11 @@ public class SettingsController : ControllerBase
             return BadRequest(new { message = result.Message });
         }
 
-        return Ok(new { message = result.Message, fileName = result.FileName });
+        if (string.IsNullOrWhiteSpace(result.FilePath) || !System.IO.File.Exists(result.FilePath))
+        {
+            return BadRequest(new { message = "Файл резервной копии не найден." });
+        }
+
+        return PhysicalFile(result.FilePath, "application/octet-stream", result.FileName);
     }
 }
