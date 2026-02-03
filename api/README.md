@@ -128,7 +128,8 @@ Swagger UI: `http://localhost:5000/swagger`
   - Query параметры: `from` и `to` в формате `YYYY-MM-DD` (опционально).
 - `POST /api/mir-kvestov/{questSlug}/order` или `/api/mir-kvestov/{questSlug}.json/order` - Создать бронирование от агрегатора.
   - Принимает `application/x-www-form-urlencoded` или JSON с полями: `first_name`, `family_name`, `phone`, `email`, `comment`, `source`, `md5`, `date`, `time`, `price`, `unique_id`, `your_slot_id`, `players`, `tariff`.
-  - `your_slot_id` поддерживает GUID или числовой формат `YYYYMMDDHHMM` (по умолчанию числовой, управляется в настройках интеграции).
+- `your_slot_id` поддерживает GUID или числовой формат `YYYYMMDDHHMM` (по умолчанию числовой, управляется в настройках интеграции).
+  - `Md5Key`/`PrepayMd5Key` могут содержать несколько ключей через запятую или точку с запятой.
 - `GET /api/mir-kvestov/{questSlug}/get_price?date=YYYY-MM-DD&time=HH:MM` или `/api/mir-kvestov/{questSlug}.json/get_price?date=YYYY-MM-DD&time=HH:MM` - Получить тарифы для слота.
 - `GET /api/mir-kvestov/{questSlug}/prepay?md5=...&unique_id=...&prepay=...` или `/api/mir-kvestov/{questSlug}.json/prepay?md5=...&unique_id=...&prepay=...` - Уведомление о предоплате (ответ строго `{"success":true}`).
 

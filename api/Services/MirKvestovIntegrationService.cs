@@ -236,10 +236,23 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         }
 
         var settings = await GetSettingsSnapshotAsync(cancellationToken);
-        var prepayKey = settings.PrepayMd5Key ?? string.Empty;
-        var payload = $"{prepayKey}{uniqueId}{prepay}";
-        var expected = ComputeMd5(payload);
-        return expected.Equals(md5, StringComparison.OrdinalIgnoreCase);
+        var keys = ParseMd5Keys(settings.PrepayMd5Key);
+        if (keys.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var key in keys)
+        {
+            var payload = $"{key}{uniqueId}{prepay}";
+            var expected = ComputeMd5(payload);
+            if (expected.Equals(md5, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool TryParseDateTime(string? dateValue, string? timeValue, out DateOnly date, out TimeOnly time)
@@ -416,7 +429,8 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
 
     private bool IsMd5Valid(MirKvestovOrderRequest request, string? md5Key)
     {
-        if (string.IsNullOrWhiteSpace(md5Key))
+        var keys = ParseMd5Keys(md5Key);
+        if (keys.Count == 0)
         {
             return true;
         }
@@ -426,9 +440,17 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return false;
         }
 
-        var payload = $"{request.FirstName}{request.FamilyName}{request.Phone}{request.Email}{md5Key}";
-        var expected = ComputeMd5(payload);
-        return expected.Equals(request.Md5, StringComparison.OrdinalIgnoreCase);
+        foreach (var key in keys)
+        {
+            var payload = $"{request.FirstName}{request.FamilyName}{request.Phone}{request.Email}{key}";
+            var expected = ComputeMd5(payload);
+            if (expected.Equals(request.Md5, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string ComputeMd5(string value)
@@ -442,6 +464,21 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         }
 
         return builder.ToString();
+    }
+
+    private static List<string> ParseMd5Keys(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return new List<string>();
+        }
+
+        return value
+            .Split(new[] { ',', ';', '\n', '\r', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(key => key.Trim())
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     private DateTime GetLocalNow(string? timeZoneId)
