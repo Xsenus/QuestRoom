@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Plus, ShieldCheck, Trash2, Lock, Unlock, KeyRound, Search, RefreshCw, X } from 'lucide-react';
+import { Plus, ShieldCheck, Trash2, Lock, Unlock, KeyRound, Search, RefreshCw, X, Pencil } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { AdminUser, AdminUserUpsert, RoleDefinition } from '../../lib/types';
 import NotificationModal from '../../components/NotificationModal';
@@ -89,6 +89,8 @@ export default function UsersPage() {
       return acc;
     }, {});
   }, [roles]);
+
+  const isAdminUser = (user: AdminUser) => roleMap[user.roleId]?.code === 'admin';
 
   const loadData = async () => {
     try {
@@ -268,6 +270,15 @@ export default function UsersPage() {
   };
 
   const updateRole = async (user: AdminUser, roleId: string) => {
+    if (isAdminUser(user)) {
+      setNotification({
+        isOpen: true,
+        title: 'Роль закреплена',
+        message: 'У администратора роль менять нельзя.',
+        tone: 'error',
+      });
+      return;
+    }
     if (!canEdit) return;
     try {
       const updated = await api.updateAdminUser(user.id, {
@@ -530,8 +541,9 @@ export default function UsersPage() {
                               ? 'border-gray-200 text-gray-700 hover:bg-gray-50'
                               : 'cursor-not-allowed border-gray-100 text-gray-300'
                           }`}
+                          title="Редактировать"
                         >
-                          Изменить
+                          <Pencil className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
@@ -545,8 +557,13 @@ export default function UsersPage() {
                               ? 'border-gray-200 text-gray-700 hover:bg-gray-50'
                               : 'cursor-not-allowed border-gray-100 text-gray-300'
                           }`}
+                          title={user.status === 'blocked' ? 'Разблокировать' : 'Блокировать'}
                         >
-                          {user.status === 'blocked' ? 'Разблокировать' : 'Блокировать'}
+                          {user.status === 'blocked' ? (
+                            <Unlock className="h-4 w-4" />
+                          ) : (
+                            <Lock className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -583,7 +600,7 @@ export default function UsersPage() {
                   <select
                     value={selectedUser.roleId || roles[0]?.id || ''}
                     onChange={(event) => updateRole(selectedUser, event.target.value)}
-                    disabled={!canEdit}
+                    disabled={!canEdit || isAdminUser(selectedUser)}
                     className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                   >
                     {roles.map((role) => (

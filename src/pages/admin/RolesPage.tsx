@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Check, Shield, Plus, RefreshCw, X } from 'lucide-react';
+import { Check, Shield, Plus, RefreshCw, X, Pencil, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { PermissionGroup, RoleDefinition } from '../../lib/types';
 import NotificationModal from '../../components/NotificationModal';
@@ -283,14 +283,15 @@ export default function RolesPage() {
                             event.stopPropagation();
                             startEdit(role);
                           }}
-                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${
+                          className={`rounded-lg border p-1.5 text-xs font-semibold ${
                             role.isSystem
                               ? 'cursor-not-allowed border-gray-200 text-gray-300'
                               : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                           }`}
                           disabled={role.isSystem}
+                          title="Изменить"
                         >
-                          Изменить
+                          <Pencil className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
@@ -298,14 +299,15 @@ export default function RolesPage() {
                             event.stopPropagation();
                             deleteRole(role);
                           }}
-                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${
+                          className={`rounded-lg border p-1.5 text-xs font-semibold ${
                             role.isSystem
                               ? 'cursor-not-allowed border-red-100 text-red-200'
                               : 'border-red-200 text-red-600 hover:bg-red-50'
                           }`}
                           disabled={role.isSystem}
+                          title="Удалить"
                         >
-                          Удалить
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -335,12 +337,16 @@ export default function RolesPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectedRole.permissions.map((permissionId) => {
                       const permission = permissionIndex.find((item) => item.id === permissionId);
+                      const label = permission
+                        ? `${permission.groupTitle}: ${permission.title}`
+                        : permissionId;
                       return (
                         <span
                           key={permissionId}
                           className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600"
+                          title={permission?.description}
                         >
-                          {permission?.title || permissionId}
+                          {label}
                         </span>
                       );
                     })}
