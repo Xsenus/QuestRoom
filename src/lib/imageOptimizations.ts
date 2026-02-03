@@ -11,17 +11,63 @@ const isOptimizableUrl = (url?: string | null) => {
   return !url.startsWith('data:') && !url.startsWith('blob:');
 };
 
-export const getOptimizedImageUrl = (
-  url: string,
-  { width, quality = DEFAULT_QUALITY, format = 'auto' }: ImageTransformOptions = {}
-) => {
+const getApiOrigin = () => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (!apiUrl) return null;
+  try {
+    return new URL(apiUrl).origin;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeImageUrl = (url: string) => {
   if (!isOptimizableUrl(url)) {
     return url;
   }
 
   try {
-    const baseUrl = typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
-    const parsed = new URL(url, baseUrl);
+    const apiOrigin = getApiOrigin();
+    const windowOrigin = typeof window === 'undefined' ? null : window.location.origin;
+    const baseOrigin =
+      url.startsWith('/api/') && apiOrigin
+        ? apiOrigin
+        : windowOrigin || apiOrigin || 'http://localhost';
+    const parsed = new URL(url, baseOrigin);
+
+    if (apiOrigin) {
+      const apiParsed = new URL(apiOrigin);
+      if (parsed.host === apiParsed.host && parsed.protocol !== apiParsed.protocol) {
+        parsed.protocol = apiParsed.protocol;
+      }
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:' &&
+      parsed.protocol === 'http:' &&
+      parsed.host === window.location.host
+    ) {
+      parsed.protocol = 'https:';
+    }
+
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+};
+
+export const getOptimizedImageUrl = (
+  url: string,
+  { width, quality = DEFAULT_QUALITY, format = 'auto' }: ImageTransformOptions = {}
+) => {
+  const normalizedUrl = normalizeImageUrl(url);
+  if (!isOptimizableUrl(normalizedUrl)) {
+    return normalizedUrl;
+  }
+
+  try {
+    const parsed = new URL(normalizedUrl);
 
     if (width) {
       parsed.searchParams.set('w', String(width));
@@ -37,7 +83,7 @@ export const getOptimizedImageUrl = (
 
     return parsed.toString();
   } catch {
-    return url;
+    return normalizedUrl;
   }
 };
 
@@ -46,11 +92,12 @@ export const getResponsiveSrcSet = (
   widths: number[],
   options: Omit<ImageTransformOptions, 'width'> = {}
 ) => {
-  if (!isOptimizableUrl(url)) {
+  const normalizedUrl = normalizeImageUrl(url);
+  if (!isOptimizableUrl(normalizedUrl)) {
     return undefined;
   }
 
   return widths
-    .map((width) => `${getOptimizedImageUrl(url, { ...options, width })} ${width}w`)
+    .map((width) => `${getOptimizedImageUrl(normalizedUrl, { ...options, width })} ${width}w`)
     .join(', ');
 };
