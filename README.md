@@ -87,6 +87,26 @@ npm run dev
 
 Фронтенд будет доступен по адресу: `http://localhost:5173`
 
+### Полезные npm-скрипты (Frontend)
+
+```bash
+# Локальная разработка
+npm run dev
+
+# Запуск dev-сервера на 0.0.0.0:5173 (для доступа из сети/контейнеров)
+npm run net
+
+# Сборка production
+npm run build
+
+# Предпросмотр production-сборки
+npm run preview
+
+# Линтинг и проверка типов
+npm run lint
+npm run typecheck
+```
+
 ### Прокси /api для разработки
 
 Если вы открываете API через фронтенд-хост (например, `http://localhost:5173/api/...`), Vite dev server
