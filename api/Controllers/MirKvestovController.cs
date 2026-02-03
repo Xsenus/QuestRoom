@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.MirKvestov;
@@ -77,9 +75,13 @@ public class MirKvestovController : ControllerBase
     [HttpPost("{questSlug}.json/order")]
     public async Task<IActionResult> CreateOrder(string questSlug)
     {
-        var request = await ReadOrderRequestAsync();
+        var request = await MirKvestovOrderRequestReader.ReadOrderRequestAsync(
+            Request,
+            HttpContext.RequestAborted);
         var payload = request == null
-            ? await ReadBodyAsync()
+            ? await MirKvestovOrderRequestReader.ReadBodyAsync(
+                Request,
+                HttpContext.RequestAborted)
             : JsonSerializer.Serialize(
                 request,
                 new JsonSerializerOptions
@@ -168,119 +170,6 @@ public class MirKvestovController : ControllerBase
         }
 
         return Content("{\"success\":true}", "application/json");
-    }
-
-    private async Task<MirKvestovOrderRequest?> ReadOrderRequestAsync()
-    {
-        Request.EnableBuffering();
-
-        if (Request.HasFormContentType)
-        {
-            var form = await Request.ReadFormAsync();
-            return BuildOrderRequest(form);
-        }
-
-        var rawBody = await ReadBodyAsync();
-        if (!string.IsNullOrWhiteSpace(rawBody))
-        {
-            try
-            {
-                var request = JsonSerializer.Deserialize<MirKvestovOrderRequest>(
-                    rawBody,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                if (request != null)
-                {
-                    return request;
-                }
-            }
-            catch (JsonException)
-            {
-                // Ignore JSON parse errors and try form-encoded fallback.
-            }
-
-            var parsed = QueryHelpers.ParseQuery(rawBody);
-            if (parsed.Count > 0)
-            {
-                return BuildOrderRequest(parsed);
-            }
-        }
-
-        try
-        {
-            return await JsonSerializer.DeserializeAsync<MirKvestovOrderRequest>(
-                Request.Body,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                },
-                HttpContext.RequestAborted);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    private static MirKvestovOrderRequest BuildOrderRequest(IFormCollection data)
-    {
-        return BuildOrderRequest(key => data[key]);
-    }
-
-    private static MirKvestovOrderRequest BuildOrderRequest(
-        IReadOnlyDictionary<string, Microsoft.Extensions.Primitives.StringValues> data)
-    {
-        return BuildOrderRequest(key => data[key]);
-    }
-
-    private static MirKvestovOrderRequest BuildOrderRequest(
-        Func<string, Microsoft.Extensions.Primitives.StringValues> getValue)
-    {
-        return new MirKvestovOrderRequest
-        {
-            FirstName = getValue("first_name"),
-            FamilyName = getValue("family_name"),
-            Phone = getValue("phone"),
-            Email = getValue("email"),
-            Comment = getValue("comment"),
-            Source = getValue("source"),
-            Md5 = getValue("md5"),
-            Date = getValue("date"),
-            Time = getValue("time"),
-            Price = TryParseInt(getValue("price")),
-            UniqueId = getValue("unique_id"),
-            YourSlotId = getValue("your_slot_id"),
-            Players = TryParseInt(getValue("players")),
-            Tariff = getValue("tariff")
-        };
-    }
-
-    private async Task<string> ReadBodyAsync()
-    {
-        if (Request.Body == null || !Request.Body.CanRead)
-        {
-            return string.Empty;
-        }
-
-        Request.Body.Position = 0;
-        using var reader = new StreamReader(Request.Body, leaveOpen: true);
-        var body = await reader.ReadToEndAsync();
-        Request.Body.Position = 0;
-        return body;
-    }
-
-    private static int? TryParseInt(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : null;
     }
 
     private static bool TryParseDateTime(string dateValue, string timeValue, out DateOnly date, out TimeOnly time)
