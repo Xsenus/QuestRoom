@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 interface User {
   email: string;
   role: string;
+  permissions: string[];
 }
 
 interface AuthContextType {
@@ -12,6 +13,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: () => boolean;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,29 +24,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const email = localStorage.getItem('user_email');
-    const role = localStorage.getItem('user_role');
-    const expiresAt = Number(localStorage.getItem('auth_expires_at'));
+    const loadCurrentUser = async () => {
+      if (!api.isAuthenticated()) {
+        setLoading(false);
+        return;
+      }
 
-    const isExpired = Number.isFinite(expiresAt) && Date.now() > expiresAt;
+      try {
+        const profile = await api.getCurrentUser();
+        const permissions = Array.isArray(profile.permissions) ? profile.permissions : [];
+        setUser({
+          email: profile.email,
+          role: profile.role,
+          permissions,
+        });
+        localStorage.setItem('user_email', profile.email);
+        localStorage.setItem('user_role', profile.role);
+        localStorage.setItem('user_permissions', JSON.stringify(permissions));
+      } catch {
+        api.logout();
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (isExpired) {
-      api.logout();
-      setLoading(false);
-      return;
-    }
-
-    if (token && email && role) {
-      setUser({ email, role });
-    }
-    setLoading(false);
+    loadCurrentUser();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       const data = await api.login(email, password);
-      setUser({ email: data.email, role: data.role });
+      setUser({
+        email: data.email,
+        role: data.role,
+        permissions: Array.isArray(data.permissions) ? data.permissions : [],
+      });
       return { error: null };
     } catch (error) {
       return { error: error as Error };
@@ -56,11 +72,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = () => {
-    return user?.role === 'admin';
+    return user?.role === 'admin' || user?.role === 'Администратор';
+  };
+
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    if (isAdmin()) return true;
+    return user.permissions.includes(permission);
+  };
+
+  const hasAnyPermission = (permissions: string[]) => {
+    if (!user) return false;
+    if (isAdmin()) return true;
+    return permissions.some((permission) => user.permissions.includes(permission));
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, isAdmin }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, signOut, isAdmin, hasPermission, hasAnyPermission }}
+    >
       {children}
     </AuthContext.Provider>
   );

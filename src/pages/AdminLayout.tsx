@@ -24,11 +24,34 @@ import {
 } from 'lucide-react';
 
 export default function AdminLayout() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, hasPermission, hasAnyPermission, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(true);
+
+  const canViewQuests = hasPermission('quests.view');
+  const canViewExtraServices = hasPermission('extra-services.view');
+  const canViewBookings = hasPermission('bookings.view');
+  const canViewBookingImport = hasPermission('bookings.import');
+  const canViewCalendarPricing = hasPermission('calendar.pricing.view');
+  const canViewCalendarProduction = hasPermission('calendar.production.view');
+  const canViewCalendar = hasAnyPermission([
+    'calendar.pricing.view',
+    'calendar.production.view',
+  ]);
+  const canViewRules = hasPermission('rules.view');
+  const canViewAbout = hasPermission('about.view');
+  const canViewCertificates = hasPermission('certificates.view');
+  const canViewCertificateOrders = hasPermission('certificate-orders.view');
+  const canViewReviews = hasPermission('reviews.view');
+  const canViewPromotions = hasPermission('promotions.view');
+  const canViewTeaZones = hasPermission('tea-zones.view');
+  const canViewGallery = hasPermission('gallery.view');
+  const canViewPromoCodes = hasPermission('promo-codes.view');
+  const canViewUsers = hasPermission('users.view');
+  const canViewRoles = isAdmin();
+  const canViewSettings = hasPermission('settings.view');
 
   const handleLogout = async () => {
     await signOut();
@@ -105,113 +128,177 @@ export default function AdminLayout() {
                 {!isMenuCollapsed && <span className="text-sm font-semibold">Меню</span>}
               </button>
             </div>
-            <NavLink to="/adm/quests" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <ListChecks className="w-5 h-5" />
-              {!isMenuCollapsed && 'Квесты'}
-            </NavLink>
-            <NavLink to="/adm/extra-services" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <ClipboardList className="w-5 h-5" />
-              {!isMenuCollapsed && 'Доп. услуги'}
-            </NavLink>
-            <NavLink to="/adm/bookings" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Calendar className="w-5 h-5" />
-              {!isMenuCollapsed && 'Бронь'}
-            </NavLink>
-            <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
+            {canViewQuests && (
+              <NavLink to="/adm/quests" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <ListChecks className="w-5 h-5" />
+                {!isMenuCollapsed && 'Квесты'}
+              </NavLink>
+            )}
+            {canViewExtraServices && (
               <NavLink
-                to="/adm/bookings/import"
-                className={navSubLinkClass}
+                to="/adm/extra-services"
+                className={navLinkClass}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <ClipboardList className="w-4 h-4 text-gray-500" />
-                {!isMenuCollapsed && 'Импорт'}
+                <ClipboardList className="w-5 h-5" />
+                {!isMenuCollapsed && 'Доп. услуги'}
               </NavLink>
-            </div>
-            <button
-              type="button"
-              className={`flex w-full items-center gap-3 px-6 py-3 font-semibold text-gray-700 transition-all hover:bg-gray-100 ${
-                isMenuCollapsed ? 'justify-center px-3' : ''
-              }`}
-              onClick={() => setIsCalendarOpen((prev) => !prev)}
-            >
-              <CalendarClock className="w-5 h-5" />
-              {!isMenuCollapsed && (
-                <span className="flex flex-1 items-center justify-between">
-                  Календарь
-                  <span className="text-xs text-gray-400">{isCalendarOpen ? '−' : '+'}</span>
-                </span>
-              )}
-            </button>
-            {isCalendarOpen && (
-              <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
-                <NavLink to="/adm/pricing" className={navSubLinkClass} onClick={() => setIsMenuOpen(false)}>
-                  <CalendarClock className="w-4 h-4 text-gray-500" />
-                  {!isMenuCollapsed && 'Ценовые правила'}
-                </NavLink>
+            )}
+            {canViewBookings && (
+              <>
                 <NavLink
-                  to="/adm/production-calendar"
-                  className={navSubLinkClass}
+                  to="/adm/bookings"
+                  className={navLinkClass}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  <CalendarDays className="w-4 h-4 text-gray-500" />
-                  {!isMenuCollapsed && 'Производственный'}
+                  <Calendar className="w-5 h-5" />
+                  {!isMenuCollapsed && 'Бронь'}
                 </NavLink>
-              </div>
+                {canViewBookingImport && (
+                  <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
+                    <NavLink
+                      to="/adm/bookings/import"
+                      className={navSubLinkClass}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <ClipboardList className="w-4 h-4 text-gray-500" />
+                      {!isMenuCollapsed && 'Импорт'}
+                    </NavLink>
+                  </div>
+                )}
+              </>
             )}
-            <NavLink to="/adm/rules" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <FileText className="w-5 h-5" />
-              {!isMenuCollapsed && 'Правила'}
-            </NavLink>
-            <NavLink to="/adm/about" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Info className="w-5 h-5" />
-              {!isMenuCollapsed && 'О проекте'}
-            </NavLink>
-            <NavLink to="/adm/certificates" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Award className="w-5 h-5" />
-              {!isMenuCollapsed && 'Сертификаты'}
-            </NavLink>
-            <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
+            {canViewCalendar && (
+              <>
+                <button
+                  type="button"
+                  className={`flex w-full items-center gap-3 px-6 py-3 font-semibold text-gray-700 transition-all hover:bg-gray-100 ${
+                    isMenuCollapsed ? 'justify-center px-3' : ''
+                  }`}
+                  onClick={() => setIsCalendarOpen((prev) => !prev)}
+                >
+                  <CalendarClock className="w-5 h-5" />
+                  {!isMenuCollapsed && (
+                    <span className="flex flex-1 items-center justify-between">
+                      Календарь
+                      <span className="text-xs text-gray-400">{isCalendarOpen ? '−' : '+'}</span>
+                    </span>
+                  )}
+                </button>
+                {isCalendarOpen && (
+                  <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
+                    {canViewCalendarPricing && (
+                      <NavLink
+                        to="/adm/pricing"
+                        className={navSubLinkClass}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <CalendarClock className="w-4 h-4 text-gray-500" />
+                        {!isMenuCollapsed && 'Ценовые правила'}
+                      </NavLink>
+                    )}
+                    {canViewCalendarProduction && (
+                      <NavLink
+                        to="/adm/production-calendar"
+                        className={navSubLinkClass}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <CalendarDays className="w-4 h-4 text-gray-500" />
+                        {!isMenuCollapsed && 'Производственный'}
+                      </NavLink>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+            {canViewRules && (
+              <NavLink to="/adm/rules" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <FileText className="w-5 h-5" />
+                {!isMenuCollapsed && 'Правила'}
+              </NavLink>
+            )}
+            {canViewAbout && (
+              <NavLink to="/adm/about" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <Info className="w-5 h-5" />
+                {!isMenuCollapsed && 'О проекте'}
+              </NavLink>
+            )}
+            {canViewCertificates && (
+              <>
+                <NavLink
+                  to="/adm/certificates"
+                  className={navLinkClass}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Award className="w-5 h-5" />
+                  {!isMenuCollapsed && 'Сертификаты'}
+                </NavLink>
+                {canViewCertificateOrders && (
+                  <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
+                    <NavLink
+                      to="/adm/certificate-orders"
+                      className={navSubLinkClass}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <ClipboardList className="w-4 h-4 text-gray-500" />
+                      {!isMenuCollapsed && 'Заявки'}
+                    </NavLink>
+                  </div>
+                )}
+              </>
+            )}
+            {canViewReviews && (
+              <NavLink to="/adm/reviews" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <MessageSquare className="w-5 h-5" />
+                {!isMenuCollapsed && 'Отзывы'}
+              </NavLink>
+            )}
+            {canViewPromotions && (
+              <NavLink to="/adm/promotions" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <Tag className="w-5 h-5" />
+                {!isMenuCollapsed && 'Акции'}
+              </NavLink>
+            )}
+            {canViewTeaZones && (
+              <NavLink to="/adm/tea-zones" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <Coffee className="w-5 h-5" />
+                {!isMenuCollapsed && 'Зоны для чаепития'}
+              </NavLink>
+            )}
+            {canViewGallery && (
+              <NavLink to="/adm/images" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <Images className="w-5 h-5" />
+                {!isMenuCollapsed && 'Галерея'}
+              </NavLink>
+            )}
+            {canViewPromoCodes && (
               <NavLink
-                to="/adm/certificate-orders"
-                className={navSubLinkClass}
+                to="/adm/promo-codes"
+                className={navLinkClass}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <ClipboardList className="w-4 h-4 text-gray-500" />
-                {!isMenuCollapsed && 'Заявки'}
+                <TicketPercent className="w-5 h-5" />
+                {!isMenuCollapsed && 'Промокоды'}
               </NavLink>
-            </div>
-            <NavLink to="/adm/reviews" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <MessageSquare className="w-5 h-5" />
-              {!isMenuCollapsed && 'Отзывы'}
-            </NavLink>
-            <NavLink to="/adm/promotions" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Tag className="w-5 h-5" />
-              {!isMenuCollapsed && 'Акции'}
-            </NavLink>
-            <NavLink to="/adm/tea-zones" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Coffee className="w-5 h-5" />
-              {!isMenuCollapsed && 'Зоны для чаепития'}
-            </NavLink>
-            <NavLink to="/adm/images" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Images className="w-5 h-5" />
-              {!isMenuCollapsed && 'Библиотека изображений'}
-            </NavLink>
-            <NavLink to="/adm/promo-codes" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <TicketPercent className="w-5 h-5" />
-              {!isMenuCollapsed && 'Промокоды'}
-            </NavLink>
-            <NavLink to="/adm/users" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Users className="w-5 h-5" />
-              {!isMenuCollapsed && 'Пользователи'}
-            </NavLink>
-            <NavLink to="/adm/roles" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <ShieldCheck className="w-5 h-5" />
-              {!isMenuCollapsed && 'Роли и права'}
-            </NavLink>
-            <NavLink to="/adm/settings" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
-              <Settings className="w-5 h-5" />
-              {!isMenuCollapsed && 'Настройки'}
-            </NavLink>
+            )}
+            {canViewUsers && (
+              <NavLink to="/adm/users" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <Users className="w-5 h-5" />
+                {!isMenuCollapsed && 'Пользователи'}
+              </NavLink>
+            )}
+            {canViewRoles && (
+              <NavLink to="/adm/roles" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <ShieldCheck className="w-5 h-5" />
+                {!isMenuCollapsed && 'Роли и права'}
+              </NavLink>
+            )}
+            {canViewSettings && (
+              <NavLink to="/adm/settings" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <Settings className="w-5 h-5" />
+                {!isMenuCollapsed && 'Настройки'}
+              </NavLink>
+            )}
           </nav>
         </aside>
 

@@ -3,8 +3,14 @@ import { api } from '../../lib/api';
 import { Review, ReviewUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Star } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 export default function ReviewsAdminPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('reviews.view');
+  const canEdit = hasPermission('reviews.edit');
+  const canDelete = hasPermission('reviews.delete');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingReview, setEditingReview] = useState<
@@ -53,6 +59,7 @@ export default function ReviewsAdminPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setEditingReview({
       customerName: '',
       questTitle: '',
@@ -66,6 +73,7 @@ export default function ReviewsAdminPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingReview) return;
 
     const { id, ...payload } = editingReview;
@@ -92,6 +100,7 @@ export default function ReviewsAdminPage() {
   };
 
   const handleToggleVisibility = async (review: Review) => {
+    if (!canEdit) return;
     try {
       const { id, createdAt, updatedAt, ...payload } = review;
       await api.updateReview(id, { ...payload, isVisible: !review.isVisible });
@@ -102,6 +111,7 @@ export default function ReviewsAdminPage() {
   };
 
   const handleToggleFeatured = async (review: Review) => {
+    if (!canEdit) return;
     try {
       const { id, createdAt, updatedAt, ...payload } = review;
       await api.updateReview(id, { ...payload, isFeatured: !review.isFeatured });
@@ -116,6 +126,7 @@ export default function ReviewsAdminPage() {
   };
 
   const confirmDelete = async (review: Review) => {
+    if (!canDelete) return;
     try {
       await api.deleteReview(review.id);
       setNotification({
@@ -169,6 +180,10 @@ export default function ReviewsAdminPage() {
       ),
     });
   };
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
@@ -298,7 +313,12 @@ export default function ReviewsAdminPage() {
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                disabled={!canEdit}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 <Save className="w-5 h-5" />
                 Сохранить
@@ -346,7 +366,12 @@ export default function ReviewsAdminPage() {
           </div>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            disabled={!canEdit}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+              canEdit
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'cursor-not-allowed bg-red-200 text-white/80'
+            }`}
           >
             <Plus className="w-5 h-5" />
             Добавить отзыв
@@ -416,17 +441,25 @@ export default function ReviewsAdminPage() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setEditingReview(review)}
-                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                        disabled={!canEdit}
+                        className={`p-2 rounded-lg transition-colors ${
+                          canEdit
+                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                            : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                        }`}
                         title="Редактировать"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleToggleFeatured(review)}
+                        disabled={!canEdit}
                         className={`p-2 rounded-lg transition-colors ${
-                          review.isFeatured
-                            ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                          canEdit
+                            ? review.isFeatured
+                              ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                            : 'cursor-not-allowed bg-gray-50 text-gray-200'
                         }`}
                         title={
                           review.isFeatured ? 'Убрать из избранных' : 'Добавить в избранные'
@@ -439,7 +472,12 @@ export default function ReviewsAdminPage() {
                       </button>
                       <button
                         onClick={() => handleToggleVisibility(review)}
-                        className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                        disabled={!canEdit}
+                        className={`p-2 rounded-lg transition-colors ${
+                          canEdit
+                            ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                            : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
+                        }`}
                         title={review.isVisible ? 'Скрыть' : 'Показать'}
                       >
                         {review.isVisible ? (
@@ -450,7 +488,12 @@ export default function ReviewsAdminPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(review)}
-                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                        disabled={!canDelete}
+                        className={`p-2 rounded-lg transition-colors ${
+                          canDelete
+                            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                            : 'cursor-not-allowed bg-red-50 text-red-200'
+                        }`}
                         title="Удалить"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -518,17 +561,25 @@ export default function ReviewsAdminPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEditingReview(review)}
-                    className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                    disabled={!canEdit}
+                    className={`p-2 rounded-lg transition-colors ${
+                      canEdit
+                        ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                        : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                    }`}
                     title="Редактировать"
                   >
                     <Edit className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleToggleFeatured(review)}
+                    disabled={!canEdit}
                     className={`p-2 rounded-lg transition-colors ${
-                      review.isFeatured
-                        ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                      canEdit
+                        ? review.isFeatured
+                          ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                        : 'cursor-not-allowed bg-gray-50 text-gray-200'
                     }`}
                     title={review.isFeatured ? 'Убрать из избранных' : 'Добавить в избранные'}
                   >
@@ -539,7 +590,12 @@ export default function ReviewsAdminPage() {
                   </button>
                   <button
                     onClick={() => handleToggleVisibility(review)}
-                    className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                    disabled={!canEdit}
+                    className={`p-2 rounded-lg transition-colors ${
+                      canEdit
+                        ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                        : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
+                    }`}
                     title={review.isVisible ? 'Скрыть' : 'Показать'}
                   >
                     {review.isVisible ? (
@@ -550,7 +606,12 @@ export default function ReviewsAdminPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(review)}
-                    className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                    disabled={!canDelete}
+                    className={`p-2 rounded-lg transition-colors ${
+                      canDelete
+                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                        : 'cursor-not-allowed bg-red-50 text-red-200'
+                    }`}
                     title="Удалить"
                   >
                     <Trash2 className="w-5 h-5" />

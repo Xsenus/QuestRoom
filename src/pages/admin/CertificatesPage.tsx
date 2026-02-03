@@ -3,6 +3,8 @@ import { api } from '../../lib/api';
 import { Certificate, CertificateUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 type ActionModalState = {
   title: string;
@@ -13,6 +15,10 @@ type ActionModalState = {
 };
 
 export default function CertificatesPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('certificates.view');
+  const canEdit = hasPermission('certificates.edit');
+  const canDelete = hasPermission('certificates.delete');
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCert, setEditingCert] = useState<
@@ -38,6 +44,7 @@ export default function CertificatesPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setEditingCert({
       title: '',
       description: '',
@@ -50,6 +57,7 @@ export default function CertificatesPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingCert) return;
 
     const { id, ...payload } = editingCert;
@@ -76,6 +84,7 @@ export default function CertificatesPage() {
   };
 
   const handleToggleVisibility = async (cert: Certificate) => {
+    if (!canEdit) return;
     try {
       const { id, createdAt, updatedAt, ...payload } = cert;
       await api.updateCertificate(id, { ...payload, isVisible: !cert.isVisible });
@@ -106,6 +115,7 @@ export default function CertificatesPage() {
   };
 
   const handleDelete = (cert: Certificate) => {
+    if (!canDelete) return;
     openActionModal({
       title: 'Удалить сертификат',
       message: `Удалить сертификат «${cert.title}»? Это действие необратимо.`,
@@ -118,6 +128,10 @@ export default function CertificatesPage() {
     });
   };
 
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
   }
@@ -128,7 +142,12 @@ export default function CertificatesPage() {
         <h2 className="text-3xl font-bold text-gray-900">Управление сертификатами</h2>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          disabled={!canEdit}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+            canEdit
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'cursor-not-allowed bg-red-200 text-white/80'
+          }`}
         >
           <Plus className="w-5 h-5" />
           Добавить сертификат
@@ -177,14 +196,24 @@ export default function CertificatesPage() {
                   });
                   setIsCreating(false);
                 }}
-                className="flex-1 p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                disabled={!canEdit}
+                className={`flex-1 p-2 rounded-lg transition-colors ${
+                  canEdit
+                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                    : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                }`}
                 title="Редактировать"
               >
                 <Edit className="w-5 h-5 mx-auto" />
               </button>
               <button
                 onClick={() => handleToggleVisibility(cert)}
-                className="flex-1 p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                disabled={!canEdit}
+                className={`flex-1 p-2 rounded-lg transition-colors ${
+                  canEdit
+                    ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                    : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
+                }`}
                 title={cert.isVisible ? 'Скрыть' : 'Показать'}
               >
                 {cert.isVisible ? (
@@ -195,7 +224,12 @@ export default function CertificatesPage() {
               </button>
               <button
                 onClick={() => handleDelete(cert)}
-                className="flex-1 p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                disabled={!canDelete}
+                className={`flex-1 p-2 rounded-lg transition-colors ${
+                  canDelete
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'cursor-not-allowed bg-red-50 text-red-200'
+                }`}
                 title="Удалить"
               >
                 <Trash2 className="w-5 h-5 mx-auto" />
@@ -270,7 +304,8 @@ export default function CertificatesPage() {
                     onChange={(e) =>
                       setEditingCert({ ...editingCert, imageUrl: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    disabled={!canEdit}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
                     placeholder="/images/certificates/cert1.jpg"
                   />
                   <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors cursor-pointer">
@@ -281,6 +316,7 @@ export default function CertificatesPage() {
                       accept="image/*"
                       className="hidden"
                       onChange={async (event) => {
+                        if (!canEdit) return;
                         const file = event.target.files?.[0];
                         if (!file) return;
                         setIsUploadingImage(true);
@@ -298,9 +334,11 @@ export default function CertificatesPage() {
                 </div>
                 <ImageLibraryPanel
                   onSelect={(url) => setEditingCert({ ...editingCert, imageUrl: url })}
+                  allowUpload={canEdit}
+                  allowDelete={canDelete}
                   toggleLabelClosed="Выбрать из библиотеки"
                   toggleLabelOpen="Скрыть библиотеку"
-                  title="Библиотека изображений"
+                  title="Галерея"
                 />
                 {editingCert.imageUrl && (
                   <img
@@ -370,7 +408,12 @@ export default function CertificatesPage() {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                  disabled={!canEdit}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    canEdit
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'cursor-not-allowed bg-red-200 text-white/80'
+                  }`}
                 >
                   <Save className="w-5 h-5" />
                   Сохранить

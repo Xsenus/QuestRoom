@@ -51,6 +51,7 @@ import type {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const tokenKeys = ['auth_token', 'token'];
+const permissionsStorageKey = 'user_permissions';
 const tokenExpiryKey = 'auth_expires_at';
 const tokenTtlMs = 1000 * 60 * 60 * 24 * 7;
 
@@ -68,6 +69,7 @@ const clearAuthStorage = () => {
   }
   localStorage.removeItem('user_email');
   localStorage.removeItem('user_role');
+  localStorage.removeItem(permissionsStorageKey);
   localStorage.removeItem(tokenExpiryKey);
 };
 
@@ -157,6 +159,7 @@ class ApiClient {
     const token = data.token ?? data.Token;
     const userEmail = data.email ?? data.Email;
     const userRole = data.role ?? data.Role;
+    const userPermissions = data.permissions ?? data.Permissions ?? [];
 
     if (token) {
       localStorage.setItem('auth_token', token);
@@ -167,6 +170,9 @@ class ApiClient {
       if (userRole) {
         localStorage.setItem('user_role', userRole);
       }
+      if (Array.isArray(userPermissions)) {
+        localStorage.setItem(permissionsStorageKey, JSON.stringify(userPermissions));
+      }
     }
 
     return {
@@ -174,7 +180,12 @@ class ApiClient {
       token,
       email: userEmail,
       role: userRole,
+      permissions: userPermissions,
     };
+  }
+
+  async getCurrentUser() {
+    return this.request('/auth/me');
   }
 
   logout() {

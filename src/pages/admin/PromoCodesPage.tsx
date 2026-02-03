@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import type { PromoCode, PromoCodeUpsert } from '../../lib/types';
 import { Edit, PlusCircle, Save, Trash2, X } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 const getToday = () => new Date().toISOString().split('T')[0];
 
@@ -23,6 +25,10 @@ const createEmptyForm = (): PromoCodeUpsert => ({
 });
 
 export default function PromoCodesPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('promo-codes.view');
+  const canEdit = hasPermission('promo-codes.edit');
+  const canDelete = hasPermission('promo-codes.delete');
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,6 +76,7 @@ export default function PromoCodesPage() {
   };
 
   const openCreateModal = () => {
+    if (!canEdit) return;
     resetForm();
     setIsModalOpen(true);
   };
@@ -79,6 +86,7 @@ export default function PromoCodesPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     try {
       if (isDateRangeInvalid) {
         alert('Дата начала не может быть позже даты окончания.');
@@ -98,6 +106,7 @@ export default function PromoCodesPage() {
   };
 
   const handleEdit = (promo: PromoCode) => {
+    if (!canEdit) return;
     setEditingId(promo.id);
     setForm({
       code: promo.code,
@@ -113,6 +122,7 @@ export default function PromoCodesPage() {
   };
 
   const handleDelete = async (promo: PromoCode) => {
+    if (!canDelete) return;
     if (!confirm(`Удалить промокод ${promo.code}?`)) return;
     try {
       await api.deletePromoCode(promo.id);
@@ -121,6 +131,10 @@ export default function PromoCodesPage() {
       alert('Ошибка при удалении: ' + (error as Error).message);
     }
   };
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="space-y-6">
@@ -132,7 +146,12 @@ export default function PromoCodesPage() {
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
+          disabled={!canEdit}
+          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm ${
+            canEdit
+              ? 'bg-white text-gray-600 hover:bg-gray-50'
+              : 'cursor-not-allowed bg-gray-100 text-gray-300'
+          }`}
         >
           <PlusCircle className="h-4 w-4" />
           Новый
@@ -210,7 +229,12 @@ export default function PromoCodesPage() {
                         <button
                           type="button"
                           onClick={() => handleEdit(promo)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                          disabled={!canEdit}
+                          className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                            canEdit
+                              ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                              : 'cursor-not-allowed border-gray-100 text-gray-300'
+                          }`}
                         >
                           <Edit className="h-4 w-4" />
                           Редактировать
@@ -218,7 +242,12 @@ export default function PromoCodesPage() {
                         <button
                           type="button"
                           onClick={() => handleDelete(promo)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                          disabled={!canDelete}
+                          className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                            canDelete
+                              ? 'border-red-200 text-red-600 hover:bg-red-50'
+                              : 'cursor-not-allowed border-red-100 text-red-200'
+                          }`}
                         >
                           <Trash2 className="h-4 w-4" />
                           Удалить
@@ -275,7 +304,12 @@ export default function PromoCodesPage() {
                               <button
                                 type="button"
                                 onClick={() => handleEdit(promo)}
-                                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                                disabled={!canEdit}
+                                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                                  canEdit
+                                    ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                                    : 'cursor-not-allowed border-gray-100 text-gray-300'
+                                }`}
                               >
                                 <Edit className="h-4 w-4" />
                                 Редактировать
@@ -283,7 +317,12 @@ export default function PromoCodesPage() {
                               <button
                                 type="button"
                                 onClick={() => handleDelete(promo)}
-                                className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                disabled={!canDelete}
+                                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                                  canDelete
+                                    ? 'border-red-200 text-red-600 hover:bg-red-50'
+                                    : 'cursor-not-allowed border-red-100 text-red-200'
+                                }`}
                               >
                                 <Trash2 className="h-4 w-4" />
                                 Удалить
@@ -417,7 +456,7 @@ export default function PromoCodesPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={isDateRangeInvalid}
+                disabled={isDateRangeInvalid || !canEdit}
                 className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />

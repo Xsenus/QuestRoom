@@ -835,8 +835,13 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         foreach (var seed in roleSeeds)
         {
-            if (existingRoles.ContainsKey(seed.Code))
+            if (existingRoles.TryGetValue(seed.Code, out var existingRole))
             {
+                existingRole.Name = seed.Name;
+                existingRole.Description = seed.Description;
+                existingRole.Permissions = seed.Permissions.ToList();
+                existingRole.IsSystem = seed.IsSystem;
+                existingRole.UpdatedAt = DateTime.UtcNow;
                 continue;
             }
 

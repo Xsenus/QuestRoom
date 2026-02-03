@@ -3,8 +3,14 @@ import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
 import { api } from '../../lib/api';
 import { TeaZone, TeaZoneUpsert } from '../../lib/types';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 export default function TeaZonesAdminPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('tea-zones.view');
+  const canEdit = hasPermission('tea-zones.edit');
+  const canDelete = hasPermission('tea-zones.delete');
   const [teaZones, setTeaZones] = useState<TeaZone[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingZone, setEditingZone] = useState<(TeaZoneUpsert & { id?: string }) | null>(
@@ -28,6 +34,7 @@ export default function TeaZonesAdminPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setEditingZone({
       name: '',
       description: '',
@@ -41,6 +48,7 @@ export default function TeaZonesAdminPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingZone) return;
 
     const { id, ...payload } = editingZone;
@@ -67,6 +75,7 @@ export default function TeaZonesAdminPage() {
   };
 
   const handleToggleActive = async (zone: TeaZone) => {
+    if (!canEdit) return;
     try {
       const { id, createdAt, updatedAt, ...payload } = zone;
       await api.updateTeaZone(id, { ...payload, isActive: !zone.isActive });
@@ -77,6 +86,7 @@ export default function TeaZonesAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) return;
     if (!confirm('Вы уверены, что хотите удалить эту зону?')) return;
 
     try {
@@ -99,6 +109,7 @@ export default function TeaZonesAdminPage() {
   };
 
   const handleImageUpload = async (files?: FileList | null) => {
+    if (!canEdit) return;
     if (!files || !editingZone) return;
     const filesToUpload = Array.from(files);
     if (!filesToUpload.length) return;
@@ -114,6 +125,10 @@ export default function TeaZonesAdminPage() {
       setIsUploadingImage(false);
     }
   };
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
@@ -208,9 +223,11 @@ export default function TeaZonesAdminPage() {
                     const images = editingZone?.images || [];
                     setEditingZone({ ...editingZone, images: [...images, url] });
                   }}
+                  allowUpload={canEdit}
+                  allowDelete={canDelete}
                   toggleLabelClosed="Выбрать из библиотеки"
                   toggleLabelOpen="Скрыть библиотеку"
-                  title="Библиотека изображений"
+                  title="Галерея"
                 />
                 {(editingZone.images || []).map((img, index) => (
                   <div key={`${img}-${index}`} className="flex items-center gap-3">
@@ -282,7 +299,12 @@ export default function TeaZonesAdminPage() {
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                disabled={!canEdit}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 <Save className="w-5 h-5" />
                 Сохранить
@@ -307,7 +329,12 @@ export default function TeaZonesAdminPage() {
         <h2 className="text-3xl font-bold text-gray-900">Зоны для чаепития</h2>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          disabled={!canEdit}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+            canEdit
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'cursor-not-allowed bg-red-200 text-white/80'
+          }`}
         >
           <Plus className="w-5 h-5" />
           Создать зону
@@ -356,21 +383,36 @@ export default function TeaZonesAdminPage() {
             <div className="mt-auto pt-4 flex justify-end gap-2">
               <button
                 onClick={() => setEditingZone({ ...zone })}
-                className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                disabled={!canEdit}
+                className={`p-2 rounded-lg transition-colors ${
+                  canEdit
+                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                    : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                }`}
                 title="Редактировать"
               >
                 <Edit className="w-5 h-5" />
               </button>
               <button
                 onClick={() => handleToggleActive(zone)}
-                className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                disabled={!canEdit}
+                className={`p-2 rounded-lg transition-colors ${
+                  canEdit
+                    ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                    : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
+                }`}
                 title={zone.isActive ? 'Деактивировать' : 'Активировать'}
               >
                 {zone.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => handleDelete(zone.id)}
-                className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                disabled={!canDelete}
+                className={`p-2 rounded-lg transition-colors ${
+                  canDelete
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'cursor-not-allowed bg-red-50 text-red-200'
+                }`}
                 title="Удалить"
               >
                 <Trash2 className="w-5 h-5" />

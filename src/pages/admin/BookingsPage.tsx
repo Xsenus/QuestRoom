@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 type ActionModalState = {
   title: string;
@@ -127,7 +128,11 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
 ];
 
 export default function BookingsPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canView = hasPermission('bookings.view');
+  const canEdit = hasPermission('bookings.edit');
+  const canDelete = hasPermission('bookings.delete');
+  const canConfirm = hasPermission('bookings.confirm');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [countBookings, setCountBookings] = useState<Booking[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -848,6 +853,9 @@ export default function BookingsPage() {
   };
 
   const handleCreateBooking = async () => {
+    if (!canEdit) {
+      return;
+    }
     if (!editingBooking) {
       return;
     }
@@ -922,6 +930,9 @@ export default function BookingsPage() {
   };
 
   const handleDeleteBooking = (booking: Booking) => {
+    if (!canDelete) {
+      return;
+    }
     openActionModal({
       title: 'Удалить бронь',
       message: `Удалить бронь клиента ${booking.customerName}? Это действие необратимо.`,
@@ -941,6 +952,9 @@ export default function BookingsPage() {
   };
 
   const updateStatus = (booking: Booking, status: Booking['status']) => {
+    if (!canConfirm) {
+      return;
+    }
     const statusLabel = getStatusText(status);
     openActionModal({
       title: `Изменить статус`,
@@ -960,6 +974,9 @@ export default function BookingsPage() {
   };
 
   const openCreateModal = () => {
+    if (!canEdit) {
+      return;
+    }
     const quest = quests.find((item) => item.id === defaultQuestId) || quests[0];
     const today = formatDate(new Date());
     setCreateResult('');
@@ -1009,6 +1026,9 @@ export default function BookingsPage() {
   };
 
   const handleEditBooking = (booking: Booking) => {
+    if (!canEdit) {
+      return;
+    }
     const bookingDateParts = booking.bookingDateTime
       ? splitDateTimeLocal(booking.bookingDateTime)
       : booking.bookingTime
@@ -1061,6 +1081,9 @@ export default function BookingsPage() {
   };
 
   const handleUpdateBooking = async () => {
+    if (!canEdit) {
+      return;
+    }
     if (!editingBooking) {
       return;
     }
@@ -1120,6 +1143,9 @@ export default function BookingsPage() {
   };
 
   const addExtraService = () => {
+    if (!canEdit) {
+      return;
+    }
     if (!editingBooking) {
       return;
     }
@@ -2111,14 +2137,24 @@ export default function BookingsPage() {
     <>
       <button
         onClick={() => handleEditBooking(booking)}
-        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+        disabled={!canEdit}
+        className={`p-2 rounded-lg transition-colors ${
+          canEdit
+            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+            : 'cursor-not-allowed bg-blue-50 text-blue-200'
+        }`}
         title="Редактировать"
       >
         <Edit className="w-4 h-4" />
       </button>
       <button
         onClick={() => handleDeleteBooking(booking)}
-        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+        disabled={!canDelete}
+        className={`p-2 rounded-lg transition-colors ${
+          canDelete
+            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+            : 'cursor-not-allowed bg-red-50 text-red-200'
+        }`}
         title="Удалить"
       >
         <Trash2 className="w-4 h-4" />
@@ -2126,7 +2162,12 @@ export default function BookingsPage() {
       {(booking.status === 'pending' || booking.status === 'not_confirmed') && (
         <button
           onClick={() => updateStatus(booking, 'confirmed')}
-          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs transition-colors"
+          disabled={!canConfirm}
+          className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors ${
+            canConfirm
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'cursor-not-allowed bg-green-200 text-white/80'
+          }`}
         >
           Подтвердить
         </button>
@@ -2136,7 +2177,12 @@ export default function BookingsPage() {
         booking.status === 'not_confirmed') && (
         <button
           onClick={() => updateStatus(booking, 'cancelled')}
-          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors"
+          disabled={!canConfirm}
+          className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors ${
+            canConfirm
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'cursor-not-allowed bg-red-200 text-white/80'
+          }`}
         >
           Отменить
         </button>
@@ -2236,6 +2282,10 @@ export default function BookingsPage() {
     }
   };
 
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   return (
     <div>
       <NotificationModal
@@ -2258,7 +2308,12 @@ export default function BookingsPage() {
           </button>
           <button
             onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+            disabled={!canEdit}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${
+              canEdit
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'cursor-not-allowed bg-red-200 text-white/80'
+            }`}
           >
             <Plus className="w-4 h-4" />
             Создать бронь
@@ -3466,7 +3521,12 @@ export default function BookingsPage() {
               )}
               <button
                 onClick={bookingFormMode === 'create' ? handleCreateBooking : handleUpdateBooking}
-                className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+                disabled={!canEdit}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-colors ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 <Save className="w-4 h-4" />
                 {bookingFormMode === 'create' ? 'Создать бронь' : 'Сохранить'}

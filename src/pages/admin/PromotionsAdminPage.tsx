@@ -3,8 +3,14 @@ import { api } from '../../lib/api';
 import { Promotion, PromotionUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 export default function PromotionsAdminPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('promotions.view');
+  const canEdit = hasPermission('promotions.edit');
+  const canDelete = hasPermission('promotions.delete');
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPromo, setEditingPromo] = useState<
@@ -28,6 +34,7 @@ export default function PromotionsAdminPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setEditingPromo({
       title: '',
       description: '',
@@ -48,6 +55,7 @@ export default function PromotionsAdminPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingPromo) return;
 
     const { id, ...payload } = editingPromo;
@@ -74,6 +82,7 @@ export default function PromotionsAdminPage() {
   };
 
   const handleToggleActive = async (promo: Promotion) => {
+    if (!canEdit) return;
     try {
       const { id, createdAt, updatedAt, ...payload } = promo;
       await api.updatePromotion(id, { ...payload, isActive: !promo.isActive });
@@ -84,6 +93,7 @@ export default function PromotionsAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) return;
     if (!confirm('Вы уверены, что хотите удалить эту акцию?')) return;
 
     try {
@@ -93,6 +103,10 @@ export default function PromotionsAdminPage() {
       alert('Ошибка при удалении акции: ' + (error as Error).message);
     }
   };
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
@@ -172,9 +186,10 @@ export default function PromotionsAdminPage() {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
+                  onChange={async (event) => {
+                    if (!canEdit) return;
+                    const file = event.target.files?.[0];
+                    if (!file) return;
                       setIsUploadingImage(true);
                       try {
                         const uploaded = await api.uploadImage(file);
@@ -191,9 +206,11 @@ export default function PromotionsAdminPage() {
               </div>
               <ImageLibraryPanel
                 onSelect={(url) => setEditingPromo({ ...editingPromo, imageUrl: url })}
+                allowUpload={canEdit}
+                allowDelete={canDelete}
                 toggleLabelClosed="Выбрать из библиотеки"
                 toggleLabelOpen="Скрыть библиотеку"
-                title="Библиотека изображений"
+                title="Галерея"
               />
               {editingPromo.imageUrl && (
                 <img
@@ -362,7 +379,12 @@ export default function PromotionsAdminPage() {
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                disabled={!canEdit}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 <Save className="w-5 h-5" />
                 Сохранить
@@ -387,7 +409,12 @@ export default function PromotionsAdminPage() {
         <h2 className="text-3xl font-bold text-gray-900">Управление акциями</h2>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          disabled={!canEdit}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+            canEdit
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'cursor-not-allowed bg-red-200 text-white/80'
+          }`}
         >
           <Plus className="w-5 h-5" />
           Создать акцию
@@ -450,21 +477,36 @@ export default function PromotionsAdminPage() {
                     showImage: promo.showImage ?? true,
                   })
                 }
-                className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                disabled={!canEdit}
+                className={`p-2 rounded-lg transition-colors ${
+                  canEdit
+                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                    : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                }`}
                 title="Редактировать"
               >
                 <Edit className="w-5 h-5" />
               </button>
               <button
                 onClick={() => handleToggleActive(promo)}
-                className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                disabled={!canEdit}
+                className={`p-2 rounded-lg transition-colors ${
+                  canEdit
+                    ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                    : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
+                }`}
                 title={promo.isActive ? 'Деактивировать' : 'Активировать'}
               >
                 {promo.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => handleDelete(promo.id)}
-                className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                disabled={!canDelete}
+                className={`p-2 rounded-lg transition-colors ${
+                  canDelete
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'cursor-not-allowed bg-red-50 text-red-200'
+                }`}
                 title="Удалить"
               >
                 <Trash2 className="w-5 h-5" />
