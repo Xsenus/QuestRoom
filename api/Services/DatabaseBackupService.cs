@@ -62,6 +62,17 @@ public class DatabaseBackupService : IDatabaseBackupService
         var timestamp = DateTimeOffset.Now.ToString("ddMMyyyyHHmm");
         var fileName = $"questroom_{timestamp}.backup";
         var filePath = Path.Combine(backupDirectory, fileName);
+        var pgDumpPath = _configuration["DatabaseBackup:PgDumpPath"];
+        var pgDumpExecutable = string.IsNullOrWhiteSpace(pgDumpPath) ? "pg_dump" : pgDumpPath;
+
+        if (!string.IsNullOrWhiteSpace(pgDumpPath) && !File.Exists(pgDumpPath))
+        {
+            return new DatabaseBackupResult(
+                false,
+                $"Не найден pg_dump по пути: {pgDumpPath}. Укажите корректный путь в настройке DatabaseBackup:PgDumpPath.",
+                null,
+                null);
+        }
 
         var arguments = string.Join(
             " ",
@@ -76,7 +87,7 @@ public class DatabaseBackupService : IDatabaseBackupService
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = "pg_dump",
+            FileName = pgDumpExecutable,
             Arguments = arguments,
             RedirectStandardError = true,
             RedirectStandardOutput = true,
@@ -125,6 +136,20 @@ public class DatabaseBackupService : IDatabaseBackupService
                     null,
                     null);
             }
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start pg_dump.");
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+
+            return new DatabaseBackupResult(
+                false,
+                "pg_dump не найден. Установите PostgreSQL client tools и добавьте pg_dump в PATH или укажите полный путь в настройке DatabaseBackup:PgDumpPath.",
+                null,
+                null);
         }
         catch (Exception ex)
         {
