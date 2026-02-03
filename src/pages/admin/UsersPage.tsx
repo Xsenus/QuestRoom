@@ -108,7 +108,7 @@ export default function UsersPage() {
   };
 
   const startCreate = () => {
-    const defaultRole = roles[0];
+    const defaultRole = roles.find((role) => role.code !== 'admin') ?? roles[0];
     setEditor({
       id: '',
       name: '',
@@ -796,7 +796,7 @@ export default function UsersPage() {
                 <select
                   value={editor.roleId}
                   onChange={(event) => setEditor({ ...editor, roleId: event.target.value })}
-                  disabled={!canEdit || roleMap[editor.roleId]?.code === 'admin'}
+                  disabled={!canEdit || (!isCreating && roleMap[editor.roleId]?.code === 'admin')}
                   className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                 >
                   {roles.map((role) => (
