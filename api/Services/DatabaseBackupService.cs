@@ -56,11 +56,11 @@ public class DatabaseBackupService : IDatabaseBackupService
                 null);
         }
 
-        var backupDirectory = Path.Combine(_environment.ContentRootPath, "App_Data", "backups");
+        var backupDirectory = Path.Combine(_environment.ContentRootPath, "backups");
         Directory.CreateDirectory(backupDirectory);
 
-        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
-        var fileName = $"questroom-backup-{timestamp}.dump";
+        var timestamp = DateTimeOffset.Now.ToString("ddMMyyyyHHmm");
+        var fileName = $"questroom_{timestamp}.backup";
         var filePath = Path.Combine(backupDirectory, fileName);
 
         var arguments = string.Join(
@@ -143,7 +143,7 @@ public class DatabaseBackupService : IDatabaseBackupService
 
         return new DatabaseBackupResult(
             true,
-            $"Резервная копия сохранена в App_Data/backups/{fileName}.",
+            $"Резервная копия сохранена в backups/{fileName}.",
             fileName,
             filePath);
     }
