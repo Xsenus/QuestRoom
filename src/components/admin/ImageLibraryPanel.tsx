@@ -15,7 +15,7 @@ type ImageLibraryPanelProps = {
   emptyText?: string;
 };
 
-const IMAGE_LIBRARY_PAGE_SIZE = 24;
+const IMAGE_LIBRARY_PAGE_SIZE = 10;
 
 export default function ImageLibraryPanel({
   onSelect,
