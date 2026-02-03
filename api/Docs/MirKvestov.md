@@ -44,6 +44,8 @@ GET /api/mir-kvestov/{questSlug}.json
 **URL**
 
 ```
+POST /api/mir-kvestov/{questSlug}
+POST /api/mir-kvestov/{questSlug}.json
 POST /api/mir-kvestov/{questSlug}/order
 POST /api/mir-kvestov/{questSlug}.json/order
 ```

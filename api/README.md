@@ -126,6 +126,7 @@ Swagger UI: `http://localhost:5000/swagger`
 
 - `GET /api/mir-kvestov/{questSlug}` или `/api/mir-kvestov/{questSlug}.json` - Получить расписание (по умолчанию количество дней задаётся в настройках интеграции).
   - Query параметры: `from` и `to` в формате `YYYY-MM-DD` (опционально).
+- `POST /api/mir-kvestov/{questSlug}` или `/api/mir-kvestov/{questSlug}.json` - Создать бронирование от агрегатора (без суффикса `/order`).
 - `POST /api/mir-kvestov/{questSlug}/order` или `/api/mir-kvestov/{questSlug}.json/order` - Создать бронирование от агрегатора.
   - Принимает `application/x-www-form-urlencoded` или JSON с полями: `first_name`, `family_name`, `phone`, `email`, `comment`, `source`, `md5`, `date`, `time`, `price`, `unique_id`, `your_slot_id`, `players`, `tariff`.
 - `POST /api/quests/{questSlug}` - Создать бронирование от агрегатора (аналогичный обработчик для интеграции Mir-kvestov.ru).
