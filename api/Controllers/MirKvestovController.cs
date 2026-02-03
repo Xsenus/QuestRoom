@@ -71,6 +71,8 @@ public class MirKvestovController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("{questSlug}")]
+    [HttpPost("{questSlug}.json")]
     [HttpPost("{questSlug}/order")]
     [HttpPost("{questSlug}.json/order")]
     public async Task<IActionResult> CreateOrder(string questSlug)
