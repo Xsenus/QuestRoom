@@ -63,6 +63,7 @@ public class MirKvestovController : ControllerBase
     }
 
     [HttpPost("{questSlug}/order")]
+    [HttpPost("{questSlug}.json/order")]
     public async Task<IActionResult> CreateOrder(string questSlug)
     {
         var request = await ReadOrderRequestAsync();
@@ -85,6 +86,7 @@ public class MirKvestovController : ControllerBase
     }
 
     [HttpGet("{questSlug}/get_price")]
+    [HttpGet("{questSlug}.json/get_price")]
     public async Task<IActionResult> GetTariffs(
         string questSlug,
         [FromQuery] string date,
@@ -104,6 +106,7 @@ public class MirKvestovController : ControllerBase
     }
 
     [HttpGet("{questSlug}/prepay")]
+    [HttpGet("{questSlug}.json/prepay")]
     public async Task<IActionResult> Prepay(
         string questSlug,
         [FromQuery] string md5,

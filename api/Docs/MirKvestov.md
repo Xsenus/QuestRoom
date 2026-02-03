@@ -45,6 +45,7 @@ GET /api/mir-kvestov/{questSlug}.json
 
 ```
 POST /api/mir-kvestov/{questSlug}/order
+POST /api/mir-kvestov/{questSlug}.json/order
 ```
 
 **Формат запроса**
@@ -96,6 +97,7 @@ POST /api/mir-kvestov/{questSlug}/order
 
 ```
 GET /api/mir-kvestov/{questSlug}/get_price?date=YYYY-MM-DD&time=HH:MM
+GET /api/mir-kvestov/{questSlug}.json/get_price?date=YYYY-MM-DD&time=HH:MM
 ```
 
 **Ответ**
@@ -112,6 +114,7 @@ GET /api/mir-kvestov/{questSlug}/get_price?date=YYYY-MM-DD&time=HH:MM
 
 ```
 GET /api/mir-kvestov/{questSlug}/prepay?md5=...&unique_id=...&prepay=...
+GET /api/mir-kvestov/{questSlug}.json/prepay?md5=...&unique_id=...&prepay=...
 ```
 
 `md5` вычисляется из строки `[prepay_md5][unique_id][prepay]`.
