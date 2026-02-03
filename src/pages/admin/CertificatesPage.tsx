@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../../lib/imageOptimizations';
 import { Certificate, CertificateUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
@@ -164,9 +165,13 @@ export default function CertificatesPage() {
           >
             {cert.imageUrl && (
               <img
-                src={cert.imageUrl}
+                src={getOptimizedImageUrl(cert.imageUrl, { width: 720 })}
+                srcSet={getResponsiveSrcSet(cert.imageUrl, [360, 540, 720, 960])}
+                sizes="(min-width: 1024px) 33vw, 100vw"
                 alt={cert.title}
                 className="w-full h-48 object-cover rounded-lg mb-4"
+                loading="lazy"
+                decoding="async"
               />
             )}
             <div className="flex items-center gap-3 mb-2">
@@ -342,9 +347,13 @@ export default function CertificatesPage() {
                 />
                 {editingCert.imageUrl && (
                   <img
-                    src={editingCert.imageUrl}
+                    src={getOptimizedImageUrl(editingCert.imageUrl, { width: 480 })}
+                    srcSet={getResponsiveSrcSet(editingCert.imageUrl, [240, 360, 480, 720])}
+                    sizes="320px"
                     alt="Preview"
                     className="mt-3 max-w-xs rounded-lg border"
+                    loading="lazy"
+                    decoding="async"
                   />
                 )}
               </div>

@@ -1,6 +1,7 @@
 import { useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Users, ShieldAlert, PhoneCall, Timer, Star, Key, Youtube, X } from 'lucide-react';
+import { getOptimizedImageUrl } from '../lib/imageOptimizations';
 import { Quest } from '../lib/types';
 
 interface QuestCardProps {
@@ -51,6 +52,11 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
     additionalImages.push(mainImage);
   }
 
+  const mainImageOptimized = getOptimizedImageUrl(mainImage, { width: 1200 });
+  const additionalImagesOptimized = additionalImages.map((image) =>
+    getOptimizedImageUrl(image, { width: 600 })
+  );
+
   const handleBookingClick = () => {
     navigate(`/quest/${quest.slug || quest.id}`);
   };
@@ -93,7 +99,7 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
             <div className="flex flex-col">
               <div
                 className="relative min-h-[180px] md:min-h-[320px] bg-cover bg-center cursor-pointer"
-                style={{ backgroundImage: `url(${mainImage})` }}
+                style={{ backgroundImage: `url(${mainImageOptimized})` }}
                 onClick={handleBookingClick}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent"></div>
@@ -171,7 +177,7 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
             </div>
 
             <div className="grid grid-cols-2 gap-0 bg-black">
-              {additionalImages.map((img, index) => (
+              {additionalImagesOptimized.map((img, index) => (
                 <div
                   key={index}
                   onClick={handleBookingClick}

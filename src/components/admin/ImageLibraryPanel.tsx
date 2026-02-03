@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Upload, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../../lib/imageOptimizations';
 import { ImageAsset } from '../../lib/types';
 
 type ImageLibraryPanelProps = {
@@ -136,10 +137,13 @@ export default function ImageLibraryPanel({
                   <>
                     <div className="relative aspect-video bg-gray-100">
                       <img
-                        src={image.url}
+                        src={getOptimizedImageUrl(image.url, { width: 360 })}
+                        srcSet={getResponsiveSrcSet(image.url, [180, 240, 360, 480])}
+                        sizes="(min-width: 768px) 25vw, 50vw"
                         alt={image.fileName}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        decoding="async"
                       />
                       {allowDelete && (
                         <button

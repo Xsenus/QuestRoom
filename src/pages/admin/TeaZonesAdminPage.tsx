@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
 import { api } from '../../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../../lib/imageOptimizations';
 import { TeaZone, TeaZoneUpsert } from '../../lib/types';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 import { useAuth } from '../../contexts/AuthContext';
@@ -359,9 +360,13 @@ export default function TeaZonesAdminPage() {
 
             {zone.images?.[0] && (
               <img
-                src={zone.images[0]}
+                src={getOptimizedImageUrl(zone.images[0], { width: 720 })}
+                srcSet={getResponsiveSrcSet(zone.images[0], [360, 540, 720, 960])}
+                sizes="(min-width: 768px) 50vw, 100vw"
                 alt={zone.name}
                 className="mt-4 h-48 w-full object-cover rounded-lg"
+                loading="lazy"
+                decoding="async"
               />
             )}
 

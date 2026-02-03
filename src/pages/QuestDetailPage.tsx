@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../lib/imageOptimizations';
 import { Quest, QuestSchedule, Settings } from '../lib/types';
 import { Users, Clock, Star, BadgeDollarSign, Key } from 'lucide-react';
 import BookingModal from '../components/BookingModal';
@@ -209,6 +210,12 @@ export default function QuestDetailPage() {
     ...(quest.images || []),
   ].filter((img, index, arr): img is string => Boolean(img) && arr.indexOf(img) === index);
   const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
+  const selectedImageUrl = selectedImage
+    ? getOptimizedImageUrl(selectedImage, { width: 1200 })
+    : null;
+  const selectedImageSrcSet = selectedImage
+    ? getResponsiveSrcSet(selectedImage, [480, 720, 960, 1200, 1600])
+    : undefined;
   const difficultyValue = quest.difficulty || 1;
   const difficultyMax = Math.max(1, quest.difficultyMax || 5);
   const filledKeys = Math.min(difficultyValue, difficultyMax);
@@ -229,9 +236,14 @@ export default function QuestDetailPage() {
                 aria-label="Открыть изображение в полном размере"
               >
                 <img
-                  src={selectedImage}
+                  src={selectedImageUrl ?? selectedImage}
+                  srcSet={selectedImageSrcSet}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
                   alt={quest.title}
                   className="w-full h-96 object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
                 />
               </button>
             )}
@@ -266,9 +278,13 @@ export default function QuestDetailPage() {
                       type="button"
                     >
                       <img
-                        src={img}
+                        src={getOptimizedImageUrl(img, { width: 240 })}
+                        srcSet={getResponsiveSrcSet(img, [120, 180, 240, 320])}
+                        sizes="120px"
                         alt={`${quest.title} фото`}
                         className="h-20 w-28 object-cover rounded-md"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </button>
                   ))}
@@ -480,9 +496,13 @@ export default function QuestDetailPage() {
               ×
             </button>
             <img
-              src={selectedImage}
+              src={getOptimizedImageUrl(selectedImage, { width: 1600 })}
+              srcSet={getResponsiveSrcSet(selectedImage, [800, 1200, 1600, 2000])}
+              sizes="90vw"
               alt={quest.title}
               className="w-full max-h-[80vh] object-contain rounded-lg"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         </div>

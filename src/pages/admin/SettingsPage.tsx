@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../../lib/imageOptimizations';
 import { Settings, SettingsUpdate } from '../../lib/types';
 import { Database, ExternalLink, Save } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
@@ -1018,9 +1019,13 @@ export default function SettingsPage() {
                         >
                           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-50">
                             <img
-                              src={option.url}
+                              src={getOptimizedImageUrl(option.url, { width: 64 })}
+                              srcSet={getResponsiveSrcSet(option.url, [32, 64, 96])}
+                              sizes="28px"
                               alt={option.label}
                               className="h-6 w-6"
+                              loading="lazy"
+                              decoding="async"
                             />
                           </span>
                           {option.label}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
+import { getOptimizedImageUrl, getResponsiveSrcSet } from '../lib/imageOptimizations';
 import { Settings, TeaZone } from '../lib/types';
 
 type ScrollDirection = 'left' | 'right';
@@ -41,9 +42,13 @@ const TeaZoneGallery = ({ name, images }: { name: string; images: string[] }) =>
           aria-label={`Открыть фото зоны ${name}`}
         >
           <img
-            src={selectedImage}
+            src={getOptimizedImageUrl(selectedImage, { width: 900 })}
+            srcSet={getResponsiveSrcSet(selectedImage, [480, 720, 900, 1200])}
+            sizes="(min-width: 1024px) 33vw, 100vw"
             alt={name}
             className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         </button>
       </div>
@@ -67,7 +72,15 @@ const TeaZoneGallery = ({ name, images }: { name: string; images: string[] }) =>
                 }`}
                 type="button"
               >
-                <img src={img} alt={`${name} фото`} className="h-20 w-28 object-cover rounded-md" />
+                <img
+                  src={getOptimizedImageUrl(img, { width: 240 })}
+                  srcSet={getResponsiveSrcSet(img, [120, 180, 240, 320])}
+                  sizes="120px"
+                  alt={`${name} фото`}
+                  className="h-20 w-28 object-cover rounded-md"
+                  loading="lazy"
+                  decoding="async"
+                />
               </button>
             ))}
           </div>
@@ -99,9 +112,13 @@ const TeaZoneGallery = ({ name, images }: { name: string; images: string[] }) =>
               ×
             </button>
             <img
-              src={selectedImage}
+              src={getOptimizedImageUrl(selectedImage, { width: 1600 })}
+              srcSet={getResponsiveSrcSet(selectedImage, [800, 1200, 1600, 2000])}
+              sizes="90vw"
               alt={name}
               className="max-h-[80vh] w-full rounded-lg object-contain bg-black/30"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         </div>
