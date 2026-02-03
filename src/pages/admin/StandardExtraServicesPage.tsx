@@ -2,8 +2,14 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { StandardExtraService, StandardExtraServiceUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 export default function StandardExtraServicesPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('extra-services.view');
+  const canEdit = hasPermission('extra-services.edit');
+  const canDelete = hasPermission('extra-services.delete');
   const [services, setServices] = useState<StandardExtraService[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState<
@@ -14,6 +20,10 @@ export default function StandardExtraServicesPage() {
   useEffect(() => {
     loadServices();
   }, []);
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   const loadServices = async () => {
     try {
@@ -26,6 +36,7 @@ export default function StandardExtraServicesPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setEditingService({
       title: '',
       price: 0,
@@ -35,6 +46,7 @@ export default function StandardExtraServicesPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingService) return;
 
     const { id, ...payload } = editingService;
@@ -61,6 +73,7 @@ export default function StandardExtraServicesPage() {
   };
 
   const handleToggleActive = async (service: StandardExtraService) => {
+    if (!canEdit) return;
     try {
       const { id, createdAt, updatedAt, ...payload } = service;
       await api.updateStandardExtraService(id, { ...payload, isActive: !service.isActive });
@@ -71,6 +84,7 @@ export default function StandardExtraServicesPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) return;
     if (!confirm('Вы уверены, что хотите удалить эту услугу?')) return;
 
     try {
@@ -146,7 +160,12 @@ export default function StandardExtraServicesPage() {
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                disabled={!canEdit}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 <Save className="w-5 h-5" />
                 Сохранить
@@ -174,7 +193,12 @@ export default function StandardExtraServicesPage() {
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+          disabled={!canEdit}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${
+            canEdit
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'cursor-not-allowed bg-red-200 text-white/80'
+          }`}
         >
           <Plus className="w-4 h-4" />
           Добавить услугу
@@ -215,17 +239,25 @@ export default function StandardExtraServicesPage() {
                       isActive: service.isActive,
                     })
                   }
-                  className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                  disabled={!canEdit}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                    canEdit
+                      ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                      : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                  }`}
                 >
                   <Edit className="w-4 h-4" />
                   Изменить
                 </button>
                 <button
                   onClick={() => handleToggleActive(service)}
+                  disabled={!canEdit}
                   className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                    service.isActive
-                      ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                      : 'bg-green-50 text-green-700 hover:bg-green-100'
+                    canEdit
+                      ? service.isActive
+                        ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
+                        : 'bg-green-50 text-green-700 hover:bg-green-100'
+                      : 'cursor-not-allowed bg-gray-50 text-gray-300'
                   }`}
                 >
                   {service.isActive ? (
@@ -242,7 +274,12 @@ export default function StandardExtraServicesPage() {
                 </button>
                 <button
                   onClick={() => handleDelete(service.id)}
-                  className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                  disabled={!canDelete}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                    canDelete
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                      : 'cursor-not-allowed bg-red-50 text-red-200'
+                  }`}
                 >
                   <Trash2 className="w-4 h-4" />
                   Удалить

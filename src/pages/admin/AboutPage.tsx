@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { AboutInfo, AboutInfoUpdate } from '../../lib/types';
 import { Save } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 export default function AboutPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('about.view');
+  const canEdit = hasPermission('about.edit');
   const [aboutInfo, setAboutInfo] = useState<AboutInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,6 +28,7 @@ export default function AboutPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!aboutInfo) return;
 
     setSaving(true);
@@ -43,6 +49,10 @@ export default function AboutPage() {
 
     setSaving(false);
   };
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
@@ -68,7 +78,8 @@ export default function AboutPage() {
               onChange={(e) =>
                 setAboutInfo({ ...aboutInfo, title: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={!canEdit}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
               placeholder="О нас"
             />
           </div>
@@ -83,7 +94,8 @@ export default function AboutPage() {
                 setAboutInfo({ ...aboutInfo, content: e.target.value })
               }
               rows={10}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={!canEdit}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
               placeholder="Описание вашей компании..."
             />
           </div>
@@ -98,7 +110,8 @@ export default function AboutPage() {
                 setAboutInfo({ ...aboutInfo, mission: e.target.value })
               }
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={!canEdit}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
               placeholder="Миссия компании..."
             />
           </div>
@@ -113,7 +126,8 @@ export default function AboutPage() {
                 setAboutInfo({ ...aboutInfo, vision: e.target.value })
               }
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={!canEdit}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
               placeholder="Видение компании..."
             />
           </div>
@@ -121,8 +135,8 @@ export default function AboutPage() {
           <div className="pt-4">
             <button
               onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              disabled={saving || !canEdit}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="w-5 h-5" />
               {saving ? 'Сохранение...' : 'Сохранить'}

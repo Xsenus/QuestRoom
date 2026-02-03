@@ -9,6 +9,8 @@ import {
   Trash2,
   UploadCloud,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 type DayType = 'holidays' | 'preholidays' | 'nowork';
 
@@ -51,6 +53,10 @@ const normalizeDayType = (day?: { dayType?: string | null; isHoliday?: boolean }
 };
 
 export default function ProductionCalendarPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('calendar.production.view');
+  const canEdit = hasPermission('calendar.production.edit');
+  const canDelete = hasPermission('calendar.production.delete');
   const [days, setDays] = useState<ProductionCalendarDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -131,6 +137,7 @@ export default function ProductionCalendarPage() {
   }, [filteredDays]);
 
   const openCreateModal = () => {
+    if (!canEdit) return;
     setEditingDay(null);
     setDraft({
       date: todayIso(),
@@ -142,6 +149,7 @@ export default function ProductionCalendarPage() {
   };
 
   const openEditModal = (day: ProductionCalendarDay) => {
+    if (!canEdit) return;
     setEditingDay(day);
     setDraft({
       date: day.date,
@@ -153,6 +161,7 @@ export default function ProductionCalendarPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     setSaving(true);
     try {
       const payload = buildPayload(draft);
@@ -171,6 +180,7 @@ export default function ProductionCalendarPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) return;
     if (!confirm('Удалить запись?')) return;
     try {
       await api.deleteProductionCalendarDay(id);
@@ -253,6 +263,9 @@ export default function ProductionCalendarPage() {
   };
 
   const handleImportJson = async () => {
+    if (!canEdit) {
+      return;
+    }
     if (!importJson.trim()) {
       setImportError('Вставьте JSON для импорта.');
       return;
@@ -274,6 +287,9 @@ export default function ProductionCalendarPage() {
   };
 
   const handleImportFromUrl = async (urlOverride?: string) => {
+    if (!canEdit) {
+      return;
+    }
     const urlToFetch = urlOverride ?? importUrl;
     if (!urlToFetch.trim()) {
       setImportError('Укажите URL для импорта.');
@@ -295,6 +311,9 @@ export default function ProductionCalendarPage() {
   };
 
   const handleAutoImport = async () => {
+    if (!canEdit) {
+      return;
+    }
     setImportUrl(defaultCalendarUrl);
     setImportStatus('Запускаем автозагрузку календаря...');
     await handleImportFromUrl(defaultCalendarUrl);
@@ -306,6 +325,10 @@ export default function ProductionCalendarPage() {
     }
     await loadDays();
   };
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="space-y-6">
@@ -320,7 +343,12 @@ export default function ProductionCalendarPage() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            disabled={!canEdit}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${
+              canEdit
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'cursor-not-allowed bg-red-200 text-white/80'
+            }`}
           >
             <CalendarPlus className="h-4 w-4" />
             Добавить день
@@ -398,7 +426,12 @@ export default function ProductionCalendarPage() {
                             <button
                               type="button"
                               onClick={() => openEditModal(day)}
-                              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                              disabled={!canEdit}
+                              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                                canEdit
+                                  ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                                  : 'cursor-not-allowed border-gray-100 text-gray-300'
+                              }`}
                             >
                               <Pencil className="h-4 w-4" />
                               Редактировать
@@ -406,7 +439,12 @@ export default function ProductionCalendarPage() {
                             <button
                               type="button"
                               onClick={() => handleDelete(day.id)}
-                              className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                              disabled={!canDelete}
+                              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                                canDelete
+                                  ? 'border-red-200 text-red-600 hover:bg-red-50'
+                                  : 'cursor-not-allowed border-red-100 text-red-200'
+                              }`}
                             >
                               <Trash2 className="h-4 w-4" />
                               Удалить
@@ -434,13 +472,14 @@ export default function ProductionCalendarPage() {
                 value={importJson}
                 onChange={(e) => setImportJson(e.target.value)}
                 placeholder="Вставьте JSON для импорта"
-                className="min-h-[140px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                disabled={!canEdit}
+                className="min-h-[140px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-50"
               />
               <button
                 type="button"
                 onClick={handleImportJson}
-                disabled={importing}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-60"
+                disabled={importing || !canEdit}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <UploadCloud className="h-4 w-4" />
                 Импортировать JSON
@@ -455,13 +494,14 @@ export default function ProductionCalendarPage() {
                     value={importUrl}
                     onChange={(e) => setImportUrl(e.target.value)}
                     placeholder="URL с календарем"
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    disabled={!canEdit}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-50"
                   />
                   <button
                     type="button"
                     onClick={handleImportFromUrl}
-                    disabled={importing}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                    disabled={importing || !canEdit}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Download className="h-4 w-4" />
                     Скачать и заполнить
@@ -469,8 +509,8 @@ export default function ProductionCalendarPage() {
                   <button
                     type="button"
                     onClick={handleAutoImport}
-                    disabled={importing}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                    disabled={importing || !canEdit}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Download className="h-4 w-4" />
                     Автозагрузка календаря
@@ -596,8 +636,8 @@ export default function ProductionCalendarPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                disabled={saving || !canEdit}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? 'Сохранение...' : 'Сохранить'}
               </button>

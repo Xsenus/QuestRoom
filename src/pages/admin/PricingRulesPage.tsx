@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { Quest, QuestPricingRule, QuestPricingRuleUpsert } from '../../lib/types';
 import { Plus, Save, X, Trash2, RefreshCw } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 const dayOptions = [
   { value: 1, label: 'Пн' },
@@ -83,6 +85,10 @@ const buildEmptyRule = (questIds: string[]): QuestPricingRuleUpsert => {
 };
 
 export default function PricingRulesPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('calendar.pricing.view');
+  const canEdit = hasPermission('calendar.pricing.edit');
+  const canDelete = hasPermission('calendar.pricing.delete');
   const [quests, setQuests] = useState<Quest[]>([]);
   const [rules, setRules] = useState<QuestPricingRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,10 +130,16 @@ export default function PricingRulesPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) {
+      return;
+    }
     setEditingRule(buildEmptyRule(selectedQuestIds));
   };
 
   const handleEdit = (rule: QuestPricingRule) => {
+    if (!canEdit) {
+      return;
+    }
     setEditingRule({
       id: rule.id,
       questIds: rule.questIds,
@@ -146,6 +158,9 @@ export default function PricingRulesPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) {
+      return;
+    }
     if (!editingRule) return;
     if (editingRule.questIds.length === 0) {
       alert('Выберите хотя бы один квест для правила.');
@@ -167,6 +182,9 @@ export default function PricingRulesPage() {
   };
 
   const handleDelete = async (ruleId: string) => {
+    if (!canDelete) {
+      return;
+    }
     if (!confirm('Удалить правило?')) return;
     try {
       await api.deletePricingRule(ruleId);
@@ -271,6 +289,10 @@ export default function PricingRulesPage() {
     ? buildTimeSlots(editingRule.startTime, editingRule.endTime, editingRule.intervalMinutes)
     : [];
 
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
   }
@@ -281,7 +303,12 @@ export default function PricingRulesPage() {
         <h2 className="text-3xl font-bold text-gray-900">Ценовые правила и календарь</h2>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          disabled={!canEdit}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+            canEdit
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'cursor-not-allowed bg-red-200 text-white/80'
+          }`}
         >
           <Plus className="w-5 h-5" />
           Добавить правило
@@ -578,7 +605,12 @@ export default function PricingRulesPage() {
               <div className="flex flex-wrap gap-4">
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                  disabled={!canEdit}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    canEdit
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'cursor-not-allowed bg-red-200 text-white/80'
+                  }`}
                 >
                   <Save className="w-5 h-5" />
                   Сохранить
@@ -724,13 +756,23 @@ export default function PricingRulesPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEdit(rule)}
-                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                      disabled={!canEdit}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                        canEdit
+                          ? 'bg-gray-100 hover:bg-gray-200'
+                          : 'cursor-not-allowed bg-gray-50 text-gray-300'
+                      }`}
                     >
                       Редактировать
                     </button>
                     <button
                       onClick={() => handleDelete(rule.id)}
-                      className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                      disabled={!canDelete}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                        canDelete
+                          ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                          : 'cursor-not-allowed bg-red-50 text-red-200'
+                      }`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -783,13 +825,23 @@ export default function PricingRulesPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleEdit(rule)}
-                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                            disabled={!canEdit}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                              canEdit
+                                ? 'bg-gray-100 hover:bg-gray-200'
+                                : 'cursor-not-allowed bg-gray-50 text-gray-300'
+                            }`}
                           >
                             Редактировать
                           </button>
                           <button
                             onClick={() => handleDelete(rule.id)}
-                            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-semibold"
+                            disabled={!canDelete}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                              canDelete
+                                ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                                : 'cursor-not-allowed bg-red-50 text-red-200'
+                            }`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

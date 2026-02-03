@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 interface User {
   email: string;
   role: string;
+  permissions: string[];
 }
 
 interface AuthContextType {
@@ -12,6 +13,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: () => boolean;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('auth_token');
     const email = localStorage.getItem('user_email');
     const role = localStorage.getItem('user_role');
+    const permissionsRaw = localStorage.getItem('user_permissions');
+    let permissions: string[] = [];
+    if (permissionsRaw) {
+      try {
+        const parsed = JSON.parse(permissionsRaw);
+        permissions = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        permissions = [];
+      }
+    }
     const expiresAt = Number(localStorage.getItem('auth_expires_at'));
 
     const isExpired = Number.isFinite(expiresAt) && Date.now() > expiresAt;
@@ -35,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (token && email && role) {
-      setUser({ email, role });
+      setUser({ email, role, permissions: Array.isArray(permissions) ? permissions : [] });
     }
     setLoading(false);
   }, []);
@@ -43,7 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       const data = await api.login(email, password);
-      setUser({ email: data.email, role: data.role });
+      setUser({
+        email: data.email,
+        role: data.role,
+        permissions: Array.isArray(data.permissions) ? data.permissions : [],
+      });
       return { error: null };
     } catch (error) {
       return { error: error as Error };
@@ -59,8 +76,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user?.role === 'admin';
   };
 
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return user.permissions.includes(permission);
+  };
+
+  const hasAnyPermission = (permissions: string[]) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return permissions.some((permission) => user.permissions.includes(permission));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, isAdmin }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, signOut, isAdmin, hasPermission, hasAnyPermission }}
+    >
       {children}
     </AuthContext.Provider>
   );

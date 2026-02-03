@@ -3,6 +3,8 @@ import { api } from '../../lib/api';
 import { Settings, SettingsUpdate } from '../../lib/types';
 import { Database, ExternalLink, Save } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 const tabs = [
   { id: 'general', label: 'Общие' },
@@ -298,6 +300,9 @@ const defaultMirKvestovScheduleFields = mirKvestovScheduleFieldOptions.map(
 );
 
 export default function SettingsPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('settings.view');
+  const canEdit = hasPermission('settings.edit');
   const timeZoneOptions = [
     { value: 'Europe/Kaliningrad', label: 'Europe/Kaliningrad (Калининград, UTC+2)' },
     { value: 'Europe/Moscow', label: 'Europe/Moscow (Москва, UTC+3)' },
@@ -649,6 +654,10 @@ export default function SettingsPage() {
     setBackupCreating(false);
   };
 
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
   }
@@ -675,8 +684,8 @@ export default function SettingsPage() {
         <h2 className="text-3xl font-bold text-gray-900">Настройки сайта</h2>
         <button
           onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-70"
+          disabled={saving || !canEdit}
+          className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
         >
           <Save className="w-4 h-4" />
           {saving ? 'Сохранение...' : 'Сохранить'}

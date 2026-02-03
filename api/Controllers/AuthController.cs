@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Auth;
 using QuestRoomApi.Models;
@@ -47,7 +48,8 @@ public class AuthController : ControllerBase
         {
             Token = token,
             Email = user.Email,
-            Role = user.Role?.Code ?? string.Empty
+            Role = user.Role?.Code ?? string.Empty,
+            Permissions = user.Role?.Permissions?.ToList() ?? new List<string>()
         });
     }
 

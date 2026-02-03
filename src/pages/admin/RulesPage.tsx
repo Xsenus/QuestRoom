@@ -2,8 +2,14 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Rule, RuleUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 export default function RulesPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('rules.view');
+  const canEdit = hasPermission('rules.edit');
+  const canDelete = hasPermission('rules.delete');
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingRule, setEditingRule] = useState<(RuleUpsert & { id?: string }) | null>(
@@ -39,6 +45,7 @@ export default function RulesPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setEditingRule({
       title: '',
       content: '',
@@ -49,6 +56,7 @@ export default function RulesPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingRule) return;
 
     const { id, ...payload } = editingRule;
@@ -75,6 +83,7 @@ export default function RulesPage() {
   };
 
   const handleToggleVisibility = async (rule: Rule) => {
+    if (!canEdit) return;
     try {
       const { id, createdAt, updatedAt, ...payload } = rule;
       await api.updateRule(id, { ...payload, isVisible: !rule.isVisible });
@@ -85,6 +94,7 @@ export default function RulesPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) return;
     if (!confirm('Вы уверены, что хотите удалить это правило?')) return;
 
     try {
@@ -94,6 +104,10 @@ export default function RulesPage() {
       alert('Ошибка при удалении правила: ' + (error as Error).message);
     }
   };
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   if (loading) {
     return <div className="text-center py-12">Загрузка...</div>;
@@ -176,7 +190,12 @@ export default function RulesPage() {
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                disabled={!canEdit}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 <Save className="w-5 h-5" />
                 Сохранить
@@ -224,7 +243,12 @@ export default function RulesPage() {
           </div>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            disabled={!canEdit}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+              canEdit
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'cursor-not-allowed bg-red-200 text-white/80'
+            }`}
           >
             <Plus className="w-5 h-5" />
             Добавить правило
@@ -267,14 +291,24 @@ export default function RulesPage() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setEditingRule(rule)}
-                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                        disabled={!canEdit}
+                        className={`p-2 rounded-lg transition-colors ${
+                          canEdit
+                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                            : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                        }`}
                         title="Редактировать"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleToggleVisibility(rule)}
-                        className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                        disabled={!canEdit}
+                        className={`p-2 rounded-lg transition-colors ${
+                          canEdit
+                            ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                            : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
+                        }`}
                         title={rule.isVisible ? 'Скрыть' : 'Показать'}
                       >
                         {rule.isVisible ? (
@@ -285,7 +319,12 @@ export default function RulesPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(rule.id)}
-                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                        disabled={!canDelete}
+                        className={`p-2 rounded-lg transition-colors ${
+                          canDelete
+                            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                            : 'cursor-not-allowed bg-red-50 text-red-200'
+                        }`}
                         title="Удалить"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -328,14 +367,24 @@ export default function RulesPage() {
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => setEditingRule(rule)}
-                    className="rounded-lg border border-transparent bg-blue-50 p-2 text-blue-600 transition-colors hover:border-blue-100 hover:bg-blue-100"
+                    disabled={!canEdit}
+                    className={`rounded-lg border border-transparent p-2 transition-colors ${
+                      canEdit
+                        ? 'bg-blue-50 text-blue-600 hover:border-blue-100 hover:bg-blue-100'
+                        : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                    }`}
                     title="Редактировать"
                   >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleToggleVisibility(rule)}
-                    className="rounded-lg border border-transparent bg-amber-50 p-2 text-amber-600 transition-colors hover:border-amber-100 hover:bg-amber-100"
+                    disabled={!canEdit}
+                    className={`rounded-lg border border-transparent p-2 transition-colors ${
+                      canEdit
+                        ? 'bg-amber-50 text-amber-600 hover:border-amber-100 hover:bg-amber-100'
+                        : 'cursor-not-allowed bg-amber-50 text-amber-200'
+                    }`}
                     title={rule.isVisible ? 'Скрыть' : 'Показать'}
                   >
                     {rule.isVisible ? (
@@ -346,7 +395,12 @@ export default function RulesPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(rule.id)}
-                    className="rounded-lg border border-transparent bg-rose-50 p-2 text-rose-600 transition-colors hover:border-rose-100 hover:bg-rose-100"
+                    disabled={!canDelete}
+                    className={`rounded-lg border border-transparent p-2 transition-colors ${
+                      canDelete
+                        ? 'bg-rose-50 text-rose-600 hover:border-rose-100 hover:bg-rose-100'
+                        : 'cursor-not-allowed bg-rose-50 text-rose-200'
+                    }`}
                     title="Удалить"
                   >
                     <Trash2 className="h-4 w-4" />

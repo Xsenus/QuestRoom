@@ -1,8 +1,10 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Check, Shield, Plus, Trash2, Pencil, RefreshCw, X } from 'lucide-react';
+import { Check, Shield, Plus, RefreshCw, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { PermissionGroup, RoleDefinition } from '../../lib/types';
 import NotificationModal from '../../components/NotificationModal';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 interface EditableRole {
   id: string;
@@ -13,11 +15,13 @@ interface EditableRole {
 }
 
 export default function RolesPage() {
+  const { isAdmin } = useAuth();
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditableRole | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{
@@ -31,6 +35,16 @@ export default function RolesPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!activeGroupId && permissionGroups.length > 0) {
+      setActiveGroupId(permissionGroups[0].id);
+    }
+  }, [activeGroupId, permissionGroups]);
+
+  if (!isAdmin()) {
+    return <AccessDenied />;
+  }
+
   const selectedRole = useMemo(
     () => roles.find((role) => role.id === selectedId) || null,
     [roles, selectedId]
@@ -41,6 +55,11 @@ export default function RolesPage() {
       group.permissions.map((item) => ({ ...item, groupId: group.id, groupTitle: group.title }))
     );
   }, [permissionGroups]);
+
+  const activeGroup = useMemo(
+    () => permissionGroups.find((group) => group.id === activeGroupId) || permissionGroups[0],
+    [permissionGroups, activeGroupId]
+  );
 
   const loadData = async () => {
     try {
@@ -264,10 +283,14 @@ export default function RolesPage() {
                             event.stopPropagation();
                             startEdit(role);
                           }}
-                          className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${
+                            role.isSystem
+                              ? 'cursor-not-allowed border-gray-200 text-gray-300'
+                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
+                          disabled={role.isSystem}
                         >
-                          <Pencil className="inline h-3.5 w-3.5" />
-                          <span className="ml-1">Изменить</span>
+                          Изменить
                         </button>
                         <button
                           type="button"
@@ -275,10 +298,14 @@ export default function RolesPage() {
                             event.stopPropagation();
                             deleteRole(role);
                           }}
-                          className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${
+                            role.isSystem
+                              ? 'cursor-not-allowed border-red-100 text-red-200'
+                              : 'border-red-200 text-red-600 hover:bg-red-50'
+                          }`}
+                          disabled={role.isSystem}
                         >
-                          <Trash2 className="inline h-3.5 w-3.5" />
-                          <span className="ml-1">Удалить</span>
+                          Удалить
                         </button>
                       </div>
                     </td>
@@ -404,15 +431,32 @@ export default function RolesPage() {
               </div>
               <div className="mt-6 space-y-4">
                 <h4 className="text-sm font-semibold text-gray-700">Права доступа</h4>
-                <div className="grid gap-4">
-                  {permissionGroups.map((group) => (
-                    <div key={group.id} className="rounded-lg border border-gray-200 p-4">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {permissionGroups.map((group) => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => setActiveGroupId(group.id)}
+                        className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                          activeGroup?.id === group.id
+                            ? 'border-red-600 bg-red-50 text-red-700'
+                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {group.title}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeGroup ? (
+                    <div className="rounded-lg border border-gray-200 p-4">
                       <div className="mb-3">
-                        <div className="text-sm font-semibold text-gray-900">{group.title}</div>
-                        <div className="text-xs text-gray-500">{group.description}</div>
+                        <div className="text-sm font-semibold text-gray-900">{activeGroup.title}</div>
+                        <div className="text-xs text-gray-500">{activeGroup.description}</div>
                       </div>
                       <div className="grid gap-2 md:grid-cols-2">
-                        {group.permissions.map((permission) => (
+                        {activeGroup.permissions.map((permission) => (
                           <label
                             key={permission.id}
                             className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm"
@@ -434,7 +478,11 @@ export default function RolesPage() {
                         ))}
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+                      Нет доступных групп прав.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

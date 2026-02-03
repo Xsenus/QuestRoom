@@ -3,6 +3,8 @@ import { Plus, ShieldCheck, Trash2, Lock, Unlock, KeyRound, Search, RefreshCw, X
 import { api } from '../../lib/api';
 import type { AdminUser, AdminUserUpsert, RoleDefinition } from '../../lib/types';
 import NotificationModal from '../../components/NotificationModal';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 interface EditableUser {
   id: string;
@@ -27,6 +29,10 @@ const statusBadgeStyles: Record<AdminUser['status'], string> = {
 };
 
 export default function UsersPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('users.view');
+  const canEdit = hasPermission('users.edit');
+  const canDelete = hasPermission('users.delete');
   const protectedAdminEmail = 'admin@questroom.local';
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
@@ -134,6 +140,7 @@ export default function UsersPage() {
   };
 
   const saveEditor = async () => {
+    if (!canEdit) return;
     if (!editor) return;
     if (!editor.name.trim() || !editor.email.trim()) {
       setNotification({
@@ -216,6 +223,7 @@ export default function UsersPage() {
   };
 
   const toggleBlock = async (user: AdminUser) => {
+    if (!canEdit) return;
     const nextStatus = user.status === 'blocked' ? 'active' : 'blocked';
     try {
       const updated = await api.updateAdminUserStatus(user.id, nextStatus);
@@ -231,6 +239,7 @@ export default function UsersPage() {
   };
 
   const deleteUser = async (user: AdminUser) => {
+    if (!canDelete) return;
     if (user.email.toLowerCase() === protectedAdminEmail) {
       setNotification({
         isOpen: true,
@@ -259,6 +268,7 @@ export default function UsersPage() {
   };
 
   const updateRole = async (user: AdminUser, roleId: string) => {
+    if (!canEdit) return;
     try {
       const updated = await api.updateAdminUser(user.id, {
         name: user.name,
@@ -280,6 +290,7 @@ export default function UsersPage() {
   };
 
   const updateStatus = async (user: AdminUser, status: AdminUser['status']) => {
+    if (!canEdit) return;
     if (user.email.toLowerCase() === protectedAdminEmail && status !== 'active') {
       setNotification({
         isOpen: true,
@@ -303,6 +314,7 @@ export default function UsersPage() {
   };
 
   const submitPasswordReset = async () => {
+    if (!canEdit) return;
     if (!passwordDraft.trim()) {
       setPasswordStatus('Введите новый пароль.');
       return;
@@ -330,6 +342,7 @@ export default function UsersPage() {
   };
 
   const saveNotes = async () => {
+    if (!canEdit) return;
     if (!selectedUser) return;
     try {
       const updated = await api.updateAdminUser(selectedUser.id, {
@@ -357,6 +370,10 @@ export default function UsersPage() {
     }
   };
 
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-4">
@@ -378,7 +395,12 @@ export default function UsersPage() {
           <button
             type="button"
             onClick={startCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-semibold shadow hover:bg-red-700"
+            disabled={!canEdit}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold shadow ${
+              canEdit
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'cursor-not-allowed bg-red-200 text-white/80'
+            }`}
           >
             <Plus className="h-4 w-4" />
             Добавить пользователя
@@ -502,7 +524,12 @@ export default function UsersPage() {
                             event.stopPropagation();
                             startEdit(user);
                           }}
-                          className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          disabled={!canEdit}
+                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${
+                            canEdit
+                              ? 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                              : 'cursor-not-allowed border-gray-100 text-gray-300'
+                          }`}
                         >
                           Изменить
                         </button>
@@ -512,7 +539,12 @@ export default function UsersPage() {
                             event.stopPropagation();
                             toggleBlock(user);
                           }}
-                          className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          disabled={!canEdit}
+                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${
+                            canEdit
+                              ? 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                              : 'cursor-not-allowed border-gray-100 text-gray-300'
+                          }`}
                         >
                           {user.status === 'blocked' ? 'Разблокировать' : 'Блокировать'}
                         </button>
@@ -551,7 +583,8 @@ export default function UsersPage() {
                   <select
                     value={selectedUser.roleId || roles[0]?.id || ''}
                     onChange={(event) => updateRole(selectedUser, event.target.value)}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    disabled={!canEdit}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                   >
                     {roles.map((role) => (
                       <option key={role.id} value={role.id}>
@@ -574,8 +607,8 @@ export default function UsersPage() {
                     onChange={(event) =>
                       updateStatus(selectedUser, event.target.value as AdminUser['status'])
                     }
-                    disabled={selectedUser.email.toLowerCase() === protectedAdminEmail}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    disabled={!canEdit || selectedUser.email.toLowerCase() === protectedAdminEmail}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                   >
                     <option value="active">Активен</option>
                     <option value="pending">Ожидает доступа</option>
@@ -602,13 +635,15 @@ export default function UsersPage() {
                       setNoteDraft(event.target.value);
                     }}
                     rows={3}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    disabled={!canEdit}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                     placeholder="Комментарий по пользователю"
                   />
                   <button
                     type="button"
                     onClick={saveNotes}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    disabled={!canEdit}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-300"
                   >
                     Сохранить заметки
                   </button>
@@ -622,13 +657,15 @@ export default function UsersPage() {
                     type="password"
                     value={passwordDraft}
                     onChange={(event) => setPasswordDraft(event.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    disabled={!canEdit}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                     placeholder="Введите новый пароль"
                   />
                   <button
                     type="button"
                     onClick={submitPasswordReset}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    disabled={!canEdit}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-300"
                   >
                     Сменить пароль и отправить email
                   </button>
@@ -640,7 +677,8 @@ export default function UsersPage() {
                   <button
                     type="button"
                     onClick={() => toggleBlock(selectedUser)}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    disabled={!canEdit}
+                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-300"
                   >
                     {selectedUser.status === 'blocked' ? (
                       <>
@@ -657,7 +695,7 @@ export default function UsersPage() {
                   <button
                     type="button"
                     onClick={() => deleteUser(selectedUser)}
-                    disabled={selectedUser.email.toLowerCase() === protectedAdminEmail}
+                    disabled={!canDelete || selectedUser.email.toLowerCase() === protectedAdminEmail}
                     className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -784,7 +822,8 @@ export default function UsersPage() {
                     type="password"
                     value={createPassword}
                     onChange={(event) => setCreatePassword(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                    disabled={!canEdit}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                     placeholder="Минимум 6 символов"
                   />
                 </div>
@@ -801,7 +840,12 @@ export default function UsersPage() {
               <button
                 type="button"
                 onClick={saveEditor}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                disabled={!canEdit}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 Сохранить
               </button>

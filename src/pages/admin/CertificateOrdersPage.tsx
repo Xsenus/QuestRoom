@@ -15,6 +15,8 @@ import {
 import { api } from '../../lib/api';
 import NotificationModal from '../../components/NotificationModal';
 import type { CertificateOrder, CertificateOrderUpdate, Settings } from '../../lib/types';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 const statusLabels: Record<string, string> = {
   pending: 'Новая',
@@ -33,6 +35,10 @@ const formatDateTime = (value: string) =>
   });
 
 export default function CertificateOrdersAdminPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('certificate-orders.view');
+  const canEdit = hasPermission('certificate-orders.edit');
+  const canDelete = hasPermission('certificate-orders.delete');
   const [orders, setOrders] = useState<CertificateOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -118,6 +124,7 @@ export default function CertificateOrdersAdminPage() {
   }, [viewMode]);
 
   const handleEdit = (order: CertificateOrder) => {
+    if (!canEdit) return;
     setEditingOrder({
       id: order.id,
       certificateTitle: order.certificateTitle,
@@ -131,6 +138,7 @@ export default function CertificateOrdersAdminPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingOrder) return;
     setIsSaving(true);
     try {
@@ -154,6 +162,7 @@ export default function CertificateOrdersAdminPage() {
   };
 
   const confirmDelete = async (order: CertificateOrder) => {
+    if (!canDelete) return;
     setIsDeleting(true);
     try {
       await api.deleteCertificateOrder(order.id);
@@ -177,6 +186,7 @@ export default function CertificateOrdersAdminPage() {
   };
 
   const handleDelete = (order: CertificateOrder) => {
+    if (!canDelete) return;
     setNotification({
       isOpen: true,
       title: 'Удалить заявку?',
@@ -248,6 +258,10 @@ export default function CertificateOrdersAdminPage() {
   const getRowStyle = (status: string) => ({
     backgroundColor: hexToRgba(getStatusColorValue(status), 0.08),
   });
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   if (isLoading) {
     return (
@@ -375,7 +389,12 @@ export default function CertificateOrdersAdminPage() {
                       <button
                         type="button"
                         onClick={() => handleEdit(order)}
-                        className="inline-flex items-center rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50"
+                        disabled={!canEdit}
+                        className={`inline-flex items-center rounded-lg border p-2 transition ${
+                          canEdit
+                            ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                            : 'cursor-not-allowed border-gray-100 text-gray-300'
+                        }`}
                         title="Редактировать"
                       >
                         <Edit className="h-4 w-4" />
@@ -383,8 +402,12 @@ export default function CertificateOrdersAdminPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(order)}
-                        disabled={isDeleting}
-                        className="inline-flex items-center rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                        disabled={isDeleting || !canDelete}
+                        className={`inline-flex items-center rounded-lg border p-2 transition disabled:opacity-60 ${
+                          canDelete
+                            ? 'border-red-200 text-red-600 hover:bg-red-50'
+                            : 'cursor-not-allowed border-red-100 text-red-200'
+                        }`}
                         title="Удалить"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -461,7 +484,12 @@ export default function CertificateOrdersAdminPage() {
                 <button
                   type="button"
                   onClick={() => handleEdit(order)}
-                  className="inline-flex items-center rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50"
+                  disabled={!canEdit}
+                  className={`inline-flex items-center rounded-lg border p-2 transition ${
+                    canEdit
+                      ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      : 'cursor-not-allowed border-gray-100 text-gray-300'
+                  }`}
                   title="Редактировать"
                 >
                   <Edit className="h-4 w-4" />
@@ -469,8 +497,12 @@ export default function CertificateOrdersAdminPage() {
                 <button
                   type="button"
                   onClick={() => handleDelete(order)}
-                  disabled={isDeleting}
-                  className="inline-flex items-center rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                  disabled={isDeleting || !canDelete}
+                  className={`inline-flex items-center rounded-lg border p-2 transition disabled:opacity-60 ${
+                    canDelete
+                      ? 'border-red-200 text-red-600 hover:bg-red-50'
+                      : 'cursor-not-allowed border-red-100 text-red-200'
+                  }`}
                   title="Удалить"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -594,8 +626,8 @@ export default function CertificateOrdersAdminPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={isSaving}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                disabled={isSaving || !canEdit}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 {isSaving ? 'Сохранение...' : 'Сохранить'}

@@ -25,7 +25,7 @@ export default function ImageLibraryPanel({
   initialOpen = false,
   toggleLabelOpen = 'Скрыть библиотеку',
   toggleLabelClosed = 'Открыть библиотеку',
-  title = 'Библиотека изображений',
+  title = 'Галерея',
   emptyText = 'В базе пока нет изображений.',
 }: ImageLibraryPanelProps) {
   const [images, setImages] = useState<ImageAsset[]>([]);

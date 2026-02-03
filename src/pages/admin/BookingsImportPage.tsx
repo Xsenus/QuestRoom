@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import type { BookingImportIssue, BookingImportResult } from '../../lib/types';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 type ImportProgress = {
   total: number;
@@ -65,6 +67,8 @@ const renderIssues = (items: BookingImportIssue[], title: string) => {
 };
 
 export default function BookingsImportPage() {
+  const { hasPermission } = useAuth();
+  const canImport = hasPermission('bookings.import');
   const [importContent, setImportContent] = useState('');
   const [importFileName, setImportFileName] = useState('');
   const [importResult, setImportResult] = useState<BookingImportResult | null>(null);
@@ -73,6 +77,10 @@ export default function BookingsImportPage() {
   const [progress, setProgress] = useState<ImportProgress>({ total: 0, processed: 0 });
 
   const pendingTotal = useMemo(() => countImportRows(importContent), [importContent]);
+
+  if (!canImport) {
+    return <AccessDenied />;
+  }
 
   const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

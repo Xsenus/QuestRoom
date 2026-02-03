@@ -4,8 +4,14 @@ import { Quest, QuestUpsert, DurationBadge, StandardExtraService } from '../../l
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 import QuestScheduleEditor from '../../components/admin/QuestScheduleEditor';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
+import { useAuth } from '../../contexts/AuthContext';
+import AccessDenied from '../../components/admin/AccessDenied';
 
 export default function QuestsPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission('quests.view');
+  const canEdit = hasPermission('quests.edit');
+  const canDelete = hasPermission('quests.delete');
   const [quests, setQuests] = useState<Quest[]>([]);
   const [durationBadges, setDurationBadges] = useState<DurationBadge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +48,10 @@ export default function QuestsPage() {
     loadStandardExtraServices();
   }, []);
 
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   const loadDurationBadges = async () => {
     try {
       const data = await api.getDurationBadges();
@@ -71,6 +81,7 @@ export default function QuestsPage() {
   };
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setEditingQuest({
       title: '',
       description: '',
@@ -102,6 +113,7 @@ export default function QuestsPage() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     if (!editingQuest) return;
 
     const { id, ...payload } = editingQuest;
@@ -136,6 +148,7 @@ export default function QuestsPage() {
   };
 
   const handleToggleVisibility = async (quest: Quest) => {
+    if (!canEdit) return;
     try {
       const payload: QuestUpsert = {
         title: quest.title,
@@ -171,6 +184,7 @@ export default function QuestsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) return;
     if (!confirm('Вы уверены, что хотите удалить этот квест?')) return;
 
     try {
@@ -182,6 +196,7 @@ export default function QuestsPage() {
   };
 
   const addExtraService = () => {
+    if (!canEdit) return;
     if (!editingQuest) return;
     const extraServices = editingQuest.extraServices || [];
     setEditingQuest({
@@ -191,6 +206,7 @@ export default function QuestsPage() {
   };
 
   const updateExtraService = (index: number, field: 'title' | 'price', value: string) => {
+    if (!canEdit) return;
     if (!editingQuest) return;
     const extraServices = [...(editingQuest.extraServices || [])];
     extraServices[index] = {
@@ -325,6 +341,7 @@ export default function QuestsPage() {
   };
 
   const handleImageUpload = async (file?: File) => {
+    if (!canEdit) return;
     if (!file || !editingQuest) return;
 
     try {
@@ -341,6 +358,7 @@ export default function QuestsPage() {
   };
 
   const handleSelectLibraryImage = (url: string) => {
+    if (!canEdit) return;
     if (!editingQuest) return;
     const images = [...(editingQuest.images || []), url];
     setEditingQuest({
@@ -982,7 +1000,12 @@ export default function QuestsPage() {
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                disabled={!canEdit}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  canEdit
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'cursor-not-allowed bg-red-200 text-white/80'
+                }`}
               >
                 <Save className="w-5 h-5" />
                 Сохранить
@@ -1018,7 +1041,12 @@ export default function QuestsPage() {
         <h2 className="text-3xl font-bold text-gray-900">Управление квестами</h2>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          disabled={!canEdit}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+            canEdit
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'cursor-not-allowed bg-red-200 text-white/80'
+          }`}
         >
           <Plus className="w-5 h-5" />
           Создать квест
@@ -1083,14 +1111,24 @@ export default function QuestsPage() {
               <div className="flex gap-2 ml-4">
                 <button
                   onClick={() => handleEditQuest(quest)}
-                  className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                  disabled={!canEdit}
+                  className={`p-2 rounded-lg transition-colors ${
+                    canEdit
+                      ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                      : 'cursor-not-allowed bg-blue-50 text-blue-200'
+                  }`}
                   title="Редактировать"
                 >
                   <Edit className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => handleToggleVisibility(quest)}
-                  className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition-colors"
+                  disabled={!canEdit}
+                  className={`p-2 rounded-lg transition-colors ${
+                    canEdit
+                      ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                      : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
+                  }`}
                   title={quest.isVisible ? 'Скрыть' : 'Показать'}
                 >
                   {quest.isVisible ? (
@@ -1101,7 +1139,12 @@ export default function QuestsPage() {
                 </button>
                 <button
                   onClick={() => handleDelete(quest.id)}
-                  className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                  disabled={!canDelete}
+                  className={`p-2 rounded-lg transition-colors ${
+                    canDelete
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                      : 'cursor-not-allowed bg-red-50 text-red-200'
+                  }`}
                   title="Удалить"
                 >
                   <Trash2 className="w-5 h-5" />
