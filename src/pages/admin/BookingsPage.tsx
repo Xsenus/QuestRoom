@@ -133,6 +133,7 @@ export default function BookingsPage() {
   const canEdit = hasPermission('bookings.edit');
   const canDelete = hasPermission('bookings.delete');
   const canConfirm = hasPermission('bookings.confirm');
+  const canViewPromoCodes = hasPermission('promo-codes.view');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [countBookings, setCountBookings] = useState<Booking[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -450,6 +451,9 @@ export default function BookingsPage() {
   }, []);
 
   useEffect(() => {
+    if (!canView) {
+      return;
+    }
     const today = new Date();
     const listRangeEnd = new Date(today);
     listRangeEnd.setDate(today.getDate() + 14);
@@ -483,7 +487,7 @@ export default function BookingsPage() {
     loadQuests();
     loadSettings();
     loadPromoCodes();
-  }, []);
+  }, [canView]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -510,6 +514,9 @@ export default function BookingsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') {
+      return;
+    }
+    if (!canView) {
       return;
     }
     let isActive = true;
@@ -559,6 +566,7 @@ export default function BookingsPage() {
       isActive = false;
     };
   }, [
+    canView,
     tableColumnsStorageKey,
     user?.email,
     mergeTablePreferences,
@@ -574,6 +582,9 @@ export default function BookingsPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      if (!canView) {
+        return;
+      }
       if (columnsLoadedKey !== tableColumnsStorageKey) {
         return;
       }
@@ -601,6 +612,7 @@ export default function BookingsPage() {
       }
     };
   }, [
+    canView,
     tableColumns,
     activeColumnFilters,
     searchQuery,
@@ -737,6 +749,11 @@ export default function BookingsPage() {
 
   const loadBookings = useCallback(
     async (showLoading = true) => {
+      if (!canView) {
+        setBookings([]);
+        setCountBookings([]);
+        return;
+      }
       if (showLoading) {
         setLoading(true);
       }
@@ -754,16 +771,19 @@ export default function BookingsPage() {
         setLoading(false);
       }
     },
-    [listFilterParams, countFilterParams]
+    [canView, listFilterParams, countFilterParams]
   );
 
   useEffect(() => {
+    if (!canView) {
+      return;
+    }
     const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
     if (!canLoad) {
       return;
     }
     loadBookings();
-  }, [loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
+  }, [canView, loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -797,6 +817,10 @@ export default function BookingsPage() {
   };
 
   const loadPromoCodes = async () => {
+    if (!canViewPromoCodes) {
+      setPromoCodes([]);
+      return;
+    }
     try {
       const data = await api.getPromoCodes();
       setPromoCodes(data || []);
