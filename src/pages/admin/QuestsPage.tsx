@@ -121,12 +121,14 @@ export default function QuestsPage() {
         title: service.title,
         price: service.price,
       }));
+      const baseSlug = parent.slug?.trim();
+      const childSlug = baseSlug ? `${baseSlug}_kids` : '';
       return {
         ...prev,
         parentQuestId: parent.id,
         title: parent.title,
         description: parent.description,
-        slug: parent.slug,
+        slug: childSlug,
         addresses: parent.addresses || [],
         phones: parent.phones || [],
         participantsMin: parent.participantsMin,
