@@ -45,6 +45,12 @@ public class AppDbContext : DbContext
             .HasIndex(q => q.Slug)
             .IsUnique();
 
+        modelBuilder.Entity<Quest>()
+            .HasOne(q => q.ParentQuest)
+            .WithMany(q => q.ChildQuests)
+            .HasForeignKey(q => q.ParentQuestId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<QuestSchedule>()
             .HasOne(e => e.Quest)
             .WithMany()

@@ -20,6 +20,9 @@ public class Quest
     [Column("slug")]
     public string Slug { get; set; } = string.Empty;
 
+    [Column("parent_quest_id")]
+    public Guid? ParentQuestId { get; set; }
+
     [Column("addresses", TypeName = "text[]")]
     public string[] Addresses { get; set; } = Array.Empty<string>();
 
@@ -85,6 +88,10 @@ public class Quest
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    public Quest? ParentQuest { get; set; }
+
+    public ICollection<Quest> ChildQuests { get; set; } = new List<Quest>();
 
     public ICollection<QuestExtraService> ExtraServices { get; set; } = new List<QuestExtraService>();
 }

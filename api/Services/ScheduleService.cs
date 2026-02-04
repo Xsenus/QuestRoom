@@ -37,12 +37,13 @@ public class ScheduleService : IScheduleService
         DateOnly? fromDate,
         DateOnly? toDate)
     {
-        if (fromDate.HasValue && toDate.HasValue && await ShouldUseTemplateAsync(questId))
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(questId);
+        if (fromDate.HasValue && toDate.HasValue && await ShouldUseTemplateAsync(scheduleQuestId))
         {
-            await GenerateScheduleFromTemplatesAsync(questId, fromDate.Value, toDate.Value);
+            await GenerateScheduleFromTemplatesAsync(scheduleQuestId, fromDate.Value, toDate.Value);
         }
 
-        var query = _context.QuestSchedules.Where(s => s.QuestId == questId);
+        var query = _context.QuestSchedules.Where(s => s.QuestId == scheduleQuestId);
 
         if (fromDate.HasValue)
         {
@@ -63,10 +64,11 @@ public class ScheduleService : IScheduleService
 
     public async Task<QuestScheduleDto> CreateSlotAsync(QuestScheduleUpsertDto dto)
     {
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
         var slot = new QuestSchedule
         {
             Id = Guid.NewGuid(),
-            QuestId = dto.QuestId,
+            QuestId = scheduleQuestId,
             Date = dto.Date,
             TimeSlot = dto.TimeSlot,
             Price = dto.Price,
@@ -89,7 +91,7 @@ public class ScheduleService : IScheduleService
             return false;
         }
 
-        slot.QuestId = dto.QuestId;
+        slot.QuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
         slot.Date = dto.Date;
         slot.TimeSlot = dto.TimeSlot;
         slot.Price = dto.Price;
@@ -108,8 +110,11 @@ public class ScheduleService : IScheduleService
         }
 
         var questIds = questId.HasValue
-            ? new List<Guid> { questId.Value }
-            : await _context.Quests.Select(q => q.Id).ToListAsync();
+            ? new List<Guid> { await ResolveScheduleQuestIdAsync(questId.Value) }
+            : await _context.Quests
+                .Where(q => q.ParentQuestId == null)
+                .Select(q => q.Id)
+                .ToListAsync();
 
         if (!questIds.Any())
         {
@@ -486,14 +491,15 @@ public class ScheduleService : IScheduleService
 
     public async Task<IReadOnlyList<QuestWeeklySlotDto>> GetWeeklySlotsAsync(Guid questId)
     {
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(questId);
         return await _context.QuestWeeklySlots
-            .Where(slot => slot.QuestId == questId)
+            .Where(slot => slot.QuestId == scheduleQuestId)
             .OrderBy(slot => slot.DayOfWeek)
             .ThenBy(slot => slot.TimeSlot)
             .Select(slot => new QuestWeeklySlotDto
             {
                 Id = slot.Id,
-                QuestId = slot.QuestId,
+                QuestId = scheduleQuestId,
                 DayOfWeek = slot.DayOfWeek,
                 TimeSlot = slot.TimeSlot,
                 Price = slot.Price,
@@ -505,10 +511,11 @@ public class ScheduleService : IScheduleService
 
     public async Task<QuestWeeklySlotDto> CreateWeeklySlotAsync(QuestWeeklySlotUpsertDto dto)
     {
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
         var slot = new QuestWeeklySlot
         {
             Id = Guid.NewGuid(),
-            QuestId = dto.QuestId,
+            QuestId = scheduleQuestId,
             DayOfWeek = dto.DayOfWeek,
             TimeSlot = dto.TimeSlot,
             Price = dto.Price,
@@ -522,7 +529,7 @@ public class ScheduleService : IScheduleService
         return new QuestWeeklySlotDto
         {
             Id = slot.Id,
-            QuestId = slot.QuestId,
+            QuestId = scheduleQuestId,
             DayOfWeek = slot.DayOfWeek,
             TimeSlot = slot.TimeSlot,
             Price = slot.Price,
@@ -539,7 +546,7 @@ public class ScheduleService : IScheduleService
             return false;
         }
 
-        slot.QuestId = dto.QuestId;
+        slot.QuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
         slot.DayOfWeek = dto.DayOfWeek;
         slot.TimeSlot = dto.TimeSlot;
         slot.Price = dto.Price;
@@ -567,8 +574,9 @@ public class ScheduleService : IScheduleService
         DateOnly? fromDate,
         DateOnly? toDate)
     {
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(questId);
         var query = _context.QuestScheduleOverrides
-            .Where(overrideDay => overrideDay.QuestId == questId)
+            .Where(overrideDay => overrideDay.QuestId == scheduleQuestId)
             .Include(overrideDay => overrideDay.Slots)
             .AsQueryable();
 
@@ -591,8 +599,9 @@ public class ScheduleService : IScheduleService
 
     public async Task<QuestScheduleOverrideDto> CreateOverrideAsync(QuestScheduleOverrideUpsertDto dto)
     {
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
         var existing = await _context.QuestScheduleOverrides
-            .FirstOrDefaultAsync(overrideDay => overrideDay.QuestId == dto.QuestId && overrideDay.Date == dto.Date);
+            .FirstOrDefaultAsync(overrideDay => overrideDay.QuestId == scheduleQuestId && overrideDay.Date == dto.Date);
 
         if (existing != null)
         {
@@ -602,7 +611,7 @@ public class ScheduleService : IScheduleService
         var overrideDayEntity = new QuestScheduleOverride
         {
             Id = Guid.NewGuid(),
-            QuestId = dto.QuestId,
+            QuestId = scheduleQuestId,
             Date = dto.Date,
             IsClosed = dto.IsClosed,
             CreatedAt = DateTime.UtcNow,
@@ -627,9 +636,10 @@ public class ScheduleService : IScheduleService
             return false;
         }
 
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
         var duplicate = await _context.QuestScheduleOverrides
             .FirstOrDefaultAsync(overrideDay =>
-                overrideDay.QuestId == dto.QuestId &&
+                overrideDay.QuestId == scheduleQuestId &&
                 overrideDay.Date == dto.Date &&
                 overrideDay.Id != id);
 
@@ -638,7 +648,7 @@ public class ScheduleService : IScheduleService
             throw new InvalidOperationException("Для этой даты уже есть переопределение.");
         }
 
-        overrideDayEntity.QuestId = dto.QuestId;
+        overrideDayEntity.QuestId = scheduleQuestId;
         overrideDayEntity.Date = dto.Date;
         overrideDayEntity.IsClosed = dto.IsClosed;
         overrideDayEntity.UpdatedAt = DateTime.UtcNow;
@@ -668,15 +678,16 @@ public class ScheduleService : IScheduleService
 
     public async Task<QuestScheduleSettingsDto> GetSettingsAsync(Guid questId)
     {
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(questId);
         var settings = await _context.QuestScheduleSettings
-            .FirstOrDefaultAsync(entry => entry.QuestId == questId);
+            .FirstOrDefaultAsync(entry => entry.QuestId == scheduleQuestId);
 
         if (settings == null)
         {
             return new QuestScheduleSettingsDto
             {
                 Id = Guid.Empty,
-                QuestId = questId,
+                QuestId = scheduleQuestId,
                 HolidayPrice = null,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -695,15 +706,16 @@ public class ScheduleService : IScheduleService
 
     public async Task<QuestScheduleSettingsDto> UpsertSettingsAsync(QuestScheduleSettingsUpsertDto dto)
     {
+        var scheduleQuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
         var settings = await _context.QuestScheduleSettings
-            .FirstOrDefaultAsync(entry => entry.QuestId == dto.QuestId);
+            .FirstOrDefaultAsync(entry => entry.QuestId == scheduleQuestId);
 
         if (settings == null)
         {
             settings = new QuestScheduleSettings
             {
                 Id = Guid.NewGuid(),
-                QuestId = dto.QuestId,
+                QuestId = scheduleQuestId,
                 HolidayPrice = dto.HolidayPrice,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -778,5 +790,32 @@ public class ScheduleService : IScheduleService
         }
 
         return result;
+    }
+
+    private async Task<Guid> ResolveScheduleQuestIdAsync(Guid questId)
+    {
+        var currentId = questId;
+        var visited = new HashSet<Guid>();
+
+        while (true)
+        {
+            if (!visited.Add(currentId))
+            {
+                return questId;
+            }
+
+            var parentId = await _context.Quests
+                .AsNoTracking()
+                .Where(q => q.Id == currentId)
+                .Select(q => q.ParentQuestId)
+                .FirstOrDefaultAsync();
+
+            if (!parentId.HasValue)
+            {
+                return currentId;
+            }
+
+            currentId = parentId.Value;
+        }
     }
 }

@@ -86,6 +86,7 @@ export default function QuestsPage() {
       title: '',
       description: '',
       slug: '',
+      parentQuestId: null,
       addresses: [],
       phones: [],
       participantsMin: 2,
@@ -123,6 +124,7 @@ export default function QuestsPage() {
       giftGameLabel: normalizeOptional(payload.giftGameLabel) || 'Подарить игру',
       giftGameUrl: normalizeOptional(payload.giftGameUrl) || '/certificate',
       videoUrl: normalizeOptional(payload.videoUrl),
+      parentQuestId: normalizeOptional(payload.parentQuestId),
     };
 
     try {
@@ -154,6 +156,7 @@ export default function QuestsPage() {
         title: quest.title,
         description: quest.description,
         slug: quest.slug,
+        parentQuestId: quest.parentQuestId,
         addresses: quest.addresses || [],
         phones: quest.phones || [],
         participantsMin: quest.participantsMin,
@@ -381,7 +384,12 @@ export default function QuestsPage() {
   };
 
   if (editingQuest) {
-    const scheduleTabDisabled = isCreating || !editingQuest.id;
+    const isChildMode = Boolean(editingQuest.parentQuestId);
+    const parentQuestName = quests.find((quest) => quest.id === editingQuest.parentQuestId)?.title;
+    const scheduleTabDisabled = isCreating || !editingQuest.id || isChildMode;
+    const scheduleTabHint = isChildMode
+      ? 'Расписание и цены наследуются от родительского квеста.'
+      : 'Сначала сохраните квест';
     return (
       <div className="max-w-5xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
@@ -408,7 +416,7 @@ export default function QuestsPage() {
                   ? 'bg-red-600 text-white border-red-600'
                   : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
               } ${scheduleTabDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              title={scheduleTabDisabled ? 'Сначала сохраните квест' : undefined}
+              title={scheduleTabDisabled ? scheduleTabHint : undefined}
             >
               Время и цены
             </button>
@@ -450,6 +458,40 @@ export default function QuestsPage() {
               <p className="mt-2 text-xs text-gray-500">
                 Используется в ссылке: /quest/{editingQuest.slug || 'sherlock'}
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Родительский квест (детский режим)
+              </label>
+              <select
+                value={editingQuest.parentQuestId || ''}
+                onChange={(e) =>
+                  setEditingQuest({
+                    ...editingQuest,
+                    parentQuestId: e.target.value || null,
+                  })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              >
+                <option value="">Нет</option>
+                {quests
+                  .filter((quest) => quest.id !== editingQuest.id)
+                  .map((quest) => (
+                    <option key={quest.id} value={quest.id}>
+                      {quest.title}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-2 text-xs text-gray-500">
+                Если выбран родитель, расписание и цены наследуются от него, а вкладка
+                «Время и цены» будет заблокирована.
+              </p>
+              {isChildMode && parentQuestName && (
+                <p className="mt-1 text-xs font-semibold text-red-600">
+                  Детский режим для квеста: {parentQuestName}.
+                </p>
+              )}
             </div>
 
             <div>
@@ -792,7 +834,10 @@ export default function QuestsPage() {
                       extraParticipantPrice: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
+                    isChildMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                  }`}
                   min="0"
                 />
               </div>
@@ -941,7 +986,10 @@ export default function QuestsPage() {
                       price: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
+                    isChildMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                  }`}
                   placeholder="2500"
                 />
               </div>
@@ -1021,11 +1069,25 @@ export default function QuestsPage() {
           </div>
           ) : scheduleTabDisabled ? (
             <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
-              <p className="font-semibold text-gray-800">Сначала сохраните квест.</p>
-              <p className="mt-2">
-                Чтобы настроить расписание, нужно сохранить карточку квеста и перейти во
-                вкладку «Время и цены».
-              </p>
+              {isChildMode ? (
+                <>
+                  <p className="font-semibold text-gray-800">
+                    Расписание и цены наследуются от родителя.
+                  </p>
+                  <p className="mt-2">
+                    Для детского режима нельзя менять слоты отдельно — редактируйте расписание у родительского
+                    квеста.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-gray-800">Сначала сохраните квест.</p>
+                  <p className="mt-2">
+                    Чтобы настроить расписание, нужно сохранить карточку квеста и перейти во
+                    вкладку «Время и цены».
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <QuestScheduleEditor questId={editingQuest.id!} />
@@ -1068,6 +1130,11 @@ export default function QuestsPage() {
                   {quest.isNew && (
                     <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                       NEW
+                    </span>
+                  )}
+                  {quest.parentQuestId && (
+                    <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      ДЕТСКИЙ РЕЖИМ
                     </span>
                   )}
                   {!quest.isVisible && (
