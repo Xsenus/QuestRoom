@@ -8,6 +8,7 @@ export default function HomePage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<'adult' | 'kids'>('adult');
 
   useEffect(() => {
     loadQuests();
@@ -36,17 +37,50 @@ export default function HomePage() {
     }
   };
 
+  const filteredQuests = quests.filter((quest) => {
+    if (activeCategory === 'kids') {
+      return Boolean(quest.parentQuestId);
+    }
+    return !quest.parentQuestId;
+  });
+
   return (
     <>
       <Hero />
       <div className="max-w-7xl mx-auto px-4 py-4 md:py-8 space-y-4 md:space-y-6">
+        <div className="flex flex-col items-center gap-3 md:gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveCategory('adult')}
+              className={`px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold uppercase tracking-wider border-2 transition-all font-display ${
+                activeCategory === 'adult'
+                  ? 'bg-[#c51f2e] border-[#c51f2e] text-white shadow-lg'
+                  : 'bg-transparent border-white/60 text-white/80 hover:text-white hover:border-white'
+              }`}
+            >
+              Взрослые
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveCategory('kids')}
+              className={`px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold uppercase tracking-wider border-2 transition-all font-display ${
+                activeCategory === 'kids'
+                  ? 'bg-[#c51f2e] border-[#c51f2e] text-white shadow-lg'
+                  : 'bg-transparent border-white/60 text-white/80 hover:text-white hover:border-white'
+              }`}
+            >
+              Детские
+            </button>
+          </div>
+        </div>
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto mb-4"></div>
             <p className="text-white font-semibold text-lg">Загрузка квестов...</p>
           </div>
-        ) : quests.length > 0 ? (
-          quests.map((quest) => (
+        ) : filteredQuests.length > 0 ? (
+          filteredQuests.map((quest) => (
             <QuestCard
               key={quest.id}
               quest={quest}
