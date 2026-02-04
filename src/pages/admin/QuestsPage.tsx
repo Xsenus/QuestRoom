@@ -45,6 +45,30 @@ export default function QuestsPage() {
     }
     return images;
   };
+  const normalizeServiceTitle = (title?: string | null) =>
+    (title ?? '').trim().toLowerCase();
+  const findAnimatorService = () =>
+    standardExtraServices.find(
+      (service) => normalizeServiceTitle(service.title) === 'детский аниматор'
+    );
+  const ensureAnimatorService = (
+    services: QuestUpsert['extraServices'] = [],
+    animatorService?: StandardExtraService | null
+  ) => {
+    if (!animatorService) return services;
+    const normalizedTitle = normalizeServiceTitle(animatorService.title);
+    const exists = services.some(
+      (service) => normalizeServiceTitle(service.title) === normalizedTitle
+    );
+    if (exists) return services;
+    return [
+      ...services,
+      {
+        title: animatorService.title.trim(),
+        price: animatorService.price,
+      },
+    ];
+  };
 
   const normalizeOptional = (value?: string | null) => {
     const trimmed = value?.trim();
@@ -138,6 +162,7 @@ export default function QuestsPage() {
         title: service.title,
         price: service.price,
       }));
+      const animatorService = findAnimatorService();
       const baseSlug = parent.slug?.trim();
       const childSlug = baseSlug ? `${baseSlug}_kids` : '';
       return {
@@ -148,8 +173,8 @@ export default function QuestsPage() {
         slug: childSlug,
         addresses: parent.addresses || [],
         phones: parent.phones || [],
-        participantsMin: parent.participantsMin,
-        participantsMax: parent.participantsMax,
+        participantsMin: isCreating ? 2 : parent.participantsMin,
+        participantsMax: isCreating ? 6 : parent.participantsMax,
         extraParticipantsMax: parent.extraParticipantsMax,
         extraParticipantPrice: parent.extraParticipantPrice,
         ageRestriction: parent.ageRestriction,
@@ -166,7 +191,7 @@ export default function QuestsPage() {
         giftGameUrl: parent.giftGameUrl || '/certificate',
         videoUrl: parent.videoUrl || '',
         sortOrder: parent.sortOrder,
-        extraServices: parentExtras,
+        extraServices: ensureAnimatorService(parentExtras, animatorService),
       };
     });
   };
@@ -187,17 +212,15 @@ export default function QuestsPage() {
       videoUrl: normalizeOptional(payload.videoUrl),
       parentQuestId: normalizeOptional(payload.parentQuestId),
     };
+    const animatorService = findAnimatorService();
     const finalPayload: QuestUpsert = parentQuest
       ? {
           ...normalizedPayload,
-          participantsMin: parentQuest.participantsMin,
-          participantsMax: parentQuest.participantsMax,
+          extraServices: ensureAnimatorService(normalizedPayload.extraServices, animatorService),
           extraParticipantsMax: parentQuest.extraParticipantsMax,
           extraParticipantPrice: parentQuest.extraParticipantPrice,
           price: parentQuest.price,
           duration: parentQuest.duration,
-          difficulty: parentQuest.difficulty,
-          difficultyMax: parentQuest.difficultyMax,
         }
       : normalizedPayload;
 
@@ -313,6 +336,13 @@ export default function QuestsPage() {
     if (!canEdit) return;
     if (!editingQuest) return;
     const extraServices = [...(editingQuest.extraServices || [])];
+    if (
+      field === 'title' &&
+      editingQuest.parentQuestId &&
+      normalizeServiceTitle(extraServices[index]?.title) === 'детский аниматор'
+    ) {
+      return;
+    }
     extraServices[index] = {
       ...extraServices[index],
       [field]: field === 'price' ? Number(value) : value,
@@ -323,6 +353,12 @@ export default function QuestsPage() {
   const removeExtraService = (index: number) => {
     if (!editingQuest) return;
     const extraServices = [...(editingQuest.extraServices || [])];
+    if (
+      editingQuest.parentQuestId &&
+      normalizeServiceTitle(extraServices[index]?.title) === 'детский аниматор'
+    ) {
+      return;
+    }
     extraServices.splice(index, 1);
     setEditingQuest({ ...editingQuest, extraServices });
   };
@@ -330,6 +366,12 @@ export default function QuestsPage() {
   const addStandardExtraService = (service: StandardExtraService) => {
     const normalizedTitle = service.title.trim();
     if (!normalizedTitle) return;
+    if (
+      editingQuest?.parentQuestId &&
+      normalizeServiceTitle(normalizedTitle) === 'детский аниматор'
+    ) {
+      return;
+    }
 
     setEditingQuest((prev) => {
       if (!prev) return prev;
@@ -358,6 +400,7 @@ export default function QuestsPage() {
   const addAllStandardExtras = () => {
     setEditingQuest((prev) => {
       if (!prev) return prev;
+      const isChildMode = Boolean(prev.parentQuestId);
       const extraServices = prev.extraServices || [];
       const normalizedExisting = extraServices.map((service) => ({
         title: service.title?.trim().toLowerCase() || '',
@@ -365,6 +408,10 @@ export default function QuestsPage() {
       }));
       const toAdd = standardExtraServices
         .filter((service) => service.isActive)
+        .filter(
+          (service) =>
+            !isChildMode || normalizeServiceTitle(service.title) !== 'детский аниматор'
+        )
         .filter((service) => {
           const normalizedTitle = service.title.trim().toLowerCase();
           return !normalizedExisting.some(
@@ -483,12 +530,17 @@ export default function QuestsPage() {
   };
 
   const handleEditQuest = (quest: Quest) => {
+    const animatorService = findAnimatorService();
+    const nextExtras = quest.parentQuestId
+      ? ensureAnimatorService(quest.extraServices || [], animatorService)
+      : quest.extraServices || [];
     setEditingQuest({
       ...quest,
       images: ensureMainImageInList(quest.images || [], quest.mainImage),
       giftGameLabel: quest.giftGameLabel || 'Подарить игру',
       giftGameUrl: quest.giftGameUrl || '/certificate',
       videoUrl: quest.videoUrl || '',
+      extraServices: nextExtras,
     });
     setIsCreating(false);
     setActiveTab('details');
@@ -856,8 +908,7 @@ export default function QuestsPage() {
                       participantsMin: parseInt(e.target.value) || 2,
                     })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   min="1"
                 />
               </div>
@@ -875,8 +926,7 @@ export default function QuestsPage() {
                   participantsMax: parseInt(e.target.value) || 6,
                 })
               }
-              disabled={isChildMode}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               min="1"
             />
           </div>
@@ -894,8 +944,7 @@ export default function QuestsPage() {
                   difficulty: parseInt(e.target.value, 10) || 1,
                 })
               }
-              disabled={isChildMode}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               min="1"
             />
           </div>
@@ -913,8 +962,7 @@ export default function QuestsPage() {
                   difficultyMax: parseInt(e.target.value, 10) || 5,
                 })
               }
-              disabled={isChildMode}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               min="1"
             />
           </div>
@@ -970,7 +1018,12 @@ export default function QuestsPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Дополнительные услуги
               </label>
-              {standardExtraServices.some((service) => service.isActive) && (
+              {standardExtraServices
+                .filter(
+                  (service) =>
+                    !isChildMode || normalizeServiceTitle(service.title) !== 'детский аниматор'
+                )
+                .some((service) => service.isActive) && (
                 <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -993,6 +1046,11 @@ export default function QuestsPage() {
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     {standardExtraServices
                       .filter((service) => service.isActive)
+                      .filter(
+                        (service) =>
+                          !isChildMode ||
+                          normalizeServiceTitle(service.title) !== 'детский аниматор'
+                      )
                       .map((service) => (
                       <div
                         key={service.id}
@@ -1016,32 +1074,58 @@ export default function QuestsPage() {
                 </div>
               )}
               <div className="space-y-3">
-                {(editingQuest.extraServices || []).map((service, index) => (
-                  <div key={service.id ?? index} className="grid md:grid-cols-[2fr_1fr_auto] gap-3">
-                    <input
-                      type="text"
-                      value={service.title || ''}
-                      onChange={(e) => updateExtraService(index, 'title', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      placeholder="Название услуги"
-                    />
-                    <input
-                      type="number"
-                      value={service.price || 0}
-                      onChange={(e) => updateExtraService(index, 'price', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      placeholder="Цена"
-                      min="0"
-                    />
-                    <button
-                      onClick={() => removeExtraService(index)}
-                      className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                      title="Удалить услугу"
+                {(editingQuest.extraServices || []).map((service, index) => {
+                  const isAnimatorRequired =
+                    isChildMode && normalizeServiceTitle(service.title) === 'детский аниматор';
+                  return (
+                    <div
+                      key={service.id ?? index}
+                      className="grid md:grid-cols-[2fr_1fr_auto] gap-3 items-start"
                     >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          value={service.title || ''}
+                          onChange={(e) => updateExtraService(index, 'title', e.target.value)}
+                          readOnly={isAnimatorRequired}
+                          className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
+                            isAnimatorRequired ? 'bg-gray-100 text-gray-600' : ''
+                          }`}
+                          placeholder="Название услуги"
+                        />
+                        {isAnimatorRequired && (
+                          <p className="text-xs text-gray-500">
+                            Обязательная услуга для детских квестов.
+                          </p>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        value={service.price || 0}
+                        onChange={(e) => updateExtraService(index, 'price', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                        placeholder="Цена"
+                        min="0"
+                      />
+                      <button
+                        onClick={() => removeExtraService(index)}
+                        disabled={isAnimatorRequired}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isAnimatorRequired
+                            ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                            : 'bg-red-100 hover:bg-red-200 text-red-600'
+                        }`}
+                        title={
+                          isAnimatorRequired
+                            ? 'Эта услуга обязательна для детских квестов'
+                            : 'Удалить услугу'
+                        }
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  );
+                })}
                 <button
                   onClick={addExtraService}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"

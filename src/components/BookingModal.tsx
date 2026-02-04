@@ -29,7 +29,18 @@ export default function BookingModal({
   });
   const [submitting, setSubmitting] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(quest.participantsMin);
-  const [selectedExtraServices, setSelectedExtraServices] = useState<string[]>([]);
+  const normalizeServiceTitle = (title?: string | null) =>
+    (title ?? '').trim().toLowerCase();
+  const questExtraServices = quest.extraServices || [];
+  const mandatoryAnimatorService = quest.parentQuestId
+    ? questExtraServices.find(
+        (service) => normalizeServiceTitle(service.title) === 'детский аниматор'
+      )
+    : undefined;
+  const mandatoryAnimatorId = mandatoryAnimatorService?.id;
+  const [selectedExtraServices, setSelectedExtraServices] = useState<string[]>(
+    mandatoryAnimatorId ? [mandatoryAnimatorId] : []
+  );
   const [notification, setNotification] = useState<{
     isOpen: boolean;
     title: string;
@@ -44,7 +55,9 @@ export default function BookingModal({
     action: undefined,
   });
 
-  const questExtraServices = quest.extraServices || [];
+  const optionalExtraServices = mandatoryAnimatorId
+    ? questExtraServices.filter((service) => service.id !== mandatoryAnimatorId)
+    : questExtraServices;
   const maxParticipants = quest.participantsMax + Math.max(0, quest.extraParticipantsMax || 0);
   const extraParticipantsCount = Math.max(0, participantsCount - quest.participantsMax);
   const extraParticipantsTotal = extraParticipantsCount * Math.max(0, quest.extraParticipantPrice || 0);
@@ -64,6 +77,7 @@ export default function BookingModal({
   };
 
   const toggleExtraService = (serviceId: string) => {
+    if (serviceId === mandatoryAnimatorId) return;
     setSelectedExtraServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -344,8 +358,14 @@ export default function BookingModal({
             {questExtraServices.length > 0 && (
               <div className="space-y-2 text-white text-xs">
                 <p className="font-semibold text-sm">Дополнительные услуги:</p>
+                {mandatoryAnimatorService && (
+                  <div className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-white/90">
+                    Обязательная услуга: {mandatoryAnimatorService.title} —{' '}
+                    {mandatoryAnimatorService.price} ₽
+                  </div>
+                )}
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {questExtraServices.map((service) => (
+                  {optionalExtraServices.map((service) => (
                     <label
                       key={service.id}
                       className="flex items-start gap-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-left text-white/90 cursor-pointer"
