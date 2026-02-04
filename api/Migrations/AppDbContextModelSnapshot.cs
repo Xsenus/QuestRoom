@@ -1592,20 +1592,6 @@ namespace QuestRoomApi.Migrations
                     b.ToTable("users");
                 });
 
-            modelBuilder.Entity("QuestRoomApi.Models.UserPreference", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("BookingTablePreferencesJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("booking_table_preferences");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("user_preferences");
-                });
 
             modelBuilder.Entity("QuestRoomApi.Models.Booking", b =>
                 {
@@ -1732,16 +1718,6 @@ namespace QuestRoomApi.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("QuestRoomApi.Models.UserPreference", b =>
-                {
-                    b.HasOne("QuestRoomApi.Models.User", "User")
-                        .WithOne()
-                        .HasForeignKey("QuestRoomApi.Models.UserPreference", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
 
             modelBuilder.Entity("QuestRoomApi.Models.Booking", b =>
                 {
