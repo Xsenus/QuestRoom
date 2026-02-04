@@ -71,6 +71,7 @@ builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>(
 builder.Services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
 builder.Services.AddScoped<IUserPreferencesService, UserPreferencesService>();
 builder.Services.AddHttpClient();
+builder.Services.AddHostedService<BookingStatusMonitorService>();
 
 // Configure CORS
 builder.Services.AddCors(options =>
