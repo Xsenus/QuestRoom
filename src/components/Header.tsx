@@ -10,7 +10,7 @@ export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
   const location = useLocation();
 
   const navItems = [
-    { id: 'home', label: 'Квесты', icon: Home, path: '/' },
+    { id: 'home', label: 'Квесты', icon: Home, path: '/quests/adults' },
     { id: 'about', label: 'О проекте', icon: Info, path: '/about' },
     { id: 'rules', label: 'Правила игры', icon: FileText, path: '/rules' },
     { id: 'certificate', label: 'Подарочные сертификаты', icon: Gift, path: '/certificate' },

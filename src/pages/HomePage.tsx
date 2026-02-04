@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Quest, Settings } from '../lib/types';
 import Hero from '../components/Hero';
@@ -8,7 +9,9 @@ export default function HomePage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<'adult' | 'kids'>('adult');
+  const navigate = useNavigate();
+  const { category } = useParams();
+  const activeCategory: 'adults' | 'kids' = category === 'kids' ? 'kids' : 'adults';
 
   useEffect(() => {
     loadQuests();
@@ -52,9 +55,9 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
-              onClick={() => setActiveCategory('adult')}
+              onClick={() => navigate('/quests/adults')}
               className={`px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold uppercase tracking-wider border-2 transition-all font-display ${
-                activeCategory === 'adult'
+                activeCategory === 'adults'
                   ? 'bg-[#c51f2e] border-[#c51f2e] text-white shadow-lg'
                   : 'bg-transparent border-white/60 text-white/80 hover:text-white hover:border-white'
               }`}
@@ -63,7 +66,7 @@ export default function HomePage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveCategory('kids')}
+              onClick={() => navigate('/quests/kids')}
               className={`px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold uppercase tracking-wider border-2 transition-all font-display ${
                 activeCategory === 'kids'
                   ? 'bg-[#c51f2e] border-[#c51f2e] text-white shadow-lg'
