@@ -35,7 +35,7 @@ public class QuestsController : ControllerBase
     public async Task<ActionResult<QuestDto>> CreateQuest([FromBody] QuestUpsertDto quest)
     {
         var created = await _questService.CreateQuestAsync(quest);
-        return CreatedAtAction(nameof(GetQuest), new { id = created.Id }, created);
+        return CreatedAtAction(nameof(GetQuest), new { idOrSlug = created.Id }, created);
     }
 
     [Authorize(Roles = "admin")]

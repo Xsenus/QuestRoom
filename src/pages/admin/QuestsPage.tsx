@@ -21,6 +21,7 @@ export default function QuestsPage() {
   );
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'schedule'>('details');
+  const [questFilter, setQuestFilter] = useState<'all' | 'adult' | 'child'>('all');
   const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
     if (mainImage && !images.includes(mainImage)) {
       return [mainImage, ...images];
@@ -113,11 +114,52 @@ export default function QuestsPage() {
     setActiveTab('details');
   };
 
+  const applyParentQuest = (parent: Quest) => {
+    setEditingQuest((prev) => {
+      if (!prev) return prev;
+      const parentExtras = (parent.extraServices || []).map((service) => ({
+        title: service.title,
+        price: service.price,
+      }));
+      return {
+        ...prev,
+        parentQuestId: parent.id,
+        title: parent.title,
+        description: parent.description,
+        slug: parent.slug,
+        addresses: parent.addresses || [],
+        phones: parent.phones || [],
+        participantsMin: parent.participantsMin,
+        participantsMax: parent.participantsMax,
+        extraParticipantsMax: parent.extraParticipantsMax,
+        extraParticipantPrice: parent.extraParticipantPrice,
+        ageRestriction: parent.ageRestriction,
+        ageRating: parent.ageRating,
+        price: parent.price,
+        duration: parent.duration,
+        difficulty: parent.difficulty,
+        difficultyMax: parent.difficultyMax,
+        isNew: parent.isNew,
+        isVisible: parent.isVisible,
+        mainImage: parent.mainImage,
+        images: ensureMainImageInList(parent.images || [], parent.mainImage),
+        giftGameLabel: parent.giftGameLabel || 'Подарить игру',
+        giftGameUrl: parent.giftGameUrl || '/certificate',
+        videoUrl: parent.videoUrl || '',
+        sortOrder: parent.sortOrder,
+        extraServices: parentExtras,
+      };
+    });
+  };
+
   const handleSave = async () => {
     if (!canEdit) return;
     if (!editingQuest) return;
 
     const { id, ...payload } = editingQuest;
+    const parentQuest = payload.parentQuestId
+      ? quests.find((quest) => quest.id === payload.parentQuestId)
+      : null;
     const normalizedPayload: QuestUpsert = {
       ...payload,
       slug: normalizeOptional(payload.slug),
@@ -126,12 +168,35 @@ export default function QuestsPage() {
       videoUrl: normalizeOptional(payload.videoUrl),
       parentQuestId: normalizeOptional(payload.parentQuestId),
     };
+    const finalPayload: QuestUpsert = parentQuest
+      ? {
+          ...normalizedPayload,
+          addresses: parentQuest.addresses || [],
+          phones: parentQuest.phones || [],
+          participantsMin: parentQuest.participantsMin,
+          participantsMax: parentQuest.participantsMax,
+          extraParticipantsMax: parentQuest.extraParticipantsMax,
+          extraParticipantPrice: parentQuest.extraParticipantPrice,
+          ageRestriction: parentQuest.ageRestriction,
+          ageRating: parentQuest.ageRating,
+          price: parentQuest.price,
+          duration: parentQuest.duration,
+          difficulty: parentQuest.difficulty,
+          difficultyMax: parentQuest.difficultyMax,
+          isNew: parentQuest.isNew,
+          isVisible: parentQuest.isVisible,
+          giftGameLabel: parentQuest.giftGameLabel || 'Подарить игру',
+          giftGameUrl: parentQuest.giftGameUrl || '/certificate',
+          videoUrl: parentQuest.videoUrl,
+          sortOrder: parentQuest.sortOrder,
+        }
+      : normalizedPayload;
 
     try {
       if (isCreating) {
-        await api.createQuest(normalizedPayload);
+        await api.createQuest(finalPayload);
       } else if (id) {
-        await api.updateQuest(id, normalizedPayload);
+        await api.updateQuest(id, finalPayload);
       }
     } catch (error) {
       alert('Ошибка при сохранении квеста: ' + (error as Error).message);
@@ -288,6 +353,16 @@ export default function QuestsPage() {
     return <div className="text-center py-12">Загрузка...</div>;
   }
 
+  const filteredQuests = quests.filter((quest) => {
+    if (questFilter === 'adult') {
+      return !quest.parentQuestId;
+    }
+    if (questFilter === 'child') {
+      return Boolean(quest.parentQuestId);
+    }
+    return true;
+  });
+
   const addPhone = () => {
     const phones = editingQuest?.phones || [];
     setEditingQuest({ ...editingQuest, phones: [...phones, ''] });
@@ -390,6 +465,7 @@ export default function QuestsPage() {
     const scheduleTabHint = isChildMode
       ? 'Расписание и цены наследуются от родительского квеста.'
       : 'Сначала сохраните квест';
+    const childInputClass = isChildMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : '';
     return (
       <div className="max-w-5xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
@@ -466,12 +542,19 @@ export default function QuestsPage() {
               </label>
               <select
                 value={editingQuest.parentQuestId || ''}
-                onChange={(e) =>
-                  setEditingQuest({
-                    ...editingQuest,
-                    parentQuestId: e.target.value || null,
-                  })
-                }
+                onChange={(e) => {
+                  const nextParentId = e.target.value || null;
+                  if (!nextParentId) {
+                    setEditingQuest({ ...editingQuest, parentQuestId: null });
+                    return;
+                  }
+                  const parent = quests.find((quest) => quest.id === nextParentId);
+                  if (parent) {
+                    applyParentQuest(parent);
+                  } else {
+                    setEditingQuest({ ...editingQuest, parentQuestId: nextParentId });
+                  }
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               >
                 <option value="">Нет</option>
@@ -599,7 +682,8 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, giftGameLabel: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   placeholder="Подарить игру"
                 />
               </div>
@@ -613,7 +697,8 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, giftGameUrl: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   placeholder="/certificate"
                 />
               </div>
@@ -627,7 +712,8 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, videoUrl: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   placeholder="https://youtube.com/watch?v=..."
                 />
               </div>
@@ -647,11 +733,13 @@ export default function QuestsPage() {
                       type="text"
                       value={addr}
                       onChange={(e) => updateAddress(index, e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      disabled={isChildMode}
+                      className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                       placeholder="ул. Диксона, д. 1, стр. 4"
                     />
                     <button
                       onClick={() => removeAddress(index)}
+                      disabled={isChildMode}
                       className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                     >
                       <X className="w-5 h-5" />
@@ -660,7 +748,10 @@ export default function QuestsPage() {
                 ))}
                 <button
                   onClick={addAddress}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  disabled={isChildMode}
+                  className={`flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg transition-colors ${
+                    isChildMode ? 'cursor-not-allowed opacity-60' : 'hover:bg-gray-200'
+                  }`}
                 >
                   <Plus className="w-4 h-4" />
                   Добавить адрес
@@ -679,11 +770,13 @@ export default function QuestsPage() {
                       type="text"
                       value={phone}
                       onChange={(e) => updatePhone(index, e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      disabled={isChildMode}
+                      className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                       placeholder="8 (391) 294-59-50"
                     />
                     <button
                       onClick={() => removePhone(index)}
+                      disabled={isChildMode}
                       className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                     >
                       <X className="w-5 h-5" />
@@ -692,7 +785,10 @@ export default function QuestsPage() {
                 ))}
                 <button
                   onClick={addPhone}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  disabled={isChildMode}
+                  className={`flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg transition-colors ${
+                    isChildMode ? 'cursor-not-allowed opacity-60' : 'hover:bg-gray-200'
+                  }`}
                 >
                   <Plus className="w-4 h-4" />
                   Добавить телефон
@@ -713,7 +809,8 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, duration: parseInt(e.target.value) })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                 >
                   {durationBadges.map(badge => (
                     <option key={badge.duration} value={badge.duration}>
@@ -736,7 +833,8 @@ export default function QuestsPage() {
                       participantsMin: parseInt(e.target.value) || 2,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   min="1"
                 />
               </div>
@@ -754,7 +852,8 @@ export default function QuestsPage() {
                   participantsMax: parseInt(e.target.value) || 6,
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={isChildMode}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
               min="1"
             />
           </div>
@@ -772,7 +871,8 @@ export default function QuestsPage() {
                   difficulty: parseInt(e.target.value, 10) || 1,
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={isChildMode}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
               min="1"
             />
           </div>
@@ -790,7 +890,8 @@ export default function QuestsPage() {
                   difficultyMax: parseInt(e.target.value, 10) || 5,
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={isChildMode}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
               min="1"
             />
           </div>
@@ -813,7 +914,8 @@ export default function QuestsPage() {
                       extraParticipantsMax: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   min="0"
                 />
                 <p className="mt-2 text-xs text-gray-500">
@@ -835,9 +937,7 @@ export default function QuestsPage() {
                     })
                   }
                   disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
-                    isChildMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                  }`}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   min="0"
                 />
               </div>
@@ -946,7 +1046,8 @@ export default function QuestsPage() {
                       ageRestriction: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   placeholder="С 6 лет родителями или с 14 лет самостоятельно"
                 />
               </div>
@@ -966,7 +1067,8 @@ export default function QuestsPage() {
                       ageRating: formatAgeRating(`${e.target.value} +`),
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   placeholder="12"
                 />
               </div>
@@ -987,9 +1089,7 @@ export default function QuestsPage() {
                     })
                   }
                   disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
-                    isChildMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                  }`}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   placeholder="2500"
                 />
               </div>
@@ -1007,7 +1107,8 @@ export default function QuestsPage() {
                       sortOrder: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                 />
               </div>
             </div>
@@ -1023,7 +1124,8 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, isNew: e.target.checked })
                   }
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                  disabled={isChildMode}
+                  className={`w-5 h-5 text-red-600 rounded focus:ring-red-500 ${isChildMode ? 'cursor-not-allowed' : ''}`}
                 />
                 <span className="text-sm font-semibold text-gray-700">
                   Показывать бейдж "NEW"
@@ -1037,7 +1139,8 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, isVisible: e.target.checked })
                   }
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                  disabled={isChildMode}
+                  className={`w-5 h-5 text-red-600 rounded focus:ring-red-500 ${isChildMode ? 'cursor-not-allowed' : ''}`}
                 />
                 <span className="text-sm font-semibold text-gray-700">
                   Показывать на главной странице
@@ -1115,8 +1218,29 @@ export default function QuestsPage() {
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { key: 'all' as const, label: 'Все' },
+          { key: 'adult' as const, label: 'Взрослые' },
+          { key: 'child' as const, label: 'Детские' },
+        ].map((filter) => (
+          <button
+            key={filter.key}
+            type="button"
+            onClick={() => setQuestFilter(filter.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+              questFilter === filter.key
+                ? 'bg-red-600 text-white border-red-600'
+                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {quests.map((quest) => (
+        {filteredQuests.map((quest) => (
           <div
             key={quest.id}
             className={`bg-white rounded-lg shadow-lg p-6 ${
@@ -1190,9 +1314,9 @@ export default function QuestsPage() {
                 </button>
                 <button
                   onClick={() => handleToggleVisibility(quest)}
-                  disabled={!canEdit}
+                  disabled={!canEdit || Boolean(quest.parentQuestId)}
                   className={`p-2 rounded-lg transition-colors ${
-                    canEdit
+                    canEdit && !quest.parentQuestId
                       ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
                       : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
                   }`}
@@ -1221,10 +1345,12 @@ export default function QuestsPage() {
           </div>
         ))}
 
-        {quests.length === 0 && (
+        {filteredQuests.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <p className="text-gray-600 text-lg">Квесты не найдены</p>
-            <p className="text-gray-500 mt-2">Создайте первый квест</p>
+            <p className="text-gray-500 mt-2">
+              Попробуйте изменить фильтр или создайте новый квест.
+            </p>
           </div>
         )}
       </div>
