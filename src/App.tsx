@@ -1,4 +1,4 @@
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -118,7 +118,9 @@ function App() {
           >
             <Header currentPage={currentPage} setCurrentPage={handlePageChange} />
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              <Route path="/" element={<Navigate to="/quests/adults" replace />} />
+              <Route path="/quests" element={<Navigate to="/quests/adults" replace />} />
+              <Route path="/quests/:category" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/rules" element={<RulesPage />} />
               <Route path="/certificate" element={<CertificatePage />} />
