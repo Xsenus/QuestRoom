@@ -17,14 +17,6 @@ export default function StandardExtraServicesPage() {
   >(null);
   const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    loadServices();
-  }, []);
-
-  if (!canView) {
-    return <AccessDenied />;
-  }
-
   const loadServices = async () => {
     try {
       const data = await api.getStandardExtraServices();
@@ -34,6 +26,18 @@ export default function StandardExtraServicesPage() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (!canView) {
+      setLoading(false);
+      return;
+    }
+    loadServices();
+  }, [canView]);
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   const handleCreate = () => {
     if (!canEdit) return;
