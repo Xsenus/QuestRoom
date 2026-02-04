@@ -12,6 +12,7 @@ import TeaZonesPage from './components/TeaZonesPage';
 import QuestDetailPage from './pages/QuestDetailPage';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './pages/AdminLayout';
+import AdminHomePage from './pages/admin/AdminHomePage';
 import QuestsPage from './pages/admin/QuestsPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import BookingsPage from './pages/admin/BookingsPage';
@@ -80,7 +81,8 @@ function App() {
           <ProtectedRoute>
             <Routes>
               <Route element={<AdminLayout />}>
-                <Route index element={<QuestsPage />} />
+                <Route index element={<AdminHomePage />} />
+                <Route path="overview" element={<AdminHomePage />} />
                 <Route path="quests" element={<QuestsPage />} />
                 <Route path="bookings" element={<BookingsPage />} />
                 <Route path="bookings/import" element={<BookingsImportPage />} />

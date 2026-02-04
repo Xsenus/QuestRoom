@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
+  Home,
   LogOut,
   Calendar,
   Settings,
@@ -26,6 +27,7 @@ import {
 export default function AdminLayout() {
   const { signOut, user, hasPermission, hasAnyPermission, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(true);
@@ -44,6 +46,7 @@ export default function AdminLayout() {
   const canViewAbout = hasPermission('about.view');
   const canViewCertificates = hasPermission('certificates.view');
   const canViewCertificateOrders = hasPermission('certificate-orders.view');
+  const showCertificatesSection = canViewCertificates || canViewCertificateOrders;
   const canViewReviews = hasPermission('reviews.view');
   const canViewPromotions = hasPermission('promotions.view');
   const canViewTeaZones = hasPermission('tea-zones.view');
@@ -57,6 +60,45 @@ export default function AdminLayout() {
     await signOut();
     navigate('/adm/login');
   };
+
+  const requiredViewPermission = useMemo(() => {
+    const path = location.pathname;
+    if (path === '/adm' || path === '/adm/overview') {
+      return null;
+    }
+    if (path.startsWith('/adm/quests')) return 'quests.view';
+    if (path.startsWith('/adm/extra-services')) return 'extra-services.view';
+    if (path.startsWith('/adm/bookings/import')) return 'bookings.import';
+    if (path.startsWith('/adm/bookings')) return 'bookings.view';
+    if (path.startsWith('/adm/pricing')) return 'calendar.pricing.view';
+    if (path.startsWith('/adm/production-calendar')) return 'calendar.production.view';
+    if (path.startsWith('/adm/rules')) return 'rules.view';
+    if (path.startsWith('/adm/about')) return 'about.view';
+    if (path.startsWith('/adm/certificate-orders')) return 'certificate-orders.view';
+    if (path.startsWith('/adm/certificates')) return 'certificates.view';
+    if (path.startsWith('/adm/reviews')) return 'reviews.view';
+    if (path.startsWith('/adm/promotions')) return 'promotions.view';
+    if (path.startsWith('/adm/tea-zones')) return 'tea-zones.view';
+    if (path.startsWith('/adm/images')) return 'gallery.view';
+    if (path.startsWith('/adm/promo-codes')) return 'promo-codes.view';
+    if (path.startsWith('/adm/users')) return 'users.view';
+    if (path.startsWith('/adm/roles')) return 'roles.view';
+    if (path.startsWith('/adm/settings')) return 'settings.view';
+    return null;
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!requiredViewPermission) return;
+    if (requiredViewPermission === 'roles.view') {
+      if (!isAdmin()) {
+        navigate('/adm/overview', { replace: true });
+      }
+      return;
+    }
+    if (!hasPermission(requiredViewPermission)) {
+      navigate('/adm/overview', { replace: true });
+    }
+  }, [hasPermission, isAdmin, navigate, requiredViewPermission]);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-6 py-3 transition-all font-semibold ${
@@ -128,6 +170,10 @@ export default function AdminLayout() {
                 {!isMenuCollapsed && <span className="text-sm font-semibold">Меню</span>}
               </button>
             </div>
+            <NavLink to="/adm/overview" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+              <Home className="w-5 h-5" />
+              {!isMenuCollapsed && 'Главная'}
+            </NavLink>
             {canViewQuests && (
               <NavLink to="/adm/quests" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
                 <ListChecks className="w-5 h-5" />
@@ -223,16 +269,28 @@ export default function AdminLayout() {
                 {!isMenuCollapsed && 'О проекте'}
               </NavLink>
             )}
-            {canViewCertificates && (
+            {showCertificatesSection && (
               <>
-                <NavLink
-                  to="/adm/certificates"
-                  className={navLinkClass}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Award className="w-5 h-5" />
-                  {!isMenuCollapsed && 'Сертификаты'}
-                </NavLink>
+                {canViewCertificates ? (
+                  <NavLink
+                    to="/adm/certificates"
+                    className={navLinkClass}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Award className="w-5 h-5" />
+                    {!isMenuCollapsed && 'Сертификаты'}
+                  </NavLink>
+                ) : (
+                  <div
+                    className={`flex items-center gap-3 px-6 py-3 font-semibold text-gray-400 ${
+                      isMenuCollapsed ? 'justify-center px-3' : ''
+                    }`}
+                    title="Нет доступа к сертификатам"
+                  >
+                    <Award className="w-5 h-5" />
+                    {!isMenuCollapsed && 'Сертификаты'}
+                  </div>
+                )}
                 {canViewCertificateOrders && (
                   <div className={`${isMenuCollapsed ? '' : 'ml-6 border-l border-gray-200'}`}>
                     <NavLink

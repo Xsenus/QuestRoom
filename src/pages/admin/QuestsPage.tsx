@@ -1211,7 +1211,7 @@ export default function QuestsPage() {
               )}
             </div>
           ) : (
-            <QuestScheduleEditor questId={editingQuest.id!} />
+            <QuestScheduleEditor questId={editingQuest.id!} canEdit={canEdit} />
           )}
         </div>
         <NotificationModal

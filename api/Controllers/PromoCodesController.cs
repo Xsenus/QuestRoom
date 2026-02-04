@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +11,7 @@ namespace QuestRoomApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin")]
+[Authorize]
 public class PromoCodesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -22,6 +24,11 @@ public class PromoCodesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PromoCodeDto>>> GetPromoCodes()
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "promo-codes.view"))
+        {
+            return Forbid();
+        }
         var codes = await _context.PromoCodes
             .OrderByDescending(code => code.CreatedAt)
             .Select(code => ToDto(code))
@@ -32,6 +39,11 @@ public class PromoCodesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<PromoCodeDto>> CreatePromoCode([FromBody] PromoCodeUpsertDto dto)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "promo-codes.edit"))
+        {
+            return Forbid();
+        }
         var exists = await _context.PromoCodes.AnyAsync(code => code.Code.ToLower() == dto.Code.ToLower());
         if (exists)
         {
@@ -62,6 +74,11 @@ public class PromoCodesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdatePromoCode(Guid id, [FromBody] PromoCodeUpsertDto dto)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "promo-codes.edit"))
+        {
+            return Forbid();
+        }
         var promo = await _context.PromoCodes.FindAsync(id);
         if (promo == null)
         {
@@ -85,6 +102,11 @@ public class PromoCodesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePromoCode(Guid id)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "promo-codes.delete"))
+        {
+            return Forbid();
+        }
         var promo = await _context.PromoCodes.FindAsync(id);
         if (promo == null)
         {
@@ -94,6 +116,25 @@ public class PromoCodesController : ControllerBase
         _context.PromoCodes.Remove(promo);
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    private async Task<User?> GetCurrentUserAsync()
+    {
+        var rawUserId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var userId))
+        {
+            return null;
+        }
+
+        return await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+    }
+
+    private static bool HasPermission(User? user, string permission)
+    {
+        return user?.Role?.Permissions?.Contains(permission) == true;
     }
 
     private static PromoCodeDto ToDto(PromoCode promo)

@@ -34,6 +34,13 @@ export default function UsersPage() {
   const canEdit = hasPermission('users.edit');
   const canDelete = hasPermission('users.delete');
   const protectedAdminEmail = 'admin@questroom.local';
+  const emptyRoleId = '00000000-0000-0000-0000-000000000000';
+  const normalizeRoleId = (roleId?: string | null) =>
+    roleId && roleId !== emptyRoleId ? roleId : '';
+  const normalizeUser = (user: AdminUser): AdminUser => ({
+    ...user,
+    roleId: normalizeRoleId(user.roleId),
+  });
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -97,7 +104,7 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const [usersData, rolesData] = await Promise.all([api.getAdminUsers(), api.getRoles()]);
-      setUsers(usersData);
+      setUsers(usersData.map(normalizeUser));
       setRoles(rolesData);
       setSelectedId(usersData[0]?.id ?? null);
       setError(null);
@@ -187,7 +194,7 @@ export default function UsersPage() {
 
     try {
       if (isCreating) {
-        const created = await api.createAdminUser(payload);
+        const created = normalizeUser(await api.createAdminUser(payload));
         setUsers((prev) => [created, ...prev]);
         setSelectedId(created.id);
         setNotification({
@@ -197,7 +204,7 @@ export default function UsersPage() {
           tone: 'success',
         });
       } else {
-        const updated = await api.updateAdminUser(editor.id, payload);
+        const updated = normalizeUser(await api.updateAdminUser(editor.id, payload));
         setUsers((prev) => prev.map((user) => (user.id === updated.id ? updated : user)));
         setNotification({
           isOpen: true,
@@ -229,7 +236,7 @@ export default function UsersPage() {
     if (!canEdit) return;
     const nextStatus = user.status === 'blocked' ? 'active' : 'blocked';
     try {
-      const updated = await api.updateAdminUserStatus(user.id, nextStatus);
+      const updated = normalizeUser(await api.updateAdminUserStatus(user.id, nextStatus));
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (blockError) {
       setNotification({
@@ -282,14 +289,14 @@ export default function UsersPage() {
     }
     if (!canEdit) return;
     try {
-      const updated = await api.updateAdminUser(user.id, {
+      const updated = normalizeUser(await api.updateAdminUser(user.id, {
         name: user.name,
         email: user.email,
         phone: user.phone || null,
         roleId,
         status: user.status,
         notes: user.notes || null,
-      });
+      }));
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (updateError) {
       setNotification({
@@ -313,7 +320,7 @@ export default function UsersPage() {
       return;
     }
     try {
-      const updated = await api.updateAdminUserStatus(user.id, status);
+      const updated = normalizeUser(await api.updateAdminUserStatus(user.id, status));
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (updateError) {
       setNotification({
@@ -356,15 +363,24 @@ export default function UsersPage() {
   const saveNotes = async () => {
     if (!canEdit) return;
     if (!selectedUser) return;
+    if (!selectedUser.roleId) {
+      setNotification({
+        isOpen: true,
+        title: 'Назначьте роль',
+        message: 'Перед сохранением заметок выберите роль пользователя.',
+        tone: 'error',
+      });
+      return;
+    }
     try {
-      const updated = await api.updateAdminUser(selectedUser.id, {
+      const updated = normalizeUser(await api.updateAdminUser(selectedUser.id, {
         name: selectedUser.name,
         email: selectedUser.email,
         phone: selectedUser.phone || null,
         roleId: selectedUser.roleId,
         status: selectedUser.status,
         notes: noteDraft,
-      });
+      }));
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setNotification({
         isOpen: true,
@@ -596,14 +612,19 @@ export default function UsersPage() {
                 <div className="grid gap-2 rounded-lg bg-gray-50 p-3">
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span>Роль</span>
-                    <span>{roleMap[selectedUser.roleId]?.name || selectedUser.roleName}</span>
+                    <span>{roleMap[selectedUser.roleId]?.name || selectedUser.roleName || 'Без роли'}</span>
                   </div>
                   <select
-                    value={selectedUser.roleId || roles[0]?.id || ''}
+                    value={selectedUser.roleId || ''}
                     onChange={(event) => updateRole(selectedUser, event.target.value)}
                     disabled={!canEdit || isProtectedAdmin(selectedUser)}
                     className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-50"
                   >
+                    {!selectedUser.roleId && (
+                      <option value="" disabled>
+                        Без роли
+                      </option>
+                    )}
                     {roles.map((role) => (
                       <option key={role.id} value={role.id}>
                         {role.name}
