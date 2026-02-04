@@ -12,8 +12,15 @@ public interface IQuestService
     Task<QuestDto?> GetQuestAsync(string idOrSlug);
     Task<QuestDto> CreateQuestAsync(QuestUpsertDto dto);
     Task<bool> UpdateQuestAsync(Guid id, QuestUpsertDto dto);
-    Task<bool> DeleteQuestAsync(Guid id);
+    Task<DeleteQuestResult> DeleteQuestAsync(Guid id);
     Task<IReadOnlyList<DurationBadgeDto>> GetDurationBadgesAsync();
+}
+
+public enum DeleteQuestResult
+{
+    Deleted,
+    NotFound,
+    HasBookings
 }
 
 public class QuestService : IQuestService
@@ -154,17 +161,23 @@ public class QuestService : IQuestService
         return false;
     }
 
-    public async Task<bool> DeleteQuestAsync(Guid id)
+    public async Task<DeleteQuestResult> DeleteQuestAsync(Guid id)
     {
         var quest = await _context.Quests.FindAsync(id);
         if (quest == null)
         {
-            return false;
+            return DeleteQuestResult.NotFound;
+        }
+
+        var hasBookings = await _context.Bookings.AnyAsync(booking => booking.QuestId == id);
+        if (hasBookings)
+        {
+            return DeleteQuestResult.HasBookings;
         }
 
         _context.Quests.Remove(quest);
         await _context.SaveChangesAsync();
-        return true;
+        return DeleteQuestResult.Deleted;
     }
 
     public async Task<IReadOnlyList<DurationBadgeDto>> GetDurationBadgesAsync()

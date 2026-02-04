@@ -50,7 +50,16 @@ public class QuestsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteQuest(Guid id)
     {
-        var deleted = await _questService.DeleteQuestAsync(id);
-        return deleted ? NoContent() : NotFound();
+        var result = await _questService.DeleteQuestAsync(id);
+        return result switch
+        {
+            DeleteQuestResult.Deleted => NoContent(),
+            DeleteQuestResult.HasBookings => Conflict(new
+            {
+                message = "Нельзя удалить квест, потому что по нему есть бронирования."
+            }),
+            DeleteQuestResult.NotFound => NotFound(),
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
     }
 }
