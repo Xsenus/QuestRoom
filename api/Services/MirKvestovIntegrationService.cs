@@ -165,6 +165,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         var notes = BuildNotes(request);
         try
         {
+            var aggregator = ResolveAggregator(request.Source);
             await _bookingService.CreateBookingAsync(new BookingCreateDto
             {
                 QuestId = quest.Id,
@@ -175,7 +176,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                 BookingDate = date,
                 ParticipantsCount = participantsCount,
                 Notes = notes,
-                Aggregator = "МИР КВЕСТОВ",
+                Aggregator = aggregator,
                 AggregatorUniqueId = request.UniqueId
             });
         }
@@ -345,6 +346,33 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         }
 
         return parts.Count > 0 ? string.Join(". ", parts) : null;
+    }
+
+    private static string ResolveAggregator(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return "АГРЕГАТОР";
+        }
+
+        var normalized = source.Trim().ToLowerInvariant();
+
+        if (normalized.Contains("mir-kvestov.ru", StringComparison.Ordinal))
+        {
+            return "mir-kvestov.ru";
+        }
+
+        if (normalized.Contains("questhunter.info", StringComparison.Ordinal))
+        {
+            return "questhunter.info";
+        }
+
+        if (normalized.Contains("topkvestov.ru", StringComparison.Ordinal))
+        {
+            return "topkvestov.ru";
+        }
+
+        return "АГРЕГАТОР";
     }
 
     private async Task<QuestSchedule?> ResolveScheduleAsync(
