@@ -4,8 +4,17 @@ import { Quest, QuestUpsert, DurationBadge, StandardExtraService } from '../../l
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 import QuestScheduleEditor from '../../components/admin/QuestScheduleEditor';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
+import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+
+type ActionModalState = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  tone?: 'info' | 'danger';
+  onConfirm: () => Promise<void> | void;
+};
 
 export default function QuestsPage() {
   const { hasPermission } = useAuth();
@@ -22,6 +31,14 @@ export default function QuestsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'schedule'>('details');
   const [questFilter, setQuestFilter] = useState<'all' | 'adult' | 'child'>('all');
+  const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({ isOpen: false, title: '', message: '', tone: 'info' });
   const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
     if (mainImage && !images.includes(mainImage)) {
       return [mainImage, ...images];
@@ -243,16 +260,43 @@ export default function QuestsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!canDelete) return;
-    if (!confirm('Вы уверены, что хотите удалить этот квест?')) return;
+  const closeActionModal = () => {
+    setActionModal(null);
+  };
 
+  const openActionModal = (modal: ActionModalState) => {
+    setActionModal(modal);
+  };
+
+  const performAction = async (action: () => Promise<void> | void) => {
+    setActionLoading(true);
     try {
-      await api.deleteQuest(id);
-      loadQuests();
+      await action();
+      closeActionModal();
     } catch (error) {
-      alert('Ошибка при удалении квеста: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось удалить квест',
+        message: (error as Error).message,
+        tone: 'error',
+      });
+    } finally {
+      setActionLoading(false);
     }
+  };
+
+  const handleDelete = (quest: Quest) => {
+    if (!canDelete) return;
+    openActionModal({
+      title: 'Удалить квест?',
+      message: `Удалить квест «${quest.title}»? Это действие необратимо.`,
+      confirmLabel: 'Удалить',
+      tone: 'danger',
+      onConfirm: async () => {
+        await api.deleteQuest(quest.id);
+        loadQuests();
+      },
+    });
   };
 
   const addExtraService = () => {
@@ -1170,6 +1214,13 @@ export default function QuestsPage() {
             <QuestScheduleEditor questId={editingQuest.id!} />
           )}
         </div>
+        <NotificationModal
+          isOpen={notification.isOpen}
+          title={notification.title}
+          message={notification.message}
+          tone={notification.tone}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+        />
       </div>
     );
   }
@@ -1288,9 +1339,9 @@ export default function QuestsPage() {
                 </button>
                 <button
                   onClick={() => handleToggleVisibility(quest)}
-                  disabled={!canEdit || Boolean(quest.parentQuestId)}
+                  disabled={!canEdit}
                   className={`p-2 rounded-lg transition-colors ${
-                    canEdit && !quest.parentQuestId
+                    canEdit
                       ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
                       : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
                   }`}
@@ -1303,7 +1354,7 @@ export default function QuestsPage() {
                   )}
                 </button>
                 <button
-                  onClick={() => handleDelete(quest.id)}
+                  onClick={() => handleDelete(quest)}
                   disabled={!canDelete}
                   className={`p-2 rounded-lg transition-colors ${
                     canDelete
@@ -1328,6 +1379,50 @@ export default function QuestsPage() {
           </div>
         )}
       </div>
+      {actionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">{actionModal.title}</h3>
+              <button
+                onClick={closeActionModal}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5 text-sm text-gray-700">{actionModal.message}</div>
+            <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <button
+                onClick={closeActionModal}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                disabled={actionLoading}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => performAction(actionModal.onConfirm)}
+                className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors ${
+                  actionModal.tone === 'danger'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-gray-900 hover:bg-gray-800'
+                }`}
+                disabled={actionLoading}
+              >
+                {actionModal.confirmLabel || 'Да'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+      />
     </div>
   );
 }
