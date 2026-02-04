@@ -1339,9 +1339,9 @@ export default function QuestsPage() {
                 </button>
                 <button
                   onClick={() => handleToggleVisibility(quest)}
-                  disabled={!canEdit || Boolean(quest.parentQuestId)}
+                  disabled={!canEdit}
                   className={`p-2 rounded-lg transition-colors ${
-                    canEdit && !quest.parentQuestId
+                    canEdit
                       ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
                       : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
                   }`}
