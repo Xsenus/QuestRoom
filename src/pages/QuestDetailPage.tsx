@@ -307,8 +307,8 @@ export default function QuestDetailPage() {
                 {quest.title}
               </h1>
               {quest.parentQuestId && (
-                <span className="inline-flex items-center bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
-                  Детский режим
+                <span className="inline-flex items-center bg-[#c51f2e] text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
+                  ДЕТСКИЙ
                 </span>
               )}
               <div className="grid w-full max-w-md grid-cols-2 gap-3">

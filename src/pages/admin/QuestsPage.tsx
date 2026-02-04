@@ -173,24 +173,14 @@ export default function QuestsPage() {
     const finalPayload: QuestUpsert = parentQuest
       ? {
           ...normalizedPayload,
-          addresses: parentQuest.addresses || [],
-          phones: parentQuest.phones || [],
           participantsMin: parentQuest.participantsMin,
           participantsMax: parentQuest.participantsMax,
           extraParticipantsMax: parentQuest.extraParticipantsMax,
           extraParticipantPrice: parentQuest.extraParticipantPrice,
-          ageRestriction: parentQuest.ageRestriction,
-          ageRating: parentQuest.ageRating,
           price: parentQuest.price,
           duration: parentQuest.duration,
           difficulty: parentQuest.difficulty,
           difficultyMax: parentQuest.difficultyMax,
-          isNew: parentQuest.isNew,
-          isVisible: parentQuest.isVisible,
-          giftGameLabel: parentQuest.giftGameLabel || 'Подарить игру',
-          giftGameUrl: parentQuest.giftGameUrl || '/certificate',
-          videoUrl: parentQuest.videoUrl,
-          sortOrder: parentQuest.sortOrder,
         }
       : normalizedPayload;
 
