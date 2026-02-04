@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
     public DbSet<PromoCode> PromoCodes { get; set; }
     public DbSet<ProductionCalendarDay> ProductionCalendarDays { get; set; }
     public DbSet<ApiRequestLog> ApiRequestLogs { get; set; }
+    public DbSet<UserPreference> UserPreferences { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -140,6 +141,12 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(u => u.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<UserPreference>()
+            .HasOne(preference => preference.User)
+            .WithOne()
+            .HasForeignKey<UserPreference>(preference => preference.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Booking>()
             .HasOne(b => b.Quest)

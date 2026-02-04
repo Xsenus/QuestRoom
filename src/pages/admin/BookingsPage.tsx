@@ -127,6 +127,9 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
   { key: 'actions', label: 'Действия', width: 200, visible: true, locked: true },
 ];
 
+const bookingPageSizeOptions = [5, 10, 25, 50, 100];
+const defaultBookingPageSize = 10;
+
 export default function BookingsPage() {
   const { user, hasPermission } = useAuth();
   const canView = hasPermission('bookings.view');
@@ -162,6 +165,7 @@ export default function BookingsPage() {
   const [columnFilters, setColumnFilters] = useState<BookingTableFilter[]>([]);
   const [tableSorts, setTableSorts] = useState<BookingTableSort[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [listItemsPerPage, setListItemsPerPage] = useState<number>(defaultBookingPageSize);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -250,7 +254,8 @@ export default function BookingsPage() {
       columns: BookingTableColumnConfig[],
       filters: BookingTableFilter[],
       search: string,
-      sorts: BookingTableSort[]
+      sorts: BookingTableSort[],
+      pageSize: number
     ): BookingTablePreferences => ({
       columns: columns.map((column) => ({
         key: column.key,
@@ -268,6 +273,7 @@ export default function BookingsPage() {
         key: sort.key,
         direction: sort.direction,
       })),
+      pageSize,
     }),
     []
   );
@@ -369,6 +375,7 @@ export default function BookingsPage() {
         searchQuery: stored.searchQuery ?? '',
         columnFilters: normalizeColumnFilters(stored.columnFilters),
         sorts: normalizeSorts(stored.sorts),
+        pageSize: stored.pageSize,
       };
     },
     [normalizeColumnFilters, normalizeSorts]
@@ -549,6 +556,12 @@ export default function BookingsPage() {
         setSearchQuery(preferences?.searchQuery ?? '');
         setColumnFilters(normalizeColumnFilters(preferences?.columnFilters));
         setTableSorts(normalizeSorts(preferences?.sorts));
+        const preferredPageSize = preferences?.pageSize;
+        setListItemsPerPage(
+          bookingPageSizeOptions.includes(preferredPageSize ?? -1)
+            ? preferredPageSize ?? defaultBookingPageSize
+            : defaultBookingPageSize
+        );
       }
       setColumnsLoadedKey(tableColumnsStorageKey);
     };
@@ -581,7 +594,8 @@ export default function BookingsPage() {
         tableColumns,
         activeColumnFilters,
         searchQuery,
-        tableSorts
+        tableSorts,
+        listItemsPerPage
       );
       localStorage.setItem(tableColumnsStorageKey, JSON.stringify(preferences));
       if (preferencesSaveTimeout.current) {
@@ -609,6 +623,7 @@ export default function BookingsPage() {
     columnsLoadedKey,
     user?.email,
     buildTablePreferences,
+    listItemsPerPage,
   ]);
 
   useEffect(() => {
@@ -624,6 +639,7 @@ export default function BookingsPage() {
     activeColumnFilters,
     tableSorts,
     viewMode,
+    listItemsPerPage,
   ]);
 
   useEffect(() => {
@@ -1142,20 +1158,26 @@ export default function BookingsPage() {
     }
   };
 
+  const createExtraServiceId = () =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `extra-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
   const addExtraService = () => {
     if (!canEdit) {
       return;
     }
-    if (!editingBooking) {
-      return;
-    }
-    setEditingBooking({
-      ...editingBooking,
-      extraServices: [
-        ...editingBooking.extraServices,
-        { id: crypto.randomUUID(), title: '', price: 0 },
-      ],
-    });
+    setEditingBooking((prev) =>
+      prev
+        ? {
+            ...prev,
+            extraServices: [
+              ...prev.extraServices,
+              { id: createExtraServiceId(), title: '', price: 0 },
+            ],
+          }
+        : prev
+    );
   };
 
   const toggleQuestExtraService = (serviceId: string) => {
@@ -1238,12 +1260,28 @@ export default function BookingsPage() {
   };
 
   const removeExtraService = (index: number) => {
+    if (!canEdit) {
+      return;
+    }
     if (!editingBooking) {
       return;
     }
-    setEditingBooking({
-      ...editingBooking,
-      extraServices: editingBooking.extraServices.filter((_, i) => i !== index),
+    const service = editingBooking.extraServices[index];
+    openActionModal({
+      title: 'Удалить услугу',
+      message: `Удалить дополнительную услугу${service?.title ? ` «${service.title}»` : ''}?`,
+      confirmLabel: 'Удалить',
+      tone: 'danger',
+      onConfirm: () => {
+        setEditingBooking((prev) =>
+          prev
+            ? {
+                ...prev,
+                extraServices: prev.extraServices.filter((_, i) => i !== index),
+              }
+            : prev
+        );
+      },
     });
   };
 
@@ -1926,7 +1964,6 @@ export default function BookingsPage() {
     [sortableColumnKeys]
   );
 
-  const listItemsPerPage = viewMode === 'table' ? 10 : 9;
   const parsedSearch = useMemo(() => parseSearchQuery(searchQuery), [parseSearchQuery, searchQuery]);
   const highlightTerms = useMemo(() => {
     const values = new Set<string>();
@@ -2884,9 +2921,27 @@ export default function BookingsPage() {
 
           {filteredBookings.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm text-gray-600">
-                Страница {safePage} из {totalPages}
-              </span>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                <span>
+                  Страница {safePage} из {totalPages}
+                </span>
+                <label className="flex items-center gap-2">
+                  <span>Показывать по</span>
+                  <select
+                    value={listItemsPerPage}
+                    onChange={(e) =>
+                      setListItemsPerPage(Number(e.target.value) || defaultBookingPageSize)
+                    }
+                    className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    {bookingPageSizeOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}

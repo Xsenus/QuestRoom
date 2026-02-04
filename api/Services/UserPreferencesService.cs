@@ -1,5 +1,8 @@
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Users;
+using QuestRoomApi.Models;
 
 namespace QuestRoomApi.Services;
 
@@ -11,67 +14,57 @@ public interface IUserPreferencesService
 
 public class UserPreferencesService : IUserPreferencesService
 {
-    private readonly string _filePath;
-    private readonly SemaphoreSlim _mutex = new(1, 1);
-    private Dictionary<string, BookingTablePreferencesDto> _cache = new();
-
-    public UserPreferencesService(IWebHostEnvironment environment)
+    private readonly AppDbContext _context;
+    private readonly JsonSerializerOptions _serializerOptions = new()
     {
-        var dataDirectory = Path.Combine(environment.ContentRootPath, "App_Data");
-        Directory.CreateDirectory(dataDirectory);
-        _filePath = Path.Combine(dataDirectory, "user-preferences.json");
-        _cache = LoadFromFile();
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+
+    public UserPreferencesService(AppDbContext context)
+    {
+        _context = context;
     }
 
     public async Task<BookingTablePreferencesDto?> GetBookingTableAsync(Guid userId)
     {
-        await _mutex.WaitAsync();
+        var preferences = await _context.UserPreferences
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.UserId == userId);
+        if (preferences?.BookingTablePreferencesJson == null)
+        {
+            return null;
+        }
         try
         {
-            return _cache.TryGetValue(userId.ToString(), out var preferences)
-                ? preferences
-                : null;
+            return JsonSerializer.Deserialize<BookingTablePreferencesDto>(
+                preferences.BookingTablePreferencesJson,
+                _serializerOptions
+            );
         }
-        finally
+        catch
         {
-            _mutex.Release();
+            return null;
         }
     }
 
     public async Task SaveBookingTableAsync(Guid userId, BookingTablePreferencesDto preferences)
     {
-        await _mutex.WaitAsync();
-        try
+        var entry = await _context.UserPreferences
+            .FirstOrDefaultAsync(item => item.UserId == userId);
+        var json = JsonSerializer.Serialize(preferences, _serializerOptions);
+        if (entry == null)
         {
-            _cache[userId.ToString()] = preferences;
-            var json = JsonSerializer.Serialize(_cache, new JsonSerializerOptions
+            _context.UserPreferences.Add(new UserPreference
             {
-                WriteIndented = true
+                UserId = userId,
+                BookingTablePreferencesJson = json
             });
-            await File.WriteAllTextAsync(_filePath, json);
         }
-        finally
+        else
         {
-            _mutex.Release();
+            entry.BookingTablePreferencesJson = json;
         }
-    }
-
-    private Dictionary<string, BookingTablePreferencesDto> LoadFromFile()
-    {
-        if (!File.Exists(_filePath))
-        {
-            return new Dictionary<string, BookingTablePreferencesDto>();
-        }
-
-        try
-        {
-            var json = File.ReadAllText(_filePath);
-            var data = JsonSerializer.Deserialize<Dictionary<string, BookingTablePreferencesDto>>(json);
-            return data ?? new Dictionary<string, BookingTablePreferencesDto>();
-        }
-        catch
-        {
-            return new Dictionary<string, BookingTablePreferencesDto>();
-        }
+        await _context.SaveChangesAsync();
     }
 }
