@@ -11,6 +11,21 @@ export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
+  const resolveErrorMessage = (rawMessage: string) => {
+    const trimmed = rawMessage.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(trimmed) as { message?: string };
+        if (parsed?.message) {
+          return parsed.message;
+        }
+      } catch {
+        return rawMessage;
+      }
+    }
+    return rawMessage;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -19,7 +34,8 @@ export default function LoginPage() {
     const { error } = await signIn(email, password);
 
     if (error) {
-      setError(error.message || 'Неверный email или пароль');
+      const message = error.message || 'Неверный email или пароль';
+      setError(resolveErrorMessage(message));
       setLoading(false);
     } else {
       navigate('/adm');
