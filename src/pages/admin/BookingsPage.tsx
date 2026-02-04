@@ -165,10 +165,6 @@ export default function BookingsPage() {
   const [columnFilters, setColumnFilters] = useState<BookingTableFilter[]>([]);
   const [tableSorts, setTableSorts] = useState<BookingTableSort[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const pageSizeStorageKey = useMemo(
-    () => `admin_bookings_page_size_${user?.email ?? 'guest'}`,
-    [user?.email]
-  );
   const [listItemsPerPage, setListItemsPerPage] = useState<number>(defaultBookingPageSize);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
@@ -258,7 +254,8 @@ export default function BookingsPage() {
       columns: BookingTableColumnConfig[],
       filters: BookingTableFilter[],
       search: string,
-      sorts: BookingTableSort[]
+      sorts: BookingTableSort[],
+      pageSize: number
     ): BookingTablePreferences => ({
       columns: columns.map((column) => ({
         key: column.key,
@@ -276,6 +273,7 @@ export default function BookingsPage() {
         key: sort.key,
         direction: sort.direction,
       })),
+      pageSize,
     }),
     []
   );
@@ -377,6 +375,7 @@ export default function BookingsPage() {
         searchQuery: stored.searchQuery ?? '',
         columnFilters: normalizeColumnFilters(stored.columnFilters),
         sorts: normalizeSorts(stored.sorts),
+        pageSize: stored.pageSize,
       };
     },
     [normalizeColumnFilters, normalizeSorts]
@@ -508,26 +507,6 @@ export default function BookingsPage() {
   }, [listDateTo]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const saved = localStorage.getItem(pageSizeStorageKey);
-    const parsed = Number(saved);
-    if (bookingPageSizeOptions.includes(parsed)) {
-      setListItemsPerPage(parsed);
-      return;
-    }
-    setListItemsPerPage(defaultBookingPageSize);
-  }, [pageSizeStorageKey]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    localStorage.setItem(pageSizeStorageKey, String(listItemsPerPage));
-  }, [pageSizeStorageKey, listItemsPerPage]);
-
-  useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(
         listRangeStorageKey,
@@ -577,6 +556,12 @@ export default function BookingsPage() {
         setSearchQuery(preferences?.searchQuery ?? '');
         setColumnFilters(normalizeColumnFilters(preferences?.columnFilters));
         setTableSorts(normalizeSorts(preferences?.sorts));
+        const preferredPageSize = preferences?.pageSize;
+        setListItemsPerPage(
+          bookingPageSizeOptions.includes(preferredPageSize ?? -1)
+            ? preferredPageSize ?? defaultBookingPageSize
+            : defaultBookingPageSize
+        );
       }
       setColumnsLoadedKey(tableColumnsStorageKey);
     };
@@ -609,7 +594,8 @@ export default function BookingsPage() {
         tableColumns,
         activeColumnFilters,
         searchQuery,
-        tableSorts
+        tableSorts,
+        listItemsPerPage
       );
       localStorage.setItem(tableColumnsStorageKey, JSON.stringify(preferences));
       if (preferencesSaveTimeout.current) {
@@ -637,6 +623,7 @@ export default function BookingsPage() {
     columnsLoadedKey,
     user?.email,
     buildTablePreferences,
+    listItemsPerPage,
   ]);
 
   useEffect(() => {

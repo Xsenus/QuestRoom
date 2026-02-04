@@ -13,6 +13,7 @@ public class BookingTablePreferencesDto
     public string? SearchQuery { get; set; }
     public List<BookingTableFilterDto> ColumnFilters { get; set; } = new();
     public List<BookingTableSortDto> Sorts { get; set; } = new();
+    public int? PageSize { get; set; }
 }
 
 public class BookingTableFilterDto

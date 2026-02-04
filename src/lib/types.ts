@@ -278,6 +278,7 @@ export type BookingTablePreferences = {
   searchQuery?: string;
   columnFilters?: BookingTableFilter[];
   sorts?: BookingTableSort[];
+  pageSize?: number;
 };
 
 export type Rule = {

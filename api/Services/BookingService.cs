@@ -386,39 +386,51 @@ public class BookingService : IBookingService
         }
         if (dto.ExtraServices != null)
         {
-            var updatedIds = dto.ExtraServices
-                .Where(service => service.Id != Guid.Empty)
-                .Select(service => service.Id)
-                .ToHashSet();
-
-            var toRemove = booking.ExtraServices
-                .Where(service => !updatedIds.Contains(service.Id))
+            var normalizedServices = dto.ExtraServices
+                .Select(service => new
+                {
+                    Id = service.Id != Guid.Empty ? service.Id : (Guid?)null,
+                    Title = service.Title?.Trim() ?? string.Empty,
+                    service.Price
+                })
+                .Where(service => !string.IsNullOrWhiteSpace(service.Title))
                 .ToList();
 
-            if (toRemove.Count > 0)
+            var existingServices = await _context.BookingExtraServices
+                .Where(service => service.BookingId == booking.Id)
+                .ToListAsync();
+
+            var incomingIds = normalizedServices
+                .Where(service => service.Id.HasValue)
+                .Select(service => service.Id!.Value)
+                .ToHashSet();
+
+            foreach (var service in existingServices.Where(service => !incomingIds.Contains(service.Id)))
             {
-                _context.BookingExtraServices.RemoveRange(toRemove);
+                _context.BookingExtraServices.Remove(service);
             }
 
-            foreach (var serviceDto in dto.ExtraServices)
+            foreach (var serviceDto in normalizedServices)
             {
-                var existing = booking.ExtraServices.FirstOrDefault(service => service.Id == serviceDto.Id);
-                if (existing != null)
+                if (serviceDto.Id.HasValue)
                 {
-                    existing.Title = serviceDto.Title;
-                    existing.Price = serviceDto.Price;
-                }
-                else
-                {
-                    booking.ExtraServices.Add(new BookingExtraService
+                    var existing = existingServices.FirstOrDefault(service => service.Id == serviceDto.Id.Value);
+                    if (existing != null)
                     {
-                        Id = serviceDto.Id == Guid.Empty ? Guid.NewGuid() : serviceDto.Id,
-                        BookingId = booking.Id,
-                        Title = serviceDto.Title,
-                        Price = serviceDto.Price,
-                        CreatedAt = DateTime.UtcNow
-                    });
+                        existing.Title = serviceDto.Title;
+                        existing.Price = serviceDto.Price;
+                        continue;
+                    }
                 }
+
+                _context.BookingExtraServices.Add(new BookingExtraService
+                {
+                    Id = Guid.NewGuid(),
+                    BookingId = booking.Id,
+                    Title = serviceDto.Title,
+                    Price = serviceDto.Price,
+                    CreatedAt = DateTime.UtcNow
+                });
             }
             shouldRecalculate = true;
         }
