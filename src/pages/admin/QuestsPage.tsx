@@ -1028,7 +1028,7 @@ export default function QuestsPage() {
               </p>
             </div>
           ) : (
-            <QuestScheduleEditor questId={editingQuest.id!} />
+            <QuestScheduleEditor questId={editingQuest.id!} canEdit={canEdit} />
           )}
         </div>
       </div>

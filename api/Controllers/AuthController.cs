@@ -38,7 +38,13 @@ public class AuthController : ControllerBase
 
         if (!string.Equals(user.Status, "active", StringComparison.OrdinalIgnoreCase))
         {
-            return Unauthorized(new { message = "Доступ к аккаунту ограничен. Обратитесь к администратору." });
+            var statusMessage = user.Status?.ToLowerInvariant() switch
+            {
+                "blocked" => "Пользователь заблокирован. Обратитесь к администратору системы.",
+                "pending" => "Ваш профиль проверяется. Ожидайте одобрения администратором системы.",
+                _ => "Доступ к аккаунту ограничен. Обратитесь к администратору."
+            };
+            return Unauthorized(new { message = statusMessage });
         }
 
         user.LastLoginAt = DateTime.UtcNow;

@@ -19,7 +19,7 @@ export default function LoginPage() {
     const { error } = await signIn(email, password);
 
     if (error) {
-      setError('Неверный email или пароль');
+      setError(error.message || 'Неверный email или пароль');
       setLoading(false);
     } else {
       navigate('/adm');

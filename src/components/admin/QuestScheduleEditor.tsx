@@ -35,9 +35,10 @@ const buildEmptyOverride = (questId: string): QuestScheduleOverrideUpsert => ({
 
 type Props = {
   questId: string;
+  canEdit: boolean;
 };
 
-export default function QuestScheduleEditor({ questId }: Props) {
+export default function QuestScheduleEditor({ questId, canEdit }: Props) {
   const [weeklySlots, setWeeklySlots] = useState<QuestWeeklySlot[]>([]);
   const [overrides, setOverrides] = useState<QuestScheduleOverride[]>([]);
   const [holidayPriceInput, setHolidayPriceInput] = useState('');
@@ -110,6 +111,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const handleSaveSlot = async (slot: QuestWeeklySlot) => {
+    if (!canEdit) return;
     try {
       await api.updateQuestWeeklySlot(slot.id, {
         questId,
@@ -124,6 +126,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const handleDeleteSlot = async (slotId: string) => {
+    if (!canEdit) return;
     if (!confirm('Удалить слот?')) return;
     try {
       await api.deleteQuestWeeklySlot(slotId);
@@ -134,6 +137,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const handleAddSlot = async () => {
+    if (!canEdit) return;
     if (!newSlotTime) {
       alert('Укажите время.');
       return;
@@ -160,6 +164,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const handleSaveSettings = async () => {
+    if (!canEdit) return;
     const payload: QuestScheduleSettingsUpsert = {
       questId,
       holidayPrice: holidayPriceInput === '' ? null : Number(holidayPriceInput) || 0,
@@ -178,6 +183,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const openOverrideEditor = (override?: QuestScheduleOverride) => {
+    if (!canEdit) return;
     if (override) {
       setEditingOverride({
         id: override.id,
@@ -195,6 +201,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const updateOverrideSlot = (index: number, field: 'timeSlot' | 'price', value: string) => {
+    if (!canEdit) return;
     if (!editingOverride) return;
     const slots = [...editingOverride.slots];
     slots[index] = {
@@ -205,6 +212,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const addOverrideSlot = () => {
+    if (!canEdit) return;
     if (!editingOverride) return;
     setEditingOverride({
       ...editingOverride,
@@ -213,6 +221,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const removeOverrideSlot = (index: number) => {
+    if (!canEdit) return;
     if (!editingOverride) return;
     const slots = [...editingOverride.slots];
     slots.splice(index, 1);
@@ -220,6 +229,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const handleSaveOverride = async () => {
+    if (!canEdit) return;
     if (!editingOverride) return;
     if (!editingOverride.date) {
       alert('Укажите дату.');
@@ -247,6 +257,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
   };
 
   const handleDeleteOverride = async (overrideId: string) => {
+    if (!canEdit) return;
     if (!confirm('Удалить переопределение?')) return;
     try {
       await api.deleteQuestScheduleOverride(overrideId);
@@ -293,6 +304,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
               type="number"
               value={holidayPriceInput}
               onChange={(e) => setHolidayPriceInput(e.target.value)}
+              disabled={!canEdit}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               placeholder="Например, 5000"
               min="0"
@@ -304,7 +316,12 @@ export default function QuestScheduleEditor({ questId }: Props) {
           <button
             type="button"
             onClick={handleSaveSettings}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
+            disabled={!canEdit}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold ${
+              canEdit
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'cursor-not-allowed bg-green-200 text-white/80'
+            }`}
           >
             <Save className="w-4 h-4" />
             Сохранить
@@ -319,10 +336,13 @@ export default function QuestScheduleEditor({ questId }: Props) {
                 key={day.value}
                 type="button"
                 onClick={() => setSelectedDay(day.value)}
+                disabled={!canEdit}
                 className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                  selectedDay === day.value
+                  selectedDay === day.value && canEdit
                     ? 'bg-red-600 text-white border-red-600'
-                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                    : canEdit
+                      ? 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed'
                 }`}
               >
                 {day.label}
@@ -346,12 +366,14 @@ export default function QuestScheduleEditor({ questId }: Props) {
                   onChange={(e) =>
                     handleUpdateSlotField(slot.id, 'timeSlot', e.target.value)
                   }
+                  disabled={!canEdit}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
                 <input
                   type="number"
                   value={slot.price}
                   onChange={(e) => handleUpdateSlotField(slot.id, 'price', e.target.value)}
+                  disabled={!canEdit}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="Цена"
                   min="0"
@@ -359,7 +381,12 @@ export default function QuestScheduleEditor({ questId }: Props) {
                 <button
                   type="button"
                   onClick={() => handleSaveSlot(slot)}
-                  className="flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold"
+                  disabled={!canEdit}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${
+                    canEdit
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'cursor-not-allowed bg-green-200 text-white/80'
+                  }`}
                 >
                   <Save className="w-4 h-4" />
                   Сохранить
@@ -367,7 +394,12 @@ export default function QuestScheduleEditor({ questId }: Props) {
                 <button
                   type="button"
                   onClick={() => handleDeleteSlot(slot.id)}
-                  className="flex items-center justify-center px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg"
+                  disabled={!canEdit}
+                  className={`flex items-center justify-center px-3 py-2 rounded-lg ${
+                    canEdit
+                      ? 'bg-red-100 hover:bg-red-200 text-red-600'
+                      : 'cursor-not-allowed bg-red-50 text-red-200'
+                  }`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -383,12 +415,14 @@ export default function QuestScheduleEditor({ questId }: Props) {
               type="time"
               value={newSlotTime}
               onChange={(e) => setNewSlotTime(e.target.value)}
+              disabled={!canEdit}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
             />
             <input
               type="number"
               value={newSlotPrice}
               onChange={(e) => setNewSlotPrice(e.target.value)}
+              disabled={!canEdit}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
               placeholder="Цена"
               min="0"
@@ -396,7 +430,12 @@ export default function QuestScheduleEditor({ questId }: Props) {
             <button
               type="button"
               onClick={handleAddSlot}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+              disabled={!canEdit}
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold ${
+                canEdit
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'cursor-not-allowed bg-red-200 text-white/80'
+              }`}
             >
               <Plus className="w-4 h-4" />
               Добавить
@@ -411,7 +450,12 @@ export default function QuestScheduleEditor({ questId }: Props) {
           <button
             type="button"
             onClick={() => openOverrideEditor()}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold"
+            disabled={!canEdit}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
+              canEdit
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'cursor-not-allowed bg-red-200 text-white/80'
+            }`}
           >
             <Plus className="w-4 h-4" />
             Добавить дату
@@ -445,14 +489,24 @@ export default function QuestScheduleEditor({ questId }: Props) {
                   <button
                     type="button"
                     onClick={() => openOverrideEditor(override)}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                    disabled={!canEdit}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold ${
+                      canEdit
+                        ? 'bg-gray-100 hover:bg-gray-200'
+                        : 'cursor-not-allowed bg-gray-100 text-gray-400'
+                    }`}
                   >
                     Редактировать
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteOverride(override.id)}
-                    className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg"
+                    disabled={!canEdit}
+                    className={`px-3 py-2 rounded-lg ${
+                      canEdit
+                        ? 'bg-red-100 hover:bg-red-200 text-red-600'
+                        : 'cursor-not-allowed bg-red-50 text-red-200'
+                    }`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -491,6 +545,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
                     onChange={(e) =>
                       setEditingOverride({ ...editingOverride, date: e.target.value })
                     }
+                    disabled={!canEdit}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   />
                 </div>
@@ -501,6 +556,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
                     onChange={(e) =>
                       setEditingOverride({ ...editingOverride, isClosed: e.target.checked })
                     }
+                    disabled={!canEdit}
                     className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                   />
                   <span className="text-sm font-semibold text-gray-700">
@@ -516,7 +572,12 @@ export default function QuestScheduleEditor({ questId }: Props) {
                     <button
                       type="button"
                       onClick={addOverrideSlot}
-                      className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold"
+                      disabled={!canEdit}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${
+                        canEdit
+                          ? 'bg-gray-100 hover:bg-gray-200'
+                          : 'cursor-not-allowed bg-gray-100 text-gray-400'
+                      }`}
                     >
                       <Plus className="w-4 h-4" />
                       Добавить слот
@@ -538,6 +599,7 @@ export default function QuestScheduleEditor({ questId }: Props) {
                             onChange={(e) =>
                               updateOverrideSlot(index, 'timeSlot', e.target.value)
                             }
+                            disabled={!canEdit}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                           />
                           <input
@@ -546,13 +608,19 @@ export default function QuestScheduleEditor({ questId }: Props) {
                             onChange={(e) =>
                               updateOverrideSlot(index, 'price', e.target.value)
                             }
+                            disabled={!canEdit}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                             min="0"
                           />
                           <button
                             type="button"
                             onClick={() => removeOverrideSlot(index)}
-                            className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg"
+                            disabled={!canEdit}
+                            className={`p-2 rounded-lg ${
+                              canEdit
+                                ? 'bg-red-100 hover:bg-red-200 text-red-600'
+                                : 'cursor-not-allowed bg-red-50 text-red-200'
+                            }`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -567,7 +635,12 @@ export default function QuestScheduleEditor({ questId }: Props) {
                 <button
                   type="button"
                   onClick={handleSaveOverride}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                  disabled={!canEdit}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    canEdit
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'cursor-not-allowed bg-red-200 text-white/80'
+                  }`}
                 >
                   <Save className="w-5 h-5" />
                   Сохранить
