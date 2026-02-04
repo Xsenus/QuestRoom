@@ -29,6 +29,7 @@ public class QuestService : IQuestService
     {
         var query = _context.Quests
             .Include(q => q.ExtraServices)
+            .Include(q => q.ParentQuest)
             .AsQueryable();
 
         if (visible.HasValue)
@@ -49,6 +50,7 @@ public class QuestService : IQuestService
         {
             quest = await _context.Quests
                 .Include(q => q.ExtraServices)
+                .Include(q => q.ParentQuest)
                 .FirstOrDefaultAsync(q => q.Id == id);
         }
         else
@@ -56,6 +58,7 @@ public class QuestService : IQuestService
             var slug = idOrSlug.Trim().ToLowerInvariant();
             quest = await _context.Quests
                 .Include(q => q.ExtraServices)
+                .Include(q => q.ParentQuest)
                 .FirstOrDefaultAsync(q => q.Slug == slug);
         }
 
@@ -64,21 +67,23 @@ public class QuestService : IQuestService
 
     public async Task<QuestDto> CreateQuestAsync(QuestUpsertDto dto)
     {
+        var parentQuest = await ResolveParentQuestAsync(dto.ParentQuestId);
         var quest = new Quest
         {
             Id = Guid.NewGuid(),
             Title = dto.Title,
             Description = dto.Description,
             Slug = string.Empty,
+            ParentQuestId = parentQuest?.Id,
             Addresses = dto.Addresses,
             Phones = dto.Phones,
             ParticipantsMin = dto.ParticipantsMin,
             ParticipantsMax = dto.ParticipantsMax,
             ExtraParticipantsMax = dto.ExtraParticipantsMax,
-            ExtraParticipantPrice = dto.ExtraParticipantPrice,
+            ExtraParticipantPrice = parentQuest?.ExtraParticipantPrice ?? dto.ExtraParticipantPrice,
             AgeRestriction = dto.AgeRestriction,
             AgeRating = dto.AgeRating,
-            Price = dto.Price,
+            Price = parentQuest?.Price ?? dto.Price,
             Duration = dto.Duration,
             Difficulty = dto.Difficulty,
             DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5,
@@ -179,21 +184,23 @@ public class QuestService : IQuestService
 
     private static QuestDto ToDto(Quest quest)
     {
+        var pricingQuest = quest.ParentQuest ?? quest;
         return new QuestDto
         {
             Id = quest.Id,
             Title = quest.Title,
             Description = quest.Description,
             Slug = quest.Slug,
+            ParentQuestId = quest.ParentQuestId,
             Addresses = quest.Addresses,
             Phones = quest.Phones,
             ParticipantsMin = quest.ParticipantsMin,
             ParticipantsMax = quest.ParticipantsMax,
             ExtraParticipantsMax = quest.ExtraParticipantsMax,
-            ExtraParticipantPrice = quest.ExtraParticipantPrice,
+            ExtraParticipantPrice = pricingQuest.ExtraParticipantPrice,
             AgeRestriction = quest.AgeRestriction,
             AgeRating = quest.AgeRating,
-            Price = quest.Price,
+            Price = pricingQuest.Price,
             Duration = quest.Duration,
             Difficulty = quest.Difficulty,
             DifficultyMax = quest.DifficultyMax,
@@ -292,19 +299,21 @@ public class QuestService : IQuestService
 
     private async Task ApplyQuestUpdateAsync(Quest quest, QuestUpsertDto dto)
     {
+        var parentQuest = await ResolveParentQuestAsync(dto.ParentQuestId, quest.Id);
         quest.Title = dto.Title;
         quest.Description = dto.Description;
         var slugSource = string.IsNullOrWhiteSpace(dto.Slug) ? dto.Title : dto.Slug;
         quest.Slug = await BuildUniqueSlugAsync(slugSource, quest.Id);
+        quest.ParentQuestId = parentQuest?.Id;
         quest.Addresses = dto.Addresses;
         quest.Phones = dto.Phones;
         quest.ParticipantsMin = dto.ParticipantsMin;
         quest.ParticipantsMax = dto.ParticipantsMax;
         quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
-        quest.ExtraParticipantPrice = dto.ExtraParticipantPrice;
+        quest.ExtraParticipantPrice = parentQuest?.ExtraParticipantPrice ?? dto.ExtraParticipantPrice;
         quest.AgeRestriction = dto.AgeRestriction;
         quest.AgeRating = dto.AgeRating;
-        quest.Price = dto.Price;
+        quest.Price = parentQuest?.Price ?? dto.Price;
         quest.Duration = dto.Duration;
         quest.Difficulty = dto.Difficulty;
         quest.DifficultyMax = dto.DifficultyMax > 0 ? dto.DifficultyMax : 5;
@@ -366,5 +375,33 @@ public class QuestService : IQuestService
 
         var slug = builder.ToString().Trim('-');
         return slug;
+    }
+
+    private async Task<Quest?> ResolveParentQuestAsync(Guid? parentQuestId, Guid? currentQuestId = null)
+    {
+        if (!parentQuestId.HasValue)
+        {
+            return null;
+        }
+
+        if (currentQuestId.HasValue && parentQuestId.Value == currentQuestId.Value)
+        {
+            throw new InvalidOperationException("Квест не может быть родителем самого себя.");
+        }
+
+        var parentQuest = await _context.Quests
+            .AsNoTracking()
+            .FirstOrDefaultAsync(q => q.Id == parentQuestId.Value);
+        if (parentQuest == null)
+        {
+            throw new InvalidOperationException("Родительский квест не найден.");
+        }
+
+        if (parentQuest.ParentQuestId.HasValue)
+        {
+            throw new InvalidOperationException("Нельзя назначить копию в качестве родителя.");
+        }
+
+        return parentQuest;
     }
 }

@@ -3,6 +3,7 @@ export type Quest = {
   title: string;
   description: string;
   slug: string;
+  parentQuestId: string | null;
   addresses: string[];
   phones: string[];
   participantsMin: number;

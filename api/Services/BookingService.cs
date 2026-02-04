@@ -141,6 +141,7 @@ public class BookingService : IBookingService
             {
                 quest = await _context.Quests
                     .Include(q => q.ExtraServices)
+                    .Include(q => q.ParentQuest)
                     .FirstOrDefaultAsync(q => q.Id == questId.Value);
             }
 
@@ -149,6 +150,7 @@ public class BookingService : IBookingService
                 throw new InvalidOperationException("Квест не найден.");
             }
 
+            var pricingQuest = quest.ParentQuest ?? quest;
             var maxParticipants = quest.ParticipantsMax + Math.Max(0, quest.ExtraParticipantsMax);
             if (dto.ParticipantsCount < quest.ParticipantsMin || dto.ParticipantsCount > maxParticipants)
             {
@@ -167,13 +169,13 @@ public class BookingService : IBookingService
                 .Where(service => !string.IsNullOrWhiteSpace(service.Title))
                 .ToList() ?? new List<BookingExtraServiceCreateDto>();
             var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - quest.ParticipantsMax);
-            var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, quest.ExtraParticipantPrice);
+            var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
             var extrasTotal = selectedExtras.Sum(service => service.Price)
                 + customExtras.Sum(service => service.Price);
             var paymentType = string.IsNullOrWhiteSpace(dto.PaymentType)
                 ? "cash"
                 : dto.PaymentType!.ToLowerInvariant();
-            var basePrice = schedule?.Price ?? quest.Price;
+            var basePrice = schedule?.Price ?? pricingQuest.Price;
             var totalPrice = paymentType == "certificate"
                 ? extrasTotal
                 : basePrice + extraParticipantsTotal + extrasTotal;
@@ -559,6 +561,7 @@ public class BookingService : IBookingService
         var importedLegacyIds = new HashSet<int>();
 
         var questLookup = await _context.Quests
+            .Include(q => q.ParentQuest)
             .AsNoTracking()
             .ToDictionaryAsync(q => q.Slug.ToLowerInvariant(), q => q);
 
@@ -686,16 +689,17 @@ public class BookingService : IBookingService
             continue;
         }
 
+            var pricingQuest = quest.ParentQuest ?? quest;
             var bookingDate = DateOnly.FromDateTime(bookingDateTime);
             var bookingTime = TimeOnly.FromDateTime(bookingDateTime);
-
-            var scheduleKey = (quest.Id, bookingDate, bookingTime);
+            var scheduleQuestId = pricingQuest.Id;
+            var scheduleKey = (scheduleQuestId, bookingDate, bookingTime);
         QuestSchedule? schedule = null;
         if (!scheduleCache.TryGetValue(scheduleKey, out schedule))
         {
             var scheduleFromDb = await _context.QuestSchedules
                 .FirstOrDefaultAsync(s =>
-                    s.QuestId == quest.Id
+                    s.QuestId == scheduleQuestId
                     && s.Date == bookingDate
                     && s.TimeSlot == bookingTime);
 
@@ -704,10 +708,10 @@ public class BookingService : IBookingService
                 schedule = new QuestSchedule
                     {
                         Id = Guid.NewGuid(),
-                        QuestId = quest.Id,
+                        QuestId = scheduleQuestId,
                         Date = bookingDate,
                         TimeSlot = bookingTime,
-                        Price = record.Price > 0 ? record.Price : quest.Price,
+                        Price = record.Price > 0 ? record.Price : pricingQuest.Price,
                         IsBooked = true,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
@@ -1087,7 +1091,9 @@ public class BookingService : IBookingService
     private async Task RecalculateTotalsAsync(Booking booking)
     {
         var quest = booking.QuestId.HasValue
-            ? await _context.Quests.FindAsync(booking.QuestId.Value)
+            ? await _context.Quests
+                .Include(q => q.ParentQuest)
+                .FirstOrDefaultAsync(q => q.Id == booking.QuestId.Value)
             : null;
         if (quest == null)
         {
@@ -1103,9 +1109,10 @@ public class BookingService : IBookingService
             .ToListAsync();
 
         var extraParticipantsCount = Math.Max(0, booking.ParticipantsCount - quest.ParticipantsMax);
-        var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, quest.ExtraParticipantPrice);
+        var pricingQuest = quest.ParentQuest ?? quest;
+        var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
         var extrasTotal = extraServices.Sum(service => service.Price);
-        var basePrice = schedule?.Price ?? quest.Price;
+        var basePrice = schedule?.Price ?? pricingQuest.Price;
 
         booking.ExtraParticipantsCount = extraParticipantsCount;
         var totalPrice = booking.PaymentType == "certificate"

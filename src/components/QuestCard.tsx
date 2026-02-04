@@ -107,6 +107,11 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
                   <h2 className="text-lg md:text-3xl font-black text-white mb-2 md:mb-4 tracking-tight uppercase leading-tight font-display">
                     {quest.title}
                   </h2>
+                  {quest.parentQuestId && (
+                    <span className="inline-flex items-center bg-[#c51f2e] text-white text-[9px] md:text-xs font-bold px-2 py-1 rounded-full uppercase mb-2 md:mb-4 w-fit">
+                      ДЕТСКИЙ
+                    </span>
+                  )}
                   <div className="hidden md:flex flex-wrap items-center gap-2 mb-2 md:mb-4 justify-start">
                     <span className="inline-flex items-center gap-2 bg-[#c51f2e] text-white text-[10px] md:text-sm font-bold px-2 py-1 rounded-full">
                       <Star className="w-3.5 h-3.5 fill-white" />

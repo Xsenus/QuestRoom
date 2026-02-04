@@ -68,6 +68,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         CancellationToken cancellationToken = default)
     {
         var quest = await _context.Quests
+            .Include(q => q.ParentQuest)
             .AsNoTracking()
             .FirstOrDefaultAsync(q => q.Slug == questSlug, cancellationToken);
         if (quest == null)
@@ -75,8 +76,9 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return Array.Empty<MirKvestovScheduleSlotDto>();
         }
 
+        var scheduleQuestId = ResolveScheduleQuestId(quest);
         var settings = await GetSettingsSnapshotAsync(cancellationToken);
-        var schedule = await _scheduleService.GetScheduleForQuestAsync(quest.Id, fromDate, toDate);
+        var schedule = await _scheduleService.GetScheduleForQuestAsync(scheduleQuestId, fromDate, toDate);
         var now = GetLocalNow(settings.TimeZone);
         var cutoffMinutes = await GetBookingCutoffMinutesAsync(cancellationToken);
         var cutoffTime = now.AddMinutes(cutoffMinutes);
@@ -109,6 +111,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
     {
         var settings = await GetSettingsSnapshotAsync(cancellationToken);
         var quest = await _context.Quests
+            .Include(q => q.ParentQuest)
             .AsNoTracking()
             .FirstOrDefaultAsync(q => q.Slug == questSlug, cancellationToken);
         if (quest == null)
@@ -121,12 +124,13 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return new MirKvestovBookingResult(false, "Некорректные дата или время");
         }
 
-        var schedule = await ResolveScheduleAsync(quest.Id, request.YourSlotId, date, time, cancellationToken);
+        var scheduleQuestId = ResolveScheduleQuestId(quest);
+        var schedule = await ResolveScheduleAsync(scheduleQuestId, request.YourSlotId, date, time, cancellationToken);
 
         if (schedule == null)
         {
-            await _scheduleService.GetScheduleForQuestAsync(quest.Id, date, date);
-            schedule = await ResolveScheduleAsync(quest.Id, request.YourSlotId, date, time, cancellationToken);
+            await _scheduleService.GetScheduleForQuestAsync(scheduleQuestId, date, date);
+            schedule = await ResolveScheduleAsync(scheduleQuestId, request.YourSlotId, date, time, cancellationToken);
         }
 
         if (schedule == null)
@@ -200,6 +204,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         CancellationToken cancellationToken = default)
     {
         var quest = await _context.Quests
+            .Include(q => q.ParentQuest)
             .AsNoTracking()
             .FirstOrDefaultAsync(q => q.Slug == questSlug, cancellationToken);
         if (quest == null)
@@ -207,13 +212,15 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return new Dictionary<string, int>();
         }
 
+        var scheduleQuestId = ResolveScheduleQuestId(quest);
         var schedule = await _context.QuestSchedules
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                s => s.QuestId == quest.Id && s.Date == date && s.TimeSlot == time,
+                s => s.QuestId == scheduleQuestId && s.Date == date && s.TimeSlot == time,
                 cancellationToken);
 
-        var price = schedule?.Price ?? quest.Price;
+        var pricingQuest = quest.ParentQuest ?? quest;
+        var price = schedule?.Price ?? pricingQuest.Price;
         var label = $"Базовая цена: {price} руб.";
 
         return new Dictionary<string, int>
@@ -469,6 +476,11 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         }
 
         return false;
+    }
+
+    private static Guid ResolveScheduleQuestId(Quest quest)
+    {
+        return quest.ParentQuestId ?? quest.Id;
     }
 
     private bool IsMd5Valid(MirKvestovOrderRequest request, string? md5Key)

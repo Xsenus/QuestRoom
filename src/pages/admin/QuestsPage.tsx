@@ -21,6 +21,7 @@ export default function QuestsPage() {
   );
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'schedule'>('details');
+  const [questFilter, setQuestFilter] = useState<'all' | 'adult' | 'child'>('all');
   const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
     if (mainImage && !images.includes(mainImage)) {
       return [mainImage, ...images];
@@ -86,6 +87,7 @@ export default function QuestsPage() {
       title: '',
       description: '',
       slug: '',
+      parentQuestId: null,
       addresses: [],
       phones: [],
       participantsMin: 2,
@@ -112,24 +114,81 @@ export default function QuestsPage() {
     setActiveTab('details');
   };
 
+  const applyParentQuest = (parent: Quest) => {
+    setEditingQuest((prev) => {
+      if (!prev) return prev;
+      const parentExtras = (parent.extraServices || []).map((service) => ({
+        title: service.title,
+        price: service.price,
+      }));
+      const baseSlug = parent.slug?.trim();
+      const childSlug = baseSlug ? `${baseSlug}_kids` : '';
+      return {
+        ...prev,
+        parentQuestId: parent.id,
+        title: parent.title,
+        description: parent.description,
+        slug: childSlug,
+        addresses: parent.addresses || [],
+        phones: parent.phones || [],
+        participantsMin: parent.participantsMin,
+        participantsMax: parent.participantsMax,
+        extraParticipantsMax: parent.extraParticipantsMax,
+        extraParticipantPrice: parent.extraParticipantPrice,
+        ageRestriction: parent.ageRestriction,
+        ageRating: parent.ageRating,
+        price: parent.price,
+        duration: parent.duration,
+        difficulty: parent.difficulty,
+        difficultyMax: parent.difficultyMax,
+        isNew: parent.isNew,
+        isVisible: parent.isVisible,
+        mainImage: parent.mainImage,
+        images: ensureMainImageInList(parent.images || [], parent.mainImage),
+        giftGameLabel: parent.giftGameLabel || 'Подарить игру',
+        giftGameUrl: parent.giftGameUrl || '/certificate',
+        videoUrl: parent.videoUrl || '',
+        sortOrder: parent.sortOrder,
+        extraServices: parentExtras,
+      };
+    });
+  };
+
   const handleSave = async () => {
     if (!canEdit) return;
     if (!editingQuest) return;
 
     const { id, ...payload } = editingQuest;
+    const parentQuest = payload.parentQuestId
+      ? quests.find((quest) => quest.id === payload.parentQuestId)
+      : null;
     const normalizedPayload: QuestUpsert = {
       ...payload,
       slug: normalizeOptional(payload.slug),
       giftGameLabel: normalizeOptional(payload.giftGameLabel) || 'Подарить игру',
       giftGameUrl: normalizeOptional(payload.giftGameUrl) || '/certificate',
       videoUrl: normalizeOptional(payload.videoUrl),
+      parentQuestId: normalizeOptional(payload.parentQuestId),
     };
+    const finalPayload: QuestUpsert = parentQuest
+      ? {
+          ...normalizedPayload,
+          participantsMin: parentQuest.participantsMin,
+          participantsMax: parentQuest.participantsMax,
+          extraParticipantsMax: parentQuest.extraParticipantsMax,
+          extraParticipantPrice: parentQuest.extraParticipantPrice,
+          price: parentQuest.price,
+          duration: parentQuest.duration,
+          difficulty: parentQuest.difficulty,
+          difficultyMax: parentQuest.difficultyMax,
+        }
+      : normalizedPayload;
 
     try {
       if (isCreating) {
-        await api.createQuest(normalizedPayload);
+        await api.createQuest(finalPayload);
       } else if (id) {
-        await api.updateQuest(id, normalizedPayload);
+        await api.updateQuest(id, finalPayload);
       }
     } catch (error) {
       alert('Ошибка при сохранении квеста: ' + (error as Error).message);
@@ -154,6 +213,7 @@ export default function QuestsPage() {
         title: quest.title,
         description: quest.description,
         slug: quest.slug,
+        parentQuestId: quest.parentQuestId,
         addresses: quest.addresses || [],
         phones: quest.phones || [],
         participantsMin: quest.participantsMin,
@@ -285,6 +345,16 @@ export default function QuestsPage() {
     return <div className="text-center py-12">Загрузка...</div>;
   }
 
+  const filteredQuests = quests.filter((quest) => {
+    if (questFilter === 'adult') {
+      return !quest.parentQuestId;
+    }
+    if (questFilter === 'child') {
+      return Boolean(quest.parentQuestId);
+    }
+    return true;
+  });
+
   const addPhone = () => {
     const phones = editingQuest?.phones || [];
     setEditingQuest({ ...editingQuest, phones: [...phones, ''] });
@@ -381,7 +451,13 @@ export default function QuestsPage() {
   };
 
   if (editingQuest) {
-    const scheduleTabDisabled = isCreating || !editingQuest.id;
+    const isChildMode = Boolean(editingQuest.parentQuestId);
+    const parentQuestName = quests.find((quest) => quest.id === editingQuest.parentQuestId)?.title;
+    const scheduleTabDisabled = isCreating || !editingQuest.id || isChildMode;
+    const scheduleTabHint = isChildMode
+      ? 'Расписание и цены наследуются от родительского квеста.'
+      : 'Сначала сохраните квест';
+    const childInputClass = isChildMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : '';
     return (
       <div className="max-w-5xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
@@ -408,7 +484,7 @@ export default function QuestsPage() {
                   ? 'bg-red-600 text-white border-red-600'
                   : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
               } ${scheduleTabDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              title={scheduleTabDisabled ? 'Сначала сохраните квест' : undefined}
+              title={scheduleTabDisabled ? scheduleTabHint : undefined}
             >
               Время и цены
             </button>
@@ -450,6 +526,47 @@ export default function QuestsPage() {
               <p className="mt-2 text-xs text-gray-500">
                 Используется в ссылке: /quest/{editingQuest.slug || 'sherlock'}
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Родительский квест (детский режим)
+              </label>
+              <select
+                value={editingQuest.parentQuestId || ''}
+                onChange={(e) => {
+                  const nextParentId = e.target.value || null;
+                  if (!nextParentId) {
+                    setEditingQuest({ ...editingQuest, parentQuestId: null });
+                    return;
+                  }
+                  const parent = quests.find((quest) => quest.id === nextParentId);
+                  if (parent) {
+                    applyParentQuest(parent);
+                  } else {
+                    setEditingQuest({ ...editingQuest, parentQuestId: nextParentId });
+                  }
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              >
+                <option value="">Нет</option>
+                {quests
+                  .filter((quest) => quest.id !== editingQuest.id)
+                  .map((quest) => (
+                    <option key={quest.id} value={quest.id}>
+                      {quest.title}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-2 text-xs text-gray-500">
+                Если выбран родитель, расписание и цены наследуются от него, а вкладка
+                «Время и цены» будет заблокирована.
+              </p>
+              {isChildMode && parentQuestName && (
+                <p className="mt-1 text-xs font-semibold text-red-600">
+                  Детский режим для квеста: {parentQuestName}.
+                </p>
+              )}
             </div>
 
             <div>
@@ -671,7 +788,8 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, duration: parseInt(e.target.value) })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                 >
                   {durationBadges.map(badge => (
                     <option key={badge.duration} value={badge.duration}>
@@ -694,7 +812,8 @@ export default function QuestsPage() {
                       participantsMin: parseInt(e.target.value) || 2,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   min="1"
                 />
               </div>
@@ -712,7 +831,8 @@ export default function QuestsPage() {
                   participantsMax: parseInt(e.target.value) || 6,
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={isChildMode}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
               min="1"
             />
           </div>
@@ -730,7 +850,8 @@ export default function QuestsPage() {
                   difficulty: parseInt(e.target.value, 10) || 1,
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={isChildMode}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
               min="1"
             />
           </div>
@@ -748,7 +869,8 @@ export default function QuestsPage() {
                   difficultyMax: parseInt(e.target.value, 10) || 5,
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              disabled={isChildMode}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
               min="1"
             />
           </div>
@@ -771,7 +893,8 @@ export default function QuestsPage() {
                       extraParticipantsMax: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   min="0"
                 />
                 <p className="mt-2 text-xs text-gray-500">
@@ -792,7 +915,8 @@ export default function QuestsPage() {
                       extraParticipantPrice: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   min="0"
                 />
               </div>
@@ -941,7 +1065,8 @@ export default function QuestsPage() {
                       price: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
                   placeholder="2500"
                 />
               </div>
@@ -1021,11 +1146,25 @@ export default function QuestsPage() {
           </div>
           ) : scheduleTabDisabled ? (
             <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
-              <p className="font-semibold text-gray-800">Сначала сохраните квест.</p>
-              <p className="mt-2">
-                Чтобы настроить расписание, нужно сохранить карточку квеста и перейти во
-                вкладку «Время и цены».
-              </p>
+              {isChildMode ? (
+                <>
+                  <p className="font-semibold text-gray-800">
+                    Расписание и цены наследуются от родителя.
+                  </p>
+                  <p className="mt-2">
+                    Для детского режима нельзя менять слоты отдельно — редактируйте расписание у родительского
+                    квеста.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-gray-800">Сначала сохраните квест.</p>
+                  <p className="mt-2">
+                    Чтобы настроить расписание, нужно сохранить карточку квеста и перейти во
+                    вкладку «Время и цены».
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <QuestScheduleEditor questId={editingQuest.id!} />
@@ -1053,8 +1192,29 @@ export default function QuestsPage() {
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { key: 'all' as const, label: 'Все' },
+          { key: 'adult' as const, label: 'Взрослые' },
+          { key: 'child' as const, label: 'Детские' },
+        ].map((filter) => (
+          <button
+            key={filter.key}
+            type="button"
+            onClick={() => setQuestFilter(filter.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+              questFilter === filter.key
+                ? 'bg-red-600 text-white border-red-600'
+                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {quests.map((quest) => (
+        {filteredQuests.map((quest) => (
           <div
             key={quest.id}
             className={`bg-white rounded-lg shadow-lg p-6 ${
@@ -1068,6 +1228,11 @@ export default function QuestsPage() {
                   {quest.isNew && (
                     <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                       NEW
+                    </span>
+                  )}
+                  {quest.parentQuestId && (
+                    <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      ДЕТСКИЙ РЕЖИМ
                     </span>
                   )}
                   {!quest.isVisible && (
@@ -1123,9 +1288,9 @@ export default function QuestsPage() {
                 </button>
                 <button
                   onClick={() => handleToggleVisibility(quest)}
-                  disabled={!canEdit}
+                  disabled={!canEdit || Boolean(quest.parentQuestId)}
                   className={`p-2 rounded-lg transition-colors ${
-                    canEdit
+                    canEdit && !quest.parentQuestId
                       ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
                       : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
                   }`}
@@ -1154,10 +1319,12 @@ export default function QuestsPage() {
           </div>
         ))}
 
-        {quests.length === 0 && (
+        {filteredQuests.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <p className="text-gray-600 text-lg">Квесты не найдены</p>
-            <p className="text-gray-500 mt-2">Создайте первый квест</p>
+            <p className="text-gray-500 mt-2">
+              Попробуйте изменить фильтр или создайте новый квест.
+            </p>
           </div>
         )}
       </div>

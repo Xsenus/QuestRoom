@@ -6,6 +6,7 @@ public class QuestDto
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
+    public Guid? ParentQuestId { get; set; }
     public string[] Addresses { get; set; } = Array.Empty<string>();
     public string[] Phones { get; set; } = Array.Empty<string>();
     public int ParticipantsMin { get; set; }
