@@ -684,8 +684,7 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, giftGameLabel: e.target.value })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="Подарить игру"
                 />
               </div>
@@ -699,8 +698,7 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, giftGameUrl: e.target.value })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="/certificate"
                 />
               </div>
@@ -714,8 +712,7 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, videoUrl: e.target.value })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="https://youtube.com/watch?v=..."
                 />
               </div>
@@ -735,13 +732,11 @@ export default function QuestsPage() {
                       type="text"
                       value={addr}
                       onChange={(e) => updateAddress(index, e.target.value)}
-                      disabled={isChildMode}
-                      className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                       placeholder="ул. Диксона, д. 1, стр. 4"
                     />
                     <button
                       onClick={() => removeAddress(index)}
-                      disabled={isChildMode}
                       className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                     >
                       <X className="w-5 h-5" />
@@ -750,10 +745,7 @@ export default function QuestsPage() {
                 ))}
                 <button
                   onClick={addAddress}
-                  disabled={isChildMode}
-                  className={`flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg transition-colors ${
-                    isChildMode ? 'cursor-not-allowed opacity-60' : 'hover:bg-gray-200'
-                  }`}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Добавить адрес
@@ -772,13 +764,11 @@ export default function QuestsPage() {
                       type="text"
                       value={phone}
                       onChange={(e) => updatePhone(index, e.target.value)}
-                      disabled={isChildMode}
-                      className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                       placeholder="8 (391) 294-59-50"
                     />
                     <button
                       onClick={() => removePhone(index)}
-                      disabled={isChildMode}
                       className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                     >
                       <X className="w-5 h-5" />
@@ -787,10 +777,7 @@ export default function QuestsPage() {
                 ))}
                 <button
                   onClick={addPhone}
-                  disabled={isChildMode}
-                  className={`flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg transition-colors ${
-                    isChildMode ? 'cursor-not-allowed opacity-60' : 'hover:bg-gray-200'
-                  }`}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Добавить телефон
@@ -1048,8 +1035,7 @@ export default function QuestsPage() {
                       ageRestriction: e.target.value,
                     })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="С 6 лет родителями или с 14 лет самостоятельно"
                 />
               </div>
@@ -1069,8 +1055,7 @@ export default function QuestsPage() {
                       ageRating: formatAgeRating(`${e.target.value} +`),
                     })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="12"
                 />
               </div>
@@ -1109,8 +1094,7 @@ export default function QuestsPage() {
                       sortOrder: parseInt(e.target.value) || 0,
                     })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 />
               </div>
             </div>
@@ -1126,8 +1110,7 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, isNew: e.target.checked })
                   }
-                  disabled={isChildMode}
-                  className={`w-5 h-5 text-red-600 rounded focus:ring-red-500 ${isChildMode ? 'cursor-not-allowed' : ''}`}
+                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
                 <span className="text-sm font-semibold text-gray-700">
                   Показывать бейдж "NEW"
@@ -1141,8 +1124,7 @@ export default function QuestsPage() {
                   onChange={(e) =>
                     setEditingQuest({ ...editingQuest, isVisible: e.target.checked })
                   }
-                  disabled={isChildMode}
-                  className={`w-5 h-5 text-red-600 rounded focus:ring-red-500 ${isChildMode ? 'cursor-not-allowed' : ''}`}
+                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                 />
                 <span className="text-sm font-semibold text-gray-700">
                   Показывать на главной странице
