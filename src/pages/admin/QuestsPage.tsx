@@ -4,6 +4,7 @@ import { Quest, QuestUpsert, DurationBadge, StandardExtraService } from '../../l
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
 import QuestScheduleEditor from '../../components/admin/QuestScheduleEditor';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
+import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 
@@ -22,6 +23,12 @@ export default function QuestsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'schedule'>('details');
   const [questFilter, setQuestFilter] = useState<'all' | 'adult' | 'child'>('all');
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({ isOpen: false, title: '', message: '', tone: 'info' });
   const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
     if (mainImage && !images.includes(mainImage)) {
       return [mainImage, ...images];
@@ -251,7 +258,12 @@ export default function QuestsPage() {
       await api.deleteQuest(id);
       loadQuests();
     } catch (error) {
-      alert('Ошибка при удалении квеста: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось удалить квест',
+        message: (error as Error).message,
+        tone: 'error',
+      });
     }
   };
 
@@ -1170,6 +1182,13 @@ export default function QuestsPage() {
             <QuestScheduleEditor questId={editingQuest.id!} />
           )}
         </div>
+        <NotificationModal
+          isOpen={notification.isOpen}
+          title={notification.title}
+          message={notification.message}
+          tone={notification.tone}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+        />
       </div>
     );
   }
@@ -1328,6 +1347,13 @@ export default function QuestsPage() {
           </div>
         )}
       </div>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+      />
     </div>
   );
 }
