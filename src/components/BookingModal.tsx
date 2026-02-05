@@ -439,7 +439,7 @@ export default function BookingModal({
             {(questExtraServices.length > 0 || missingMandatoryChildServices.length > 0) && (
               <div className="space-y-3 text-white text-xs">
                 <p className="font-semibold text-sm">Дополнительные услуги:</p>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {displayMandatoryServices.map((service) => (
                     <label
                       key={service.id}

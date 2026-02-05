@@ -3580,7 +3580,7 @@ export default function BookingsPage() {
                   {bookingFormMode === 'create' && availableQuestExtras.length > 0 && (
                     <div className="mb-4">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Услуги квеста</p>
-                      <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="grid gap-2 md:grid-cols-3">
                         {availableQuestExtras.map((service) => {
                           const isMandatory = mandatoryQuestExtraServiceIds.includes(service.id);
                           return (
