@@ -6,6 +6,7 @@ public class StandardExtraServiceDto
     public string Title { get; set; } = string.Empty;
     public int Price { get; set; }
     public bool IsActive { get; set; }
+    public bool MandatoryForChildQuests { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

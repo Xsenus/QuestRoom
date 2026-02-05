@@ -234,6 +234,7 @@ export type StandardExtraService = {
   title: string;
   price: number;
   isActive: boolean;
+  mandatoryForChildQuests: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -242,6 +243,7 @@ export type StandardExtraServiceUpsert = {
   title: string;
   price: number;
   isActive: boolean;
+  mandatoryForChildQuests: boolean;
 };
 
 export type BookingExtraService = {

@@ -138,6 +138,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Title = "Доплата за ночные сеансы начиная с 21:30",
                     Price = 500,
                     IsActive = true,
+                    MandatoryForChildQuests = false,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 },
@@ -147,6 +148,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Title = "Доплата за услуги детского аниматора",
                     Price = 1000,
                     IsActive = true,
+                    MandatoryForChildQuests = false,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 },
@@ -156,6 +158,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Title = "Аренда зоны отдыха для ожидающих гостей",
                     Price = 500,
                     IsActive = true,
+                    MandatoryForChildQuests = false,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 },
@@ -165,6 +168,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Title = "Аренда зоны для чаепития за 45 минут",
                     Price = 500,
                     IsActive = true,
+                    MandatoryForChildQuests = false,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 });

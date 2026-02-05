@@ -7,6 +7,8 @@ interface HeaderProps {
 }
 
 export default function Header({ currentPage, setCurrentPage }: HeaderProps) {
+  void currentPage;
+  void setCurrentPage;
   const location = useLocation();
 
   const navItems = [

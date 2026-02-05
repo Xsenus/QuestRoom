@@ -191,7 +191,7 @@ export default function ProductionCalendarPage() {
   };
 
   const normalizeImportEntry = (
-    entry: Partial<ProductionCalendarDayUpsert> & { date?: string; dayType?: DayType },
+    entry: Partial<ProductionCalendarDayUpsert> & { date?: string; dayType?: DayType | null },
     sourceLabel?: string
   ): ProductionCalendarDayUpsert => {
     if (!entry.date) {
@@ -499,7 +499,7 @@ export default function ProductionCalendarPage() {
                   />
                   <button
                     type="button"
-                    onClick={handleImportFromUrl}
+                    onClick={() => void handleImportFromUrl()}
                     disabled={importing || !canEdit}
                     className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >

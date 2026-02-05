@@ -93,7 +93,7 @@ export default function RolesPage() {
     setEditor({
       id: role.id,
       name: role.name,
-      description: role.description,
+      description: role.description ?? '',
       permissions: [...role.permissions],
       system: role.code === 'admin',
     });
