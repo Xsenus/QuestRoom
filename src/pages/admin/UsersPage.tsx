@@ -138,10 +138,10 @@ export default function UsersPage() {
       id: user.id,
       name: user.name,
       email: user.email,
-      phone: user.phone,
+      phone: user.phone ?? undefined,
       roleId: user.roleId || fallbackRoleId,
       status: user.status || 'active',
-      notes: user.notes,
+      notes: user.notes ?? undefined,
     });
     setIsCreating(false);
     setPasswordDraft('');

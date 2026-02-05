@@ -9,6 +9,7 @@ interface FooterProps {
 }
 
 export default function Footer({ setCurrentPage }: FooterProps) {
+  void setCurrentPage;
   const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {

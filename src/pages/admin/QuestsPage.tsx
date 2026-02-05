@@ -457,49 +457,58 @@ export default function QuestsPage() {
   });
 
   const addPhone = () => {
+    if (!editingQuest) return;
     const phones = editingQuest?.phones || [];
     setEditingQuest({ ...editingQuest, phones: [...phones, ''] });
   };
 
   const updatePhone = (index: number, value: string) => {
+    if (!editingQuest) return;
     const phones = [...(editingQuest?.phones || [])];
     phones[index] = value;
     setEditingQuest({ ...editingQuest, phones });
   };
 
   const removePhone = (index: number) => {
+    if (!editingQuest) return;
     const phones = [...(editingQuest?.phones || [])];
     phones.splice(index, 1);
     setEditingQuest({ ...editingQuest, phones });
   };
 
   const addAddress = () => {
+    if (!editingQuest) return;
     const addresses = editingQuest?.addresses || [];
     setEditingQuest({ ...editingQuest, addresses: [...addresses, ''] });
   };
 
   const updateAddress = (index: number, value: string) => {
+    if (!editingQuest) return;
     const addresses = [...(editingQuest?.addresses || [])];
     addresses[index] = value;
     setEditingQuest({ ...editingQuest, addresses });
   };
 
   const removeAddress = (index: number) => {
+    if (!editingQuest) return;
     const addresses = [...(editingQuest?.addresses || [])];
     addresses.splice(index, 1);
     setEditingQuest({ ...editingQuest, addresses });
   };
 
   const addImage = (url: string) => {
+    if (!editingQuest) return;
     const images = editingQuest?.images || [];
     setEditingQuest({ ...editingQuest, images: [...images, url] });
   };
 
   const setMainImage = (url: string) => {
+    if (!editingQuest) return;
     setEditingQuest({ ...editingQuest, mainImage: url });
   };
 
   const removeImage = (index: number) => {
+    if (!editingQuest) return;
     const images = [...(editingQuest?.images || [])];
     const removedUrl = images[index];
     images.splice(index, 1);

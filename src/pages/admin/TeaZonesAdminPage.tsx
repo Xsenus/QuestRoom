@@ -99,11 +99,13 @@ export default function TeaZonesAdminPage() {
   };
 
   const addImage = () => {
+    if (!editingZone) return;
     const images = editingZone?.images || [];
     setEditingZone({ ...editingZone, images: [...images, ''] });
   };
 
   const removeImage = (index: number) => {
+    if (!editingZone) return;
     const images = [...(editingZone?.images || [])];
     images.splice(index, 1);
     setEditingZone({ ...editingZone, images });
