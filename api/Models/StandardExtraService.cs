@@ -20,6 +20,9 @@ public class StandardExtraService
     [Column("is_active")]
     public bool IsActive { get; set; }
 
+    [Column("mandatory_for_child_quests")]
+    public bool MandatoryForChildQuests { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 

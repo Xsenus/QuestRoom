@@ -44,6 +44,7 @@ public class StandardExtraServiceService : IStandardExtraServiceService
             Title = dto.Title.Trim(),
             Price = dto.Price,
             IsActive = dto.IsActive,
+            MandatoryForChildQuests = dto.MandatoryForChildQuests,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -64,6 +65,7 @@ public class StandardExtraServiceService : IStandardExtraServiceService
         service.Title = dto.Title.Trim();
         service.Price = dto.Price;
         service.IsActive = dto.IsActive;
+        service.MandatoryForChildQuests = dto.MandatoryForChildQuests;
         service.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -91,6 +93,7 @@ public class StandardExtraServiceService : IStandardExtraServiceService
             Title = service.Title,
             Price = service.Price,
             IsActive = service.IsActive,
+            MandatoryForChildQuests = service.MandatoryForChildQuests,
             CreatedAt = service.CreatedAt,
             UpdatedAt = service.UpdatedAt
         };
