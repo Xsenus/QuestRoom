@@ -359,10 +359,17 @@ export default function BookingModal({
               <div className="space-y-2 text-white text-xs">
                 <p className="font-semibold text-sm">Дополнительные услуги:</p>
                 {mandatoryAnimatorService && (
-                  <div className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-white/90">
-                    Обязательная услуга: {mandatoryAnimatorService.title} —{' '}
-                    {mandatoryAnimatorService.price} ₽
-                  </div>
+                  <label className="flex items-start gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-left text-white/90">
+                    <input
+                      type="checkbox"
+                      checked
+                      disabled
+                      className="mt-1 h-4 w-4 rounded border-white/40 bg-white/10 text-red-600"
+                    />
+                    <span>
+                      {mandatoryAnimatorService.title} — {mandatoryAnimatorService.price} ₽
+                    </span>
+                  </label>
                 )}
                 <div className="grid gap-2 sm:grid-cols-2">
                   {optionalExtraServices.map((service) => (
