@@ -47,26 +47,33 @@ export default function QuestsPage() {
   };
   const normalizeServiceTitle = (title?: string | null) =>
     (title ?? '').trim().toLowerCase();
-  const findAnimatorService = () =>
-    standardExtraServices.find(
-      (service) => normalizeServiceTitle(service.title) === 'детский аниматор'
-    );
-  const ensureAnimatorService = (
-    services: QuestUpsert['extraServices'] = [],
-    animatorService?: StandardExtraService | null
-  ) => {
-    if (!animatorService) return services;
-    const normalizedTitle = normalizeServiceTitle(animatorService.title);
-    const exists = services.some(
+  const getMandatoryChildServices = () =>
+    standardExtraServices.filter((service) => service.mandatoryForChildQuests);
+  const isMandatoryChildServiceTitle = (title?: string | null) => {
+    const normalizedTitle = normalizeServiceTitle(title);
+    if (!normalizedTitle) return false;
+    return getMandatoryChildServices().some(
       (service) => normalizeServiceTitle(service.title) === normalizedTitle
     );
-    if (exists) return services;
+  };
+  const ensureMandatoryChildServices = (
+    services: QuestUpsert['extraServices'] = [],
+    mandatoryServices: StandardExtraService[] = []
+  ) => {
+    if (mandatoryServices.length === 0) return services;
+    const normalizedExisting = new Set(
+      services.map((service) => normalizeServiceTitle(service.title))
+    );
+    const toAdd = mandatoryServices.filter(
+      (service) => !normalizedExisting.has(normalizeServiceTitle(service.title))
+    );
+    if (toAdd.length === 0) return services;
     return [
       ...services,
-      {
-        title: animatorService.title.trim(),
-        price: animatorService.price,
-      },
+      ...toAdd.map((service) => ({
+        title: service.title.trim(),
+        price: service.price,
+      })),
     ];
   };
 
@@ -162,7 +169,7 @@ export default function QuestsPage() {
         title: service.title,
         price: service.price,
       }));
-      const animatorService = findAnimatorService();
+      const mandatoryServices = getMandatoryChildServices();
       const baseSlug = parent.slug?.trim();
       const childSlug = baseSlug ? `${baseSlug}_kids` : '';
       return {
@@ -191,7 +198,7 @@ export default function QuestsPage() {
         giftGameUrl: parent.giftGameUrl || '/certificate',
         videoUrl: parent.videoUrl || '',
         sortOrder: parent.sortOrder,
-        extraServices: ensureAnimatorService(parentExtras, animatorService),
+        extraServices: ensureMandatoryChildServices(parentExtras, mandatoryServices),
       };
     });
   };
@@ -212,11 +219,14 @@ export default function QuestsPage() {
       videoUrl: normalizeOptional(payload.videoUrl),
       parentQuestId: normalizeOptional(payload.parentQuestId),
     };
-    const animatorService = findAnimatorService();
+    const mandatoryServices = getMandatoryChildServices();
     const finalPayload: QuestUpsert = parentQuest
       ? {
           ...normalizedPayload,
-          extraServices: ensureAnimatorService(normalizedPayload.extraServices, animatorService),
+          extraServices: ensureMandatoryChildServices(
+            normalizedPayload.extraServices,
+            mandatoryServices
+          ),
           extraParticipantsMax: parentQuest.extraParticipantsMax,
           extraParticipantPrice: parentQuest.extraParticipantPrice,
           price: parentQuest.price,
@@ -337,9 +347,8 @@ export default function QuestsPage() {
     if (!editingQuest) return;
     const extraServices = [...(editingQuest.extraServices || [])];
     if (
-      field === 'title' &&
       editingQuest.parentQuestId &&
-      normalizeServiceTitle(extraServices[index]?.title) === 'детский аниматор'
+      isMandatoryChildServiceTitle(extraServices[index]?.title)
     ) {
       return;
     }
@@ -355,7 +364,7 @@ export default function QuestsPage() {
     const extraServices = [...(editingQuest.extraServices || [])];
     if (
       editingQuest.parentQuestId &&
-      normalizeServiceTitle(extraServices[index]?.title) === 'детский аниматор'
+      isMandatoryChildServiceTitle(extraServices[index]?.title)
     ) {
       return;
     }
@@ -366,10 +375,7 @@ export default function QuestsPage() {
   const addStandardExtraService = (service: StandardExtraService) => {
     const normalizedTitle = service.title.trim();
     if (!normalizedTitle) return;
-    if (
-      editingQuest?.parentQuestId &&
-      normalizeServiceTitle(normalizedTitle) === 'детский аниматор'
-    ) {
+    if (editingQuest?.parentQuestId && isMandatoryChildServiceTitle(normalizedTitle)) {
       return;
     }
 
@@ -408,10 +414,7 @@ export default function QuestsPage() {
       }));
       const toAdd = standardExtraServices
         .filter((service) => service.isActive)
-        .filter(
-          (service) =>
-            !isChildMode || normalizeServiceTitle(service.title) !== 'детский аниматор'
-        )
+        .filter((service) => !isChildMode || !service.mandatoryForChildQuests)
         .filter((service) => {
           const normalizedTitle = service.title.trim().toLowerCase();
           return !normalizedExisting.some(
@@ -530,9 +533,9 @@ export default function QuestsPage() {
   };
 
   const handleEditQuest = (quest: Quest) => {
-    const animatorService = findAnimatorService();
+    const mandatoryServices = getMandatoryChildServices();
     const nextExtras = quest.parentQuestId
-      ? ensureAnimatorService(quest.extraServices || [], animatorService)
+      ? ensureMandatoryChildServices(quest.extraServices || [], mandatoryServices)
       : quest.extraServices || [];
     setEditingQuest({
       ...quest,
@@ -1019,10 +1022,7 @@ export default function QuestsPage() {
                 Дополнительные услуги
               </label>
               {standardExtraServices
-                .filter(
-                  (service) =>
-                    !isChildMode || normalizeServiceTitle(service.title) !== 'детский аниматор'
-                )
+                .filter((service) => !isChildMode || !service.mandatoryForChildQuests)
                 .some((service) => service.isActive) && (
                 <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1046,11 +1046,7 @@ export default function QuestsPage() {
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     {standardExtraServices
                       .filter((service) => service.isActive)
-                      .filter(
-                        (service) =>
-                          !isChildMode ||
-                          normalizeServiceTitle(service.title) !== 'детский аниматор'
-                      )
+                      .filter((service) => !isChildMode || !service.mandatoryForChildQuests)
                       .map((service) => (
                       <div
                         key={service.id}
@@ -1075,8 +1071,8 @@ export default function QuestsPage() {
               )}
               <div className="space-y-3">
                 {(editingQuest.extraServices || []).map((service, index) => {
-                  const isAnimatorRequired =
-                    isChildMode && normalizeServiceTitle(service.title) === 'детский аниматор';
+                  const isMandatoryChildService =
+                    isChildMode && isMandatoryChildServiceTitle(service.title);
                   return (
                     <div
                       key={service.id ?? index}
@@ -1087,13 +1083,13 @@ export default function QuestsPage() {
                           type="text"
                           value={service.title || ''}
                           onChange={(e) => updateExtraService(index, 'title', e.target.value)}
-                          readOnly={isAnimatorRequired}
+                          readOnly={isMandatoryChildService}
                           className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
-                            isAnimatorRequired ? 'bg-gray-100 text-gray-600' : ''
+                            isMandatoryChildService ? 'bg-gray-100 text-gray-600' : ''
                           }`}
                           placeholder="Название услуги"
                         />
-                        {isAnimatorRequired && (
+                        {isMandatoryChildService && (
                           <p className="text-xs text-gray-500">
                             Обязательная услуга для детских квестов.
                           </p>
@@ -1103,20 +1099,23 @@ export default function QuestsPage() {
                         type="number"
                         value={service.price || 0}
                         onChange={(e) => updateExtraService(index, 'price', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                        readOnly={isMandatoryChildService}
+                        className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${
+                          isMandatoryChildService ? 'bg-gray-100 text-gray-600' : ''
+                        }`}
                         placeholder="Цена"
                         min="0"
                       />
                       <button
                         onClick={() => removeExtraService(index)}
-                        disabled={isAnimatorRequired}
+                        disabled={isMandatoryChildService}
                         className={`p-2 rounded-lg transition-colors ${
-                          isAnimatorRequired
+                          isMandatoryChildService
                             ? 'cursor-not-allowed bg-gray-100 text-gray-400'
                             : 'bg-red-100 hover:bg-red-200 text-red-600'
                         }`}
                         title={
-                          isAnimatorRequired
+                          isMandatoryChildService
                             ? 'Эта услуга обязательна для детских квестов'
                             : 'Удалить услугу'
                         }

@@ -10,6 +10,7 @@ import {
   Quest,
   QuestSchedule,
   Settings,
+  StandardExtraService,
 } from '../../lib/types';
 import {
   Calendar,
@@ -141,6 +142,7 @@ export default function BookingsPage() {
   const [countBookings, setCountBookings] = useState<Booking[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [standardExtraServices, setStandardExtraServices] = useState<StandardExtraService[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [defaultQuestId, setDefaultQuestId] = useState<string>('');
   const [scheduleSlots, setScheduleSlots] = useState<QuestSchedule[]>([]);
@@ -213,6 +215,17 @@ export default function BookingsPage() {
     extraServices: Booking['extraServices'];
   } | null>(null);
   const listRangeStorageKey = 'admin_bookings_list_range';
+  const normalizeServiceTitle = (title?: string | null) =>
+    (title ?? '').trim().toLowerCase();
+  const mandatoryChildServiceTitles = useMemo(
+    () =>
+      new Set(
+        standardExtraServices
+          .filter((service) => service.mandatoryForChildQuests)
+          .map((service) => normalizeServiceTitle(service.title))
+      ),
+    [standardExtraServices]
+  );
   const showCustomFilters = false;
   const tableColumnsStorageKey = useMemo(
     () => `admin_bookings_table_columns_${user?.email ?? 'guest'}`,
@@ -492,6 +505,7 @@ export default function BookingsPage() {
     setListDateFrom(listFrom);
     setListDateTo(listTo);
     loadQuests();
+    loadStandardExtraServices();
     loadSettings();
     loadPromoCodes();
   }, [canView]);
@@ -829,6 +843,15 @@ export default function BookingsPage() {
       }
     } catch (error) {
       console.error('Error loading quests:', error);
+    }
+  };
+
+  const loadStandardExtraServices = async () => {
+    try {
+      const data = await api.getStandardExtraServices();
+      setStandardExtraServices(data || []);
+    } catch (error) {
+      console.error('Error loading standard extra services:', error);
     }
   };
 
@@ -1205,6 +1228,12 @@ export default function BookingsPage() {
   };
 
   const toggleQuestExtraService = (serviceId: string) => {
+    const mandatoryIds = getMandatoryQuestExtraServiceIds(
+      editingBooking?.questId ? questLookup.get(editingBooking.questId) : null
+    );
+    if (mandatoryIds.includes(serviceId)) {
+      return;
+    }
     setSelectedQuestExtraServiceIds((prev) =>
       prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
     );
@@ -1399,6 +1428,15 @@ export default function BookingsPage() {
   const questLookup = useMemo(() => {
     return new Map(quests.map((quest) => [quest.id, quest]));
   }, [quests]);
+
+  const getMandatoryQuestExtraServiceIds = (quest?: Quest | null) => {
+    if (!quest?.parentQuestId || mandatoryChildServiceTitles.size === 0) {
+      return [];
+    }
+    return (quest.extraServices || [])
+      .filter((service) => mandatoryChildServiceTitles.has(normalizeServiceTitle(service.title)))
+      .map((service) => service.id);
+  };
 
   const statusCounts = useMemo(() => {
     const source =
@@ -1903,10 +1941,29 @@ export default function BookingsPage() {
     return questLookup.get(editingBooking.questId)?.extraServices ?? [];
   }, [bookingFormMode, editingBooking?.questId, questLookup]);
 
+  const mandatoryQuestExtraServiceIds = useMemo(() => {
+    if (bookingFormMode !== 'create' || !editingBooking?.questId) {
+      return [];
+    }
+    const quest = questLookup.get(editingBooking.questId);
+    return getMandatoryQuestExtraServiceIds(quest);
+  }, [bookingFormMode, editingBooking?.questId, questLookup, mandatoryChildServiceTitles]);
+
   const selectedQuestExtrasTotal = useMemo(
     () => getSelectedQuestExtrasTotal(),
     [bookingFormMode, editingBooking?.questId, questLookup, selectedQuestExtraServiceIds]
   );
+
+  useEffect(() => {
+    if (!mandatoryQuestExtraServiceIds.length) {
+      return;
+    }
+    setSelectedQuestExtraServiceIds((prev) => {
+      const next = new Set(prev);
+      mandatoryQuestExtraServiceIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  }, [mandatoryQuestExtraServiceIds]);
 
   const addColumnFilter = () => {
     hasUserEditedPreferences.current = true;
@@ -3445,7 +3502,9 @@ export default function BookingsPage() {
                     <div className="mb-4">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Услуги квеста</p>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        {availableQuestExtras.map((service) => (
+                        {availableQuestExtras.map((service) => {
+                          const isMandatory = mandatoryQuestExtraServiceIds.includes(service.id);
+                          return (
                           <label
                             key={service.id}
                             className="flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
@@ -3454,13 +3513,15 @@ export default function BookingsPage() {
                               type="checkbox"
                               checked={selectedQuestExtraServiceIds.includes(service.id)}
                               onChange={() => toggleQuestExtraService(service.id)}
+                              disabled={isMandatory}
                               className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
                             />
                             <span>
                               {service.title} · {service.price} ₽
                             </span>
                           </label>
-                        ))}
+                          );
+                        })}
                       </div>
                       {selectedQuestExtrasTotal > 0 && (
                         <p className="mt-2 text-xs text-gray-500">

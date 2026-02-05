@@ -45,6 +45,7 @@ export default function StandardExtraServicesPage() {
       title: '',
       price: 0,
       isActive: true,
+      mandatoryForChildQuests: false,
     });
     setIsCreating(true);
   };
@@ -146,7 +147,7 @@ export default function StandardExtraServicesPage() {
                 />
               </div>
 
-              <div className="flex items-center">
+              <div className="space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -157,6 +158,22 @@ export default function StandardExtraServicesPage() {
                     className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
                   />
                   <span className="text-sm font-semibold text-gray-700">Услуга активна</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingService.mandatoryForChildQuests || false}
+                    onChange={(e) =>
+                      setEditingService({
+                        ...editingService,
+                        mandatoryForChildQuests: e.target.checked,
+                      })
+                    }
+                    className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">
+                    Обязательна для детских квестов
+                  </span>
                 </label>
               </div>
             </div>
@@ -232,6 +249,11 @@ export default function StandardExtraServicesPage() {
                 >
                   {service.isActive ? 'Активна' : 'Неактивна'}
                 </span>
+                {service.mandatoryForChildQuests && (
+                  <span className="ml-2 inline-flex mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                    Обязательна для детских
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -241,6 +263,7 @@ export default function StandardExtraServicesPage() {
                       title: service.title,
                       price: service.price,
                       isActive: service.isActive,
+                      mandatoryForChildQuests: service.mandatoryForChildQuests,
                     })
                   }
                   disabled={!canEdit}

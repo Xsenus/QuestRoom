@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../lib/api';
-import { Quest, QuestSchedule } from '../lib/types';
+import { Quest, QuestSchedule, StandardExtraService } from '../lib/types';
 import NotificationModal from './NotificationModal';
 
 interface BookingModalProps {
@@ -27,20 +27,32 @@ export default function BookingModal({
     paymentType: 'cash',
     promoCode: '',
   });
+  const [standardExtraServices, setStandardExtraServices] = useState<StandardExtraService[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(quest.participantsMin);
   const normalizeServiceTitle = (title?: string | null) =>
     (title ?? '').trim().toLowerCase();
   const questExtraServices = quest.extraServices || [];
-  const mandatoryAnimatorService = quest.parentQuestId
-    ? questExtraServices.find(
-        (service) => normalizeServiceTitle(service.title) === 'детский аниматор'
-      )
-    : undefined;
-  const mandatoryAnimatorId = mandatoryAnimatorService?.id;
-  const [selectedExtraServices, setSelectedExtraServices] = useState<string[]>(
-    mandatoryAnimatorId ? [mandatoryAnimatorId] : []
+  const mandatoryChildServices = useMemo(
+    () => standardExtraServices.filter((service) => service.mandatoryForChildQuests),
+    [standardExtraServices]
   );
+  const mandatoryQuestServices = useMemo(() => {
+    if (!quest.parentQuestId || mandatoryChildServices.length === 0) {
+      return [];
+    }
+    const mandatoryTitles = new Set(
+      mandatoryChildServices.map((service) => normalizeServiceTitle(service.title))
+    );
+    return questExtraServices.filter((service) =>
+      mandatoryTitles.has(normalizeServiceTitle(service.title))
+    );
+  }, [quest.parentQuestId, questExtraServices, mandatoryChildServices]);
+  const mandatoryQuestServiceIds = useMemo(
+    () => mandatoryQuestServices.map((service) => service.id),
+    [mandatoryQuestServices]
+  );
+  const [selectedExtraServices, setSelectedExtraServices] = useState<string[]>([]);
   const [notification, setNotification] = useState<{
     isOpen: boolean;
     title: string;
@@ -55,8 +67,8 @@ export default function BookingModal({
     action: undefined,
   });
 
-  const optionalExtraServices = mandatoryAnimatorId
-    ? questExtraServices.filter((service) => service.id !== mandatoryAnimatorId)
+  const optionalExtraServices = mandatoryQuestServiceIds.length
+    ? questExtraServices.filter((service) => !mandatoryQuestServiceIds.includes(service.id))
     : questExtraServices;
   const maxParticipants = quest.participantsMax + Math.max(0, quest.extraParticipantsMax || 0);
   const extraParticipantsCount = Math.max(0, participantsCount - quest.participantsMax);
@@ -77,13 +89,34 @@ export default function BookingModal({
   };
 
   const toggleExtraService = (serviceId: string) => {
-    if (serviceId === mandatoryAnimatorId) return;
+    if (mandatoryQuestServiceIds.includes(serviceId)) return;
     setSelectedExtraServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
         : [...prev, serviceId]
     );
   };
+
+  useEffect(() => {
+    const loadStandardExtraServices = async () => {
+      try {
+        const data = await api.getStandardExtraServices();
+        setStandardExtraServices(data || []);
+      } catch (error) {
+        console.error('Error loading standard extra services:', error);
+      }
+    };
+    loadStandardExtraServices();
+  }, []);
+
+  useEffect(() => {
+    if (!mandatoryQuestServiceIds.length) return;
+    setSelectedExtraServices((prev) => {
+      const next = new Set(prev);
+      mandatoryQuestServiceIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  }, [mandatoryQuestServiceIds]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -358,8 +391,11 @@ export default function BookingModal({
             {questExtraServices.length > 0 && (
               <div className="space-y-2 text-white text-xs">
                 <p className="font-semibold text-sm">Дополнительные услуги:</p>
-                {mandatoryAnimatorService && (
-                  <label className="flex items-start gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-left text-white/90">
+                {mandatoryQuestServices.map((service) => (
+                  <label
+                    key={service.id}
+                    className="flex items-start gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-left text-white/90"
+                  >
                     <input
                       type="checkbox"
                       checked
@@ -367,10 +403,10 @@ export default function BookingModal({
                       className="mt-1 h-4 w-4 rounded border-white/40 bg-white/10 text-red-600"
                     />
                     <span>
-                      {mandatoryAnimatorService.title} — {mandatoryAnimatorService.price} ₽
+                      {service.title} — {service.price} ₽
                     </span>
                   </label>
-                )}
+                ))}
                 <div className="grid gap-2 sm:grid-cols-2">
                   {optionalExtraServices.map((service) => (
                     <label
