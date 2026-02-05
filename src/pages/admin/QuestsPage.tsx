@@ -362,14 +362,21 @@ export default function QuestsPage() {
   const removeExtraService = (index: number) => {
     if (!editingQuest) return;
     const extraServices = [...(editingQuest.extraServices || [])];
-    if (
-      editingQuest.parentQuestId &&
-      isMandatoryChildServiceTitle(extraServices[index]?.title)
-    ) {
+    const service = extraServices[index];
+    if (editingQuest.parentQuestId && isMandatoryChildServiceTitle(service?.title)) {
       return;
     }
-    extraServices.splice(index, 1);
-    setEditingQuest({ ...editingQuest, extraServices });
+    openActionModal({
+      title: 'Удалить услугу?',
+      message: `Удалить услугу «${service?.title || 'Без названия'}»?`,
+      confirmLabel: 'Удалить',
+      tone: 'danger',
+      onConfirm: () => {
+        const nextServices = [...(editingQuest.extraServices || [])];
+        nextServices.splice(index, 1);
+        setEditingQuest({ ...editingQuest, extraServices: nextServices });
+      },
+    });
   };
 
   const addStandardExtraService = (service: StandardExtraService) => {

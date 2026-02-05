@@ -389,29 +389,33 @@ export default function BookingModal({
             </div>
 
             {questExtraServices.length > 0 && (
-              <div className="space-y-2 text-white text-xs">
+              <div className="space-y-3 text-white text-xs">
                 <p className="font-semibold text-sm">Дополнительные услуги:</p>
-                {mandatoryQuestServices.map((service) => (
-                  <label
-                    key={service.id}
-                    className="flex items-start gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-left text-white/90"
-                  >
-                    <input
-                      type="checkbox"
-                      checked
-                      disabled
-                      className="mt-1 h-4 w-4 rounded border-white/40 bg-white/10 text-red-600"
-                    />
-                    <span>
-                      {service.title} — {service.price} ₽
-                    </span>
-                  </label>
-                ))}
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {mandatoryQuestServices.map((service) => (
+                    <label
+                      key={service.id}
+                      className="flex items-start gap-3 rounded-lg border border-white/30 bg-white/15 px-3 py-3 text-left text-white/95"
+                    >
+                      <input
+                        type="checkbox"
+                        checked
+                        disabled
+                        className="mt-1 h-4 w-4 rounded border-white/40 bg-white/10 text-red-600"
+                      />
+                      <span className="flex-1">
+                        <span className="block font-semibold">{service.title}</span>
+                        <span className="block text-white/80">{service.price} ₽</span>
+                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
+                          Обязательная
+                        </span>
+                      </span>
+                    </label>
+                  ))}
                   {optionalExtraServices.map((service) => (
                     <label
                       key={service.id}
-                      className="flex items-start gap-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-left text-white/90 cursor-pointer"
+                      className="flex items-start gap-3 rounded-lg border border-white/15 bg-white/5 px-3 py-3 text-left text-white/90 cursor-pointer hover:bg-white/10"
                     >
                       <input
                         type="checkbox"
@@ -419,8 +423,9 @@ export default function BookingModal({
                         onChange={() => toggleExtraService(service.id)}
                         className="mt-1 h-4 w-4 text-red-600 rounded border-white/40 bg-white/10"
                       />
-                      <span>
-                        {service.title} — {service.price} ₽
+                      <span className="flex-1">
+                        <span className="block font-semibold">{service.title}</span>
+                        <span className="block text-white/80">{service.price} ₽</span>
                       </span>
                     </label>
                   ))}
