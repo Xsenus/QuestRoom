@@ -955,7 +955,7 @@ export default function BookingsPage() {
             price: service.price,
           }))
           .filter((service) => service.title),
-        paymentType: editingBooking.paymentType || null,
+        paymentType: editingBooking.paymentType || undefined,
         promoCode: editingBooking.promoCode || null,
       });
       setCreateResult('Бронь создана.');
@@ -1175,7 +1175,7 @@ export default function BookingsPage() {
         participantsCount: editingBooking.participantsCount,
         extraParticipantsCount: editingBooking.extraParticipantsCount,
         totalPrice: editingBooking.totalPrice,
-        paymentType: editingBooking.paymentType || null,
+        paymentType: editingBooking.paymentType || undefined,
         promoCode: editingBooking.promoCode || null,
         promoDiscountType: editingBooking.promoDiscountType || null,
         promoDiscountValue: editingBooking.promoDiscountValue,
@@ -1241,6 +1241,15 @@ export default function BookingsPage() {
 
   const updateExtraService = (index: number, field: 'title' | 'price', value: string) => {
     if (!editingBooking) {
+      return;
+    }
+    const service = editingBooking.extraServices[index];
+    const mandatoryTitles = new Set(
+      getMandatoryStandardServicesForQuest(editingBooking.questId).map((item) =>
+        normalizeServiceTitle(item.title)
+      )
+    );
+    if (mandatoryTitles.has(normalizeServiceTitle(service?.title))) {
       return;
     }
     const nextServices = editingBooking.extraServices.map((service, serviceIndex) =>
@@ -1320,6 +1329,14 @@ export default function BookingsPage() {
       return;
     }
     const service = editingBooking.extraServices[index];
+    const mandatoryTitles = new Set(
+      getMandatoryStandardServicesForQuest(editingBooking.questId).map((item) =>
+        normalizeServiceTitle(item.title)
+      )
+    );
+    if (mandatoryTitles.has(normalizeServiceTitle(service?.title))) {
+      return;
+    }
     openActionModal({
       title: 'Удалить услугу',
       message: `Удалить дополнительную услугу${service?.title ? ` «${service.title}»` : ''}?`,
@@ -1428,6 +1445,20 @@ export default function BookingsPage() {
   const questLookup = useMemo(() => {
     return new Map(quests.map((quest) => [quest.id, quest]));
   }, [quests]);
+
+  const getMandatoryStandardServicesForQuest = useCallback(
+    (questId?: string | null) => {
+      if (!questId) {
+        return [];
+      }
+      const quest = questLookup.get(questId);
+      if (!quest?.parentQuestId) {
+        return [];
+      }
+      return standardExtraServices.filter((service) => service.mandatoryForChildQuests);
+    },
+    [questLookup, standardExtraServices]
+  );
 
   const getMandatoryQuestExtraServiceIds = (quest?: Quest | null) => {
     if (!quest?.parentQuestId || mandatoryChildServiceTitles.size === 0) {
@@ -1954,6 +1985,16 @@ export default function BookingsPage() {
     [bookingFormMode, editingBooking?.questId, questLookup, selectedQuestExtraServiceIds]
   );
 
+  const mandatoryBookingExtraServiceTitles = useMemo(
+    () =>
+      new Set(
+        getMandatoryStandardServicesForQuest(editingBooking?.questId).map((service) =>
+          normalizeServiceTitle(service.title)
+        )
+      ),
+    [editingBooking?.questId, getMandatoryStandardServicesForQuest]
+  );
+
   useEffect(() => {
     if (!mandatoryQuestExtraServiceIds.length) {
       return;
@@ -1964,6 +2005,44 @@ export default function BookingsPage() {
       return Array.from(next);
     });
   }, [mandatoryQuestExtraServiceIds]);
+
+  useEffect(() => {
+    if (!editingBooking?.questId) {
+      return;
+    }
+    const mandatoryServices = getMandatoryStandardServicesForQuest(editingBooking.questId);
+    if (!mandatoryServices.length) {
+      return;
+    }
+    setEditingBooking((prev) => {
+      if (!prev || prev.questId !== editingBooking.questId) {
+        return prev;
+      }
+
+      const existingTitles = new Set(
+        prev.extraServices.map((service) => normalizeServiceTitle(service.title))
+      );
+      const missingMandatoryServices = mandatoryServices.filter(
+        (service) => !existingTitles.has(normalizeServiceTitle(service.title))
+      );
+
+      if (!missingMandatoryServices.length) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        extraServices: [
+          ...prev.extraServices,
+          ...missingMandatoryServices.map((service) => ({
+            id: createExtraServiceId(),
+            title: service.title,
+            price: service.price,
+          })),
+        ],
+      };
+    });
+  }, [editingBooking?.questId, getMandatoryStandardServicesForQuest]);
 
   const addColumnFilter = () => {
     hasUserEditedPreferences.current = true;
@@ -3534,13 +3613,23 @@ export default function BookingsPage() {
                     Дополнительные услуги
                   </label>
                   <div className="space-y-3">
-                    {editingBooking.extraServices.map((service, index) => (
+                    {editingBooking.extraServices.map((service, index) => {
+                      const isMandatoryService = mandatoryBookingExtraServiceTitles.has(
+                        normalizeServiceTitle(service.title)
+                      );
+
+                      return (
                       <div key={service.id} className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <input
                           type="text"
                           value={service.title}
                           onChange={(e) => updateExtraService(index, 'title', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          disabled={isMandatoryService}
+                          className={`w-full px-3 py-2 border rounded-lg outline-none ${
+                            isMandatoryService
+                              ? 'border-gray-200 bg-gray-100 text-gray-600'
+                              : 'border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-transparent'
+                          }`}
                           placeholder="Название услуги"
                         />
                         <input
@@ -3548,18 +3637,29 @@ export default function BookingsPage() {
                           min="0"
                           value={service.price}
                           onChange={(e) => updateExtraService(index, 'price', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                          disabled={isMandatoryService}
+                          className={`w-full px-3 py-2 border rounded-lg outline-none ${
+                            isMandatoryService
+                              ? 'border-gray-200 bg-gray-100 text-gray-600'
+                              : 'border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-transparent'
+                          }`}
                           placeholder="Цена"
                         />
                         <button
                           type="button"
                           onClick={() => removeExtraService(index)}
-                          className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                          disabled={isMandatoryService}
+                          className={`px-3 py-2 rounded-lg font-semibold transition-colors ${
+                            isMandatoryService
+                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                              : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                          }`}
                         >
-                          Удалить
+                          {isMandatoryService ? 'Обязательно' : 'Удалить'}
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                     <button
                       type="button"
                       onClick={addExtraService}
