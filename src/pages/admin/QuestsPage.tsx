@@ -227,8 +227,6 @@ export default function QuestsPage() {
             normalizedPayload.extraServices,
             mandatoryServices
           ),
-          extraParticipantsMax: parentQuest.extraParticipantsMax,
-          extraParticipantPrice: parentQuest.extraParticipantPrice,
           price: parentQuest.price,
           duration: parentQuest.duration,
         }
@@ -1004,8 +1002,7 @@ export default function QuestsPage() {
                       extraParticipantsMax: parseInt(e.target.value) || 0,
                     })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   min="0"
                 />
                 <p className="mt-2 text-xs text-gray-500">
@@ -1026,8 +1023,7 @@ export default function QuestsPage() {
                       extraParticipantPrice: parseInt(e.target.value) || 0,
                     })
                   }
-                  disabled={isChildMode}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   min="0"
                 />
               </div>
