@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
 
 type DayType = 'holidays' | 'preholidays' | 'nowork';
 
@@ -75,6 +76,8 @@ export default function ProductionCalendarPage() {
     dayType: 'holidays',
     source: 'manual',
   });
+  const [dayToDeleteId, setDayToDeleteId] = useState<string | null>(null);
+  const [isRefreshConfirmOpen, setIsRefreshConfirmOpen] = useState(false);
 
   const loadDays = async () => {
     setLoading(true);
@@ -179,14 +182,21 @@ export default function ProductionCalendarPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!canDelete) return;
-    if (!confirm('Удалить запись?')) return;
+    setDayToDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!dayToDeleteId) return;
+
     try {
-      await api.deleteProductionCalendarDay(id);
+      await api.deleteProductionCalendarDay(dayToDeleteId);
       await loadDays();
     } catch (error) {
       alert('Ошибка при удалении: ' + (error as Error).message);
+    } finally {
+      setDayToDeleteId(null);
     }
   };
 
@@ -320,9 +330,6 @@ export default function ProductionCalendarPage() {
   };
 
   const handleRefresh = async () => {
-    if (!confirm('Обновить данные календаря?')) {
-      return;
-    }
     await loadDays();
   };
 
@@ -355,7 +362,7 @@ export default function ProductionCalendarPage() {
           </button>
           <button
             type="button"
-            onClick={handleRefresh}
+            onClick={() => setIsRefreshConfirmOpen(true)}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
           >
             <RefreshCw className="h-4 w-4" />
@@ -645,6 +652,63 @@ export default function ProductionCalendarPage() {
           </div>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(dayToDeleteId)}
+        title="Удаление записи"
+        message="Удалить запись из производственного календаря?"
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setDayToDeleteId(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setDayToDeleteId(null)}
+      />
+
+      <NotificationModal
+        isOpen={isRefreshConfirmOpen}
+        title="Обновление календаря"
+        message="Обновить данные календаря?"
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setIsRefreshConfirmOpen(false)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsRefreshConfirmOpen(false);
+                await handleRefresh();
+              }}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Обновить
+            </button>
+          </>
+        )}
+        onClose={() => setIsRefreshConfirmOpen(false)}
+      />
     </div>
   );
 }

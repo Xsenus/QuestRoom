@@ -4,6 +4,7 @@ import type { PromoCode, PromoCodeUpsert } from '../../lib/types';
 import { Edit, PlusCircle, Save, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
 
 const getToday = () => new Date().toISOString().split('T')[0];
 
@@ -34,6 +35,7 @@ export default function PromoCodesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PromoCodeUpsert>(createEmptyForm());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [promoToDelete, setPromoToDelete] = useState<PromoCode | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
     if (typeof window === 'undefined') return 'cards';
     return (localStorage.getItem('promoCodesViewMode') as 'cards' | 'table') || 'cards';
@@ -121,14 +123,20 @@ export default function PromoCodesPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (promo: PromoCode) => {
+  const handleDelete = (promo: PromoCode) => {
     if (!canDelete) return;
-    if (!confirm(`Удалить промокод ${promo.code}?`)) return;
+    setPromoToDelete(promo);
+  };
+
+  const confirmDelete = async () => {
+    if (!promoToDelete) return;
     try {
-      await api.deletePromoCode(promo.id);
+      await api.deletePromoCode(promoToDelete.id);
       await loadPromoCodes();
     } catch (error) {
       alert('Ошибка при удалении: ' + (error as Error).message);
+    } finally {
+      setPromoToDelete(null);
     }
   };
 
@@ -473,6 +481,33 @@ export default function PromoCodesPage() {
           </div>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(promoToDelete)}
+        title="Удаление промокода"
+        message={promoToDelete ? `Удалить промокод "${promoToDelete.code}"?` : ''}
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setPromoToDelete(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setPromoToDelete(null)}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   QuestWeeklySlot,
 } from '../../lib/types';
 import { CalendarClock, Plus, Save, Trash2, X } from 'lucide-react';
+import NotificationModal from '../NotificationModal';
 
 const dayOptions = [
   { value: 1, label: 'Понедельник' },
@@ -49,6 +50,11 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
   const [editingOverride, setEditingOverride] = useState<
     (QuestScheduleOverrideUpsert & { id?: string }) | null
   >(null);
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -125,15 +131,21 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
     }
   };
 
-  const handleDeleteSlot = async (slotId: string) => {
+  const handleDeleteSlot = (slotId: string) => {
     if (!canEdit) return;
-    if (!confirm('Удалить слот?')) return;
-    try {
-      await api.deleteQuestWeeklySlot(slotId);
-      await loadWeeklySlots();
-    } catch (error) {
-      alert('Ошибка удаления слота: ' + (error as Error).message);
-    }
+
+    setPendingDeleteAction({
+      title: 'Удаление слота',
+      message: 'Удалить слот?',
+      onConfirm: async () => {
+        try {
+          await api.deleteQuestWeeklySlot(slotId);
+          await loadWeeklySlots();
+        } catch (error) {
+          alert('Ошибка удаления слота: ' + (error as Error).message);
+        }
+      },
+    });
   };
 
   const handleAddSlot = async () => {
@@ -256,15 +268,21 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
     }
   };
 
-  const handleDeleteOverride = async (overrideId: string) => {
+  const handleDeleteOverride = (overrideId: string) => {
     if (!canEdit) return;
-    if (!confirm('Удалить переопределение?')) return;
-    try {
-      await api.deleteQuestScheduleOverride(overrideId);
-      await loadOverrides();
-    } catch (error) {
-      alert('Ошибка удаления: ' + (error as Error).message);
-    }
+
+    setPendingDeleteAction({
+      title: 'Удаление переопределения',
+      message: 'Удалить переопределение?',
+      onConfirm: async () => {
+        try {
+          await api.deleteQuestScheduleOverride(overrideId);
+          await loadOverrides();
+        } catch (error) {
+          alert('Ошибка удаления: ' + (error as Error).message);
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -272,7 +290,8 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
   }
 
   return (
-    <div className="space-y-8">
+    <>
+      <div className="space-y-8">
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
         <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
           <CalendarClock className="h-5 w-5 text-red-600" />
@@ -658,6 +677,38 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      <NotificationModal
+        isOpen={Boolean(pendingDeleteAction)}
+        title={pendingDeleteAction?.title ?? ''}
+        message={pendingDeleteAction?.message ?? ''}
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setPendingDeleteAction(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!pendingDeleteAction) return;
+                await pendingDeleteAction.onConfirm();
+                setPendingDeleteAction(null);
+              }}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setPendingDeleteAction(null)}
+      />
+    </>
   );
 }

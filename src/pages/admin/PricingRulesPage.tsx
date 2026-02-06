@@ -4,6 +4,7 @@ import { Quest, QuestPricingRule, QuestPricingRuleUpsert } from '../../lib/types
 import { Plus, Save, X, Trash2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
 
 const dayOptions = [
   { value: 1, label: 'Пн' },
@@ -101,6 +102,8 @@ export default function PricingRulesPage() {
   const [generateTo, setGenerateTo] = useState<string>(getCurrentYearRange().end);
   const [generateResult, setGenerateResult] = useState<string>('');
   const [rulesView, setRulesView] = useState<'cards' | 'table'>('cards');
+  const [ruleToDeleteId, setRuleToDeleteId] = useState<string | null>(null);
+  const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
 
   useEffect(() => {
     loadQuests();
@@ -181,16 +184,22 @@ export default function PricingRulesPage() {
     }
   };
 
-  const handleDelete = async (ruleId: string) => {
+  const handleDelete = (ruleId: string) => {
     if (!canDelete) {
       return;
     }
-    if (!confirm('Удалить правило?')) return;
+    setRuleToDeleteId(ruleId);
+  };
+
+  const confirmDelete = async () => {
+    if (!ruleToDeleteId) return;
     try {
-      await api.deletePricingRule(ruleId);
+      await api.deletePricingRule(ruleToDeleteId);
       loadRules();
     } catch (error) {
       alert('Ошибка удаления: ' + (error as Error).message);
+    } finally {
+      setRuleToDeleteId(null);
     }
   };
 
@@ -216,7 +225,7 @@ export default function PricingRulesPage() {
     );
   };
 
-  const handleGenerate = async () => {
+  const executeGenerate = async () => {
     if (!generateFrom || !generateTo) {
       setGenerateResult('Заполните диапазон дат.');
       return;
@@ -224,10 +233,6 @@ export default function PricingRulesPage() {
 
     try {
       const isAllQuests = !generationQuestId;
-      if (isAllQuests && !confirm('Сгенерировать расписание для всех квестов?')) {
-        return;
-      }
-
       const result = await api.generateSchedule(
         isAllQuests
           ? { fromDate: generateFrom, toDate: generateTo }
@@ -241,6 +246,14 @@ export default function PricingRulesPage() {
     } catch (error) {
       setGenerateResult('Ошибка генерации: ' + (error as Error).message);
     }
+  };
+
+  const handleGenerate = async () => {
+    if (!generationQuestId) {
+      setIsGenerateConfirmOpen(true);
+      return;
+    }
+    await executeGenerate();
   };
 
   const questOptions = useMemo(
@@ -298,7 +311,8 @@ export default function PricingRulesPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <>
+      <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold text-gray-900">Ценовые правила и календарь</h2>
         <button
@@ -855,6 +869,64 @@ export default function PricingRulesPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+
+      <NotificationModal
+        isOpen={Boolean(ruleToDeleteId)}
+        title="Удаление правила"
+        message="Вы уверены, что хотите удалить это правило?"
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setRuleToDeleteId(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setRuleToDeleteId(null)}
+      />
+
+      <NotificationModal
+        isOpen={isGenerateConfirmOpen}
+        title="Генерация расписания"
+        message="Сгенерировать расписание для всех квестов?"
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setIsGenerateConfirmOpen(false)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsGenerateConfirmOpen(false);
+                await executeGenerate();
+              }}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Сгенерировать
+            </button>
+          </>
+        )}
+        onClose={() => setIsGenerateConfirmOpen(false)}
+      />
+    </>
   );
 }

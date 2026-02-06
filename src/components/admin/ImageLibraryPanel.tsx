@@ -61,6 +61,7 @@ export default function ImageLibraryPanel({
     message: '',
     tone: 'info',
   });
+  const [imageToDelete, setImageToDelete] = useState<ImageAsset | null>(null);
 
   const showNotification = (title: string, message: string, tone: NotificationState['tone'] = 'info') => {
     setNotification({
@@ -102,14 +103,20 @@ export default function ImageLibraryPanel({
     }
   };
 
-  const handleDelete = async (image: ImageAsset) => {
-    if (!confirm(`Удалить изображение "${image.fileName}"?`)) return;
+  const handleDelete = (image: ImageAsset) => {
+    setImageToDelete(image);
+  };
+
+  const confirmDelete = async () => {
+    if (!imageToDelete) return;
     try {
-      await api.deleteImage(image.id);
-      setImages((prev) => prev.filter((item) => item.id !== image.id));
+      await api.deleteImage(imageToDelete.id);
+      setImages((prev) => prev.filter((item) => item.id !== imageToDelete.id));
       showNotification('Готово', 'Изображение удалено.', 'success');
     } catch (error) {
       showNotification('Ошибка', 'Ошибка удаления изображения: ' + (error as Error).message, 'error');
+    } finally {
+      setImageToDelete(null);
     }
   };
 
@@ -403,6 +410,37 @@ export default function ImageLibraryPanel({
         message={notification.message}
         tone={notification.tone}
         onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      <NotificationModal
+        isOpen={Boolean(imageToDelete)}
+        title="Удаление изображения"
+        message={
+          imageToDelete
+            ? `Удалить изображение "${imageToDelete.fileName}"?`
+            : ''
+        }
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setImageToDelete(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setImageToDelete(null)}
       />
     </>
   );
