@@ -6,6 +6,11 @@ import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 
+const ALWAYS_ENABLED_PERMISSIONS = ['gallery.view'] as const;
+
+const ensureAlwaysEnabledPermissions = (permissions: string[]) =>
+  Array.from(new Set([...permissions, ...ALWAYS_ENABLED_PERMISSIONS]));
+
 interface EditableRole {
   id: string;
   name: string;
@@ -84,7 +89,7 @@ export default function RolesPage() {
       id: `role-${Date.now()}`,
       name: '',
       description: '',
-      permissions: [],
+      permissions: ensureAlwaysEnabledPermissions([]),
     });
     setIsCreating(true);
   };
@@ -94,7 +99,7 @@ export default function RolesPage() {
       id: role.id,
       name: role.name,
       description: role.description ?? '',
-      permissions: [...role.permissions],
+      permissions: ensureAlwaysEnabledPermissions([...role.permissions]),
       system: role.code === 'admin',
     });
     setIsCreating(false);
@@ -116,7 +121,7 @@ export default function RolesPage() {
         const created = await api.createRole({
           name: editor.name,
           description: editor.description,
-          permissions: editor.permissions,
+          permissions: ensureAlwaysEnabledPermissions(editor.permissions),
         });
         setRoles((prev) => [created, ...prev]);
         setSelectedId(created.id);
@@ -130,7 +135,7 @@ export default function RolesPage() {
         const updated = await api.updateRole(editor.id, {
           name: editor.name,
           description: editor.description,
-          permissions: editor.permissions,
+          permissions: ensureAlwaysEnabledPermissions(editor.permissions),
         });
         setRoles((prev) => prev.map((role) => (role.id === updated.id ? updated : role)));
         setNotification({
@@ -182,12 +187,19 @@ export default function RolesPage() {
   };
 
   const togglePermission = (permissionId: string) => {
-    if (!editor) return;
+    if (
+      !editor
+      || ALWAYS_ENABLED_PERMISSIONS.includes(
+        permissionId as (typeof ALWAYS_ENABLED_PERMISSIONS)[number]
+      )
+    ) {
+      return;
+    }
     const hasPermission = editor.permissions.includes(permissionId);
     const nextPermissions = hasPermission
       ? editor.permissions.filter((id) => id !== permissionId)
       : [...editor.permissions, permissionId];
-    setEditor({ ...editor, permissions: nextPermissions });
+    setEditor({ ...editor, permissions: ensureAlwaysEnabledPermissions(nextPermissions) });
   };
 
   return (
@@ -472,10 +484,19 @@ export default function RolesPage() {
                           >
                             <input
                               type="checkbox"
-                              checked={editor.permissions.includes(permission.id)}
+                              checked={
+                                ALWAYS_ENABLED_PERMISSIONS.includes(
+                                  permission.id as (typeof ALWAYS_ENABLED_PERMISSIONS)[number]
+                                ) || editor.permissions.includes(permission.id)
+                              }
                               onChange={() => togglePermission(permission.id)}
                               className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                              disabled={editor.system}
+                              disabled={
+                                editor.system
+                                || ALWAYS_ENABLED_PERMISSIONS.includes(
+                                  permission.id as (typeof ALWAYS_ENABLED_PERMISSIONS)[number]
+                                )
+                              }
                             />
                             <span>
                               <span className="font-semibold text-gray-800">{permission.title}</span>

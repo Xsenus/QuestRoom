@@ -19,6 +19,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ALWAYS_ALLOWED_PERMISSIONS = new Set(['gallery.view']);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,12 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasPermission = (permission: string) => {
     if (!user) return false;
+    if (ALWAYS_ALLOWED_PERMISSIONS.has(permission)) return true;
     if (isAdmin()) return true;
     return user.permissions.includes(permission);
   };
 
   const hasAnyPermission = (permissions: string[]) => {
     if (!user) return false;
+    if (permissions.some((permission) => ALWAYS_ALLOWED_PERMISSIONS.has(permission))) {
+      return true;
+    }
     if (isAdmin()) return true;
     return permissions.some((permission) => user.permissions.includes(permission));
   };

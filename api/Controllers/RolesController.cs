@@ -72,7 +72,7 @@ public class RolesController : ControllerBase
             Code = $"custom-{Guid.NewGuid():N}",
             Name = dto.Name.Trim(),
             Description = dto.Description,
-            Permissions = dto.Permissions,
+            Permissions = NormalizePermissions(dto.Permissions),
             IsSystem = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -100,7 +100,7 @@ public class RolesController : ControllerBase
 
         role.Name = dto.Name.Trim();
         role.Description = dto.Description;
-        role.Permissions = dto.Permissions;
+        role.Permissions = NormalizePermissions(dto.Permissions);
         role.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -132,6 +132,18 @@ public class RolesController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private static List<string> NormalizePermissions(IEnumerable<string>? permissions)
+    {
+        var normalized = (permissions ?? Array.Empty<string>())
+            .Where(permission => !string.IsNullOrWhiteSpace(permission))
+            .Select(permission => permission.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        normalized.Add("gallery.view");
+
+        return normalized.ToList();
     }
 
     private static RoleDto ToDto(Role role)

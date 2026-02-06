@@ -14,22 +14,28 @@ namespace QuestRoomApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ImagesController : ControllerBase
+public class ImagesController : PermissionAwareControllerBase
 {
     private readonly AppDbContext _context;
     private const int MaxPreviewWidth = 360;
 
-    public ImagesController(AppDbContext context)
+    public ImagesController(AppDbContext context) : base(context)
     {
         _context = context;
     }
 
-    [Authorize(Roles = "admin")]
+    [Authorize]
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<ActionResult<ImageAssetDto>> UploadImage([FromForm] IFormFile file)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "gallery.edit"))
+        {
+            return Forbid();
+        }
+
         if (file.Length == 0)
             return BadRequest(new { message = "Файл пустой" });
 
@@ -52,7 +58,7 @@ public class ImagesController : ControllerBase
         return Ok(ToDto(image, Request));
     }
 
-    [Authorize(Roles = "admin")]
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ImageAssetDto>>> GetImages(
         [FromQuery] int limit = 50,
@@ -96,10 +102,16 @@ public class ImagesController : ControllerBase
         }
     }
 
-    [Authorize(Roles = "admin")]
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteImage(Guid id)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "gallery.delete"))
+        {
+            return Forbid();
+        }
+
         var image = await _context.ImageAssets.FirstOrDefaultAsync(i => i.Id == id);
         if (image == null)
             return NotFound();
@@ -178,5 +190,4 @@ public class ImagesController : ControllerBase
             SizeBytes = image.Data.LongLength
         };
     }
-
 }
