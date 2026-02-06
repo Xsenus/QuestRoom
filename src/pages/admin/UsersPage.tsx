@@ -61,6 +61,7 @@ export default function UsersPage() {
     message: string;
     tone: 'success' | 'error' | 'info';
   }>({ isOpen: false, title: '', message: '', tone: 'info' });
+  const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     loadData();
@@ -248,7 +249,7 @@ export default function UsersPage() {
     }
   };
 
-  const deleteUser = async (user: AdminUser) => {
+  const deleteUser = (user: AdminUser) => {
     if (!canDelete) return;
     if (user.email.toLowerCase() === protectedAdminEmail) {
       setNotification({
@@ -259,14 +260,26 @@ export default function UsersPage() {
       });
       return;
     }
-    if (!confirm(`Удалить пользователя ${user.name}?`)) return;
+
+    setUserToDelete(user);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+
     try {
-      await api.deleteAdminUser(user.id);
-      const remaining = users.filter((item) => item.id !== user.id);
+      await api.deleteAdminUser(userToDelete.id);
+      const remaining = users.filter((item) => item.id !== userToDelete.id);
       setUsers(remaining);
-      if (selectedId === user.id) {
+      if (selectedId === userToDelete.id) {
         setSelectedId(remaining[0]?.id ?? null);
       }
+      setNotification({
+        isOpen: true,
+        title: 'Пользователь удален',
+        message: `Пользователь "${userToDelete.name}" успешно удален.`,
+        tone: 'success',
+      });
     } catch (deleteError) {
       setNotification({
         isOpen: true,
@@ -274,6 +287,8 @@ export default function UsersPage() {
         message: (deleteError as Error).message,
         tone: 'error',
       });
+    } finally {
+      setUserToDelete(null);
     }
   };
 
@@ -893,6 +908,37 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(userToDelete)}
+        title="Удаление пользователя"
+        message={
+          userToDelete
+            ? `Вы уверены, что хотите удалить пользователя "${userToDelete.name}"?`
+            : ''
+        }
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setUserToDelete(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteUser}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setUserToDelete(null)}
+      />
 
       <NotificationModal
         isOpen={notification.isOpen}

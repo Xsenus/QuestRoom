@@ -35,6 +35,7 @@ export default function RolesPage() {
     message: string;
     tone: 'success' | 'error' | 'info';
   }>({ isOpen: false, title: '', message: '', tone: 'info' });
+  const [roleToDelete, setRoleToDelete] = useState<RoleDefinition | null>(null);
 
   useEffect(() => {
     loadData();
@@ -158,7 +159,7 @@ export default function RolesPage() {
     }
   };
 
-  const deleteRole = async (role: RoleDefinition) => {
+  const deleteRole = (role: RoleDefinition) => {
     if (role.isSystem) {
       setNotification({
         isOpen: true,
@@ -168,14 +169,26 @@ export default function RolesPage() {
       });
       return;
     }
-    if (!confirm(`Удалить роль ${role.name}?`)) return;
+
+    setRoleToDelete(role);
+  };
+
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return;
+
     try {
-      await api.deleteRole(role.id);
-      const remaining = roles.filter((item) => item.id !== role.id);
+      await api.deleteRole(roleToDelete.id);
+      const remaining = roles.filter((item) => item.id !== roleToDelete.id);
       setRoles(remaining);
-      if (selectedId === role.id) {
+      if (selectedId === roleToDelete.id) {
         setSelectedId(remaining[0]?.id ?? null);
       }
+      setNotification({
+        isOpen: true,
+        title: 'Роль удалена',
+        message: `Роль "${roleToDelete.name}" успешно удалена.`,
+        tone: 'success',
+      });
     } catch (deleteError) {
       setNotification({
         isOpen: true,
@@ -183,6 +196,8 @@ export default function RolesPage() {
         message: (deleteError as Error).message,
         tone: 'error',
       });
+    } finally {
+      setRoleToDelete(null);
     }
   };
 
@@ -538,6 +553,37 @@ export default function RolesPage() {
           </div>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(roleToDelete)}
+        title="Удаление роли"
+        message={
+          roleToDelete
+            ? `Вы уверены, что хотите удалить роль "${roleToDelete.name}"?`
+            : ''
+        }
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setRoleToDelete(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteRole}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setRoleToDelete(null)}
+      />
 
       <NotificationModal
         isOpen={notification.isOpen}
