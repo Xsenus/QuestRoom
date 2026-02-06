@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Quest, QuestUpsert, DurationBadge, StandardExtraService } from '../../lib/types';
-import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star } from 'lucide-react';
+import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload, Star, ArrowUp, ArrowDown } from 'lucide-react';
 import QuestScheduleEditor from '../../components/admin/QuestScheduleEditor';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 import NotificationModal from '../../components/NotificationModal';
@@ -39,11 +39,19 @@ export default function QuestsPage() {
     message: string;
     tone: 'success' | 'error' | 'info';
   }>({ isOpen: false, title: '', message: '', tone: 'info' });
-  const ensureMainImageInList = (images: string[] = [], mainImage: string | null) => {
-    if (mainImage && !images.includes(mainImage)) {
-      return [mainImage, ...images];
-    }
-    return images;
+  const normalizeImageList = (images: string[] = []) =>
+    images.map((image) => image.trim()).filter(Boolean);
+  const buildSecondaryImages = (images: string[] = [], mainImage: string | null) => {
+    const normalizedMain = mainImage?.trim() || null;
+    const uniqueImages = new Set<string>();
+
+    return normalizeImageList(images).filter((image) => {
+      if (image === normalizedMain || uniqueImages.has(image)) {
+        return false;
+      }
+      uniqueImages.add(image);
+      return true;
+    });
   };
   const normalizeServiceTitle = (title?: string | null) =>
     (title ?? '').trim().toLowerCase();
@@ -197,7 +205,7 @@ export default function QuestsPage() {
         isNew: parent.isNew,
         isVisible: parent.isVisible,
         mainImage: parent.mainImage,
-        images: ensureMainImageInList(parent.images || [], parent.mainImage),
+        images: buildSecondaryImages(parent.images || [], parent.mainImage),
         giftGameLabel: parent.giftGameLabel || 'Подарить игру',
         giftGameUrl: parent.giftGameUrl || '/certificate',
         videoUrl: parent.videoUrl || '',
@@ -215,6 +223,7 @@ export default function QuestsPage() {
     const parentQuest = payload.parentQuestId
       ? quests.find((quest) => quest.id === payload.parentQuestId)
       : null;
+    const normalizedMainImage = normalizeOptional(payload.mainImage);
     const normalizedPayload: QuestUpsert = {
       ...payload,
       slug: normalizeOptional(payload.slug),
@@ -222,6 +231,8 @@ export default function QuestsPage() {
       giftGameUrl: normalizeOptional(payload.giftGameUrl) || '/certificate',
       videoUrl: normalizeOptional(payload.videoUrl),
       parentQuestId: normalizeOptional(payload.parentQuestId),
+      mainImage: normalizedMainImage,
+      images: buildSecondaryImages(payload.images || [], normalizedMainImage),
     };
     const mandatoryServices = getMandatoryChildServices();
     const finalPayload: QuestUpsert = parentQuest
@@ -512,13 +523,35 @@ export default function QuestsPage() {
 
   const addImage = (url: string) => {
     if (!editingQuest) return;
-    const images = editingQuest?.images || [];
+    const images = buildSecondaryImages(editingQuest.images || [], editingQuest.mainImage);
     setEditingQuest({ ...editingQuest, images: [...images, url] });
   };
 
   const setMainImage = (url: string) => {
     if (!editingQuest) return;
-    setEditingQuest({ ...editingQuest, mainImage: url });
+    const mainImage = url.trim() || null;
+    const images = buildSecondaryImages(editingQuest.images || [], mainImage);
+    setEditingQuest({ ...editingQuest, mainImage, images });
+  };
+
+  const moveSecondaryToMain = (index: number) => {
+    if (!editingQuest) return;
+    const images = [...(editingQuest.images || [])];
+    const candidateMain = images[index]?.trim();
+    if (!candidateMain) return;
+    images.splice(index, 1);
+    const mainImage = candidateMain;
+    const secondaryImages = buildSecondaryImages(images, mainImage);
+    setEditingQuest({ ...editingQuest, mainImage, images: secondaryImages });
+  };
+
+  const moveImage = (index: number, direction: 'up' | 'down') => {
+    if (!editingQuest) return;
+    const images = [...(editingQuest.images || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= images.length) return;
+    [images[index], images[targetIndex]] = [images[targetIndex], images[index]];
+    setEditingQuest({ ...editingQuest, images });
   };
 
   const removeImage = (index: number) => {
@@ -540,7 +573,10 @@ export default function QuestsPage() {
 
     try {
       const image = await api.uploadImage(file);
-      const images = [...(editingQuest.images || []), image.url];
+      const images = buildSecondaryImages(
+        [...(editingQuest.images || []), image.url],
+        editingQuest.mainImage
+      );
       setEditingQuest({
         ...editingQuest,
         images,
@@ -554,7 +590,10 @@ export default function QuestsPage() {
   const handleSelectLibraryImage = (url: string) => {
     if (!canEdit) return;
     if (!editingQuest) return;
-    const images = [...(editingQuest.images || []), url];
+    const images = buildSecondaryImages(
+      [...(editingQuest.images || []), url],
+      editingQuest.mainImage
+    );
     setEditingQuest({
       ...editingQuest,
       images,
@@ -569,7 +608,7 @@ export default function QuestsPage() {
       : quest.extraServices || [];
     setEditingQuest({
       ...quest,
-      images: ensureMainImageInList(quest.images || [], quest.mainImage),
+      images: buildSecondaryImages(quest.images || [], quest.mainImage),
       giftGameLabel: quest.giftGameLabel || 'Подарить игру',
       giftGameUrl: quest.giftGameUrl || '/certificate',
       videoUrl: quest.videoUrl || '',
@@ -721,6 +760,14 @@ export default function QuestsPage() {
                 Изображения квеста
               </label>
               <div className="space-y-3">
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+                  <p className="font-semibold">Как работает галерея:</p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>Основное изображение задаётся отдельно и показывается первым.</li>
+                    <li>Ниже — только второстепенные изображения в заданном порядке.</li>
+                    <li>Порядок второстепенных можно менять стрелками ↑ и ↓.</li>
+                  </ul>
+                </div>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors cursor-pointer">
                     <Upload className="w-4 h-4" />
@@ -733,7 +780,7 @@ export default function QuestsPage() {
                     />
                   </label>
                   <span className="text-sm text-gray-500">
-                    Можно загрузить изображение в базу или вставить URL вручную.
+                    Загруженный файл добавится в список второстепенных.
                   </span>
                 </div>
                 <ImageLibraryPanel
@@ -742,53 +789,90 @@ export default function QuestsPage() {
                   toggleLabelOpen="Скрыть библиотеку"
                   title="Загруженные изображения"
                 />
-                {(editingQuest.images || []).map((img, index) => (
-                  <div key={index} className="flex items-center gap-3">
+                <div className="space-y-2 rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Основное изображение
+                  </p>
+                  <div className="flex items-center gap-3">
                     <input
                       type="text"
-                      value={img}
-                      onChange={(e) => {
-                        const newImages = [...(editingQuest.images || [])];
-                        newImages[index] = e.target.value;
-                        setEditingQuest({ ...editingQuest, images: newImages });
-                      }}
+                      value={editingQuest.mainImage || ''}
+                      onChange={(e) => setMainImage(e.target.value)}
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      placeholder="URL изображения"
+                      placeholder="URL основного изображения"
                     />
-                    {editingQuest.mainImage === img && (
-                      <span className="text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
-                        Основное
-                      </span>
-                    )}
-                    <button
-                      onClick={() => setMainImage(img)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        editingQuest.mainImage === img
-                          ? 'bg-yellow-500 text-white'
-                          : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                      }`}
-                      title="Сделать основным"
-                    >
-                      <Star
-                        className="w-5 h-5"
-                        fill={editingQuest.mainImage === img ? 'currentColor' : 'none'}
-                      />
-                    </button>
-                    <button
-                      onClick={() => removeImage(index)}
-                      className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
+                    <span className="text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full">
+                      Главное
+                    </span>
                   </div>
-                ))}
-                <button
-                  onClick={() => addImage('')}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Добавить изображение
-                </button>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Второстепенные изображения
+                  </p>
+                  {!(editingQuest.images || []).length && (
+                    <div className="rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-500">
+                      Нет второстепенных изображений. Добавьте URL вручную, загрузите файл или выберите изображение в библиотеке.
+                    </div>
+                  )}
+                  {(editingQuest.images || []).map((img, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={img}
+                        onChange={(e) => {
+                          const newImages = [...(editingQuest.images || [])];
+                          newImages[index] = e.target.value;
+                          setEditingQuest({
+                            ...editingQuest,
+                            images: buildSecondaryImages(newImages, editingQuest.mainImage),
+                          });
+                        }}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                        placeholder="URL изображения"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => moveSecondaryToMain(index)}
+                        className="p-2 rounded-lg bg-yellow-100 hover:bg-yellow-200 text-yellow-700 transition-colors"
+                        title="Сделать главным"
+                      >
+                        <Star className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, 'up')}
+                        className="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Поднять выше"
+                        disabled={index === 0}
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, 'down')}
+                        className="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Опустить ниже"
+                        disabled={index === (editingQuest.images || []).length - 1}
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addImage('')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Добавить изображение
+                  </button>
+                </div>
               </div>
             </div>
 
