@@ -187,7 +187,7 @@ export default function AdminLayout() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 <ClipboardList className="w-5 h-5" />
-                {!isMenuCollapsed && 'Доп. услуги'}
+                {!isMenuCollapsed && 'Дополнительные услуги'}
               </NavLink>
             )}
             {canViewBookings && (

@@ -109,10 +109,10 @@ export default function StandardExtraServicesPage() {
       <div className="max-w-3xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold mb-6">
-            {isCreating ? 'Создание доп. услуги' : 'Редактирование доп. услуги'}
+            {isCreating ? 'Создание дополнительной услуги' : 'Редактирование дополнительной услуги'}
           </h2>
 
-          <div className="space-y-6">
+          <fieldset disabled={!canEdit} className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Название услуги
@@ -177,28 +177,28 @@ export default function StandardExtraServicesPage() {
                 </label>
               </div>
             </div>
+          </fieldset>
 
-            <div className="flex gap-4 pt-4">
-              <button
-                onClick={handleSave}
-                disabled={!canEdit}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                  canEdit
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'cursor-not-allowed bg-red-200 text-white/80'
-                }`}
-              >
-                <Save className="w-5 h-5" />
-                Сохранить
-              </button>
-              <button
-                onClick={handleCancel}
-                className="flex items-center gap-2 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                <X className="w-5 h-5" />
-                Отмена
-              </button>
-            </div>
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleSave}
+              disabled={!canEdit}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                canEdit
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'cursor-not-allowed bg-red-200 text-white/80'
+              }`}
+            >
+              <Save className="w-5 h-5" />
+              Сохранить
+            </button>
+            <button
+              onClick={handleCancel}
+              className="flex items-center gap-2 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              <X className="w-5 h-5" />
+              Отмена
+            </button>
           </div>
         </div>
       </div>
@@ -209,8 +209,8 @@ export default function StandardExtraServicesPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Стандартные доп. услуги</h1>
-          <p className="text-gray-600">Управляйте базовым списком доп. услуг для квестов.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Дополнительные услуги</h1>
+          <p className="text-gray-600">Управляйте базовым списком дополнительных услуг.</p>
         </div>
         <button
           onClick={handleCreate}
@@ -228,34 +228,36 @@ export default function StandardExtraServicesPage() {
 
       {services.length === 0 ? (
         <div className="bg-white rounded-lg shadow-lg p-8 text-center text-gray-600">
-          Нет доп. услуг. Добавьте первую.
+          Нет дополнительных услуг. Добавьте первую.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {services.map((service) => (
             <div
               key={service.id}
-              className="bg-white rounded-lg shadow-md p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+              className={`flex h-full flex-col rounded-lg bg-white p-6 shadow-lg ${
+                !service.isActive ? 'opacity-60' : ''
+              }`}
             >
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{service.title}</h3>
-                <p className="text-sm text-gray-600">{service.price} ₽</p>
+              <div className="flex flex-wrap gap-2">
                 <span
-                  className={`inline-flex mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                    service.isActive
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
+                  className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    service.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
                   {service.isActive ? 'Активна' : 'Неактивна'}
                 </span>
                 {service.mandatoryForChildQuests && (
-                  <span className="ml-2 inline-flex mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                  <span className="inline-flex w-fit items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
                     Обязательна для детских
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <h3 className="mt-4 text-xl font-bold text-gray-900">{service.title}</h3>
+              <p className="mt-2 text-sm text-gray-600">{service.price} ₽</p>
+
+              <div className="mt-auto pt-4 flex justify-end gap-2">
                 <button
                   onClick={() =>
                     setEditingService({
@@ -266,50 +268,34 @@ export default function StandardExtraServicesPage() {
                       mandatoryForChildQuests: service.mandatoryForChildQuests,
                     })
                   }
-                  disabled={!canEdit}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                    canEdit
-                      ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                      : 'cursor-not-allowed bg-blue-50 text-blue-200'
-                  }`}
+                  className="p-2 rounded-lg transition-colors bg-blue-100 text-blue-600 hover:bg-blue-200"
+                  title="Редактировать"
                 >
-                  <Edit className="w-4 h-4" />
-                  Изменить
+                  <Edit className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => handleToggleActive(service)}
                   disabled={!canEdit}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                  className={`p-2 rounded-lg transition-colors ${
                     canEdit
-                      ? service.isActive
-                        ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                        : 'bg-green-50 text-green-700 hover:bg-green-100'
-                      : 'cursor-not-allowed bg-gray-50 text-gray-300'
+                      ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                      : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
                   }`}
+                  title={service.isActive ? 'Деактивировать' : 'Активировать'}
                 >
-                  {service.isActive ? (
-                    <>
-                      <EyeOff className="w-4 h-4" />
-                      Деактивировать
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-4 h-4" />
-                      Активировать
-                    </>
-                  )}
+                  {service.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                 </button>
                 <button
                   onClick={() => handleDelete(service.id)}
                   disabled={!canDelete}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                  className={`p-2 rounded-lg transition-colors ${
                     canDelete
-                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
                       : 'cursor-not-allowed bg-red-50 text-red-200'
                   }`}
+                  title="Удалить"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Удалить
+                  <Trash2 className="w-5 h-5" />
                 </button>
               </div>
             </div>
