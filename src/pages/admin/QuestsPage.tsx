@@ -14,6 +14,9 @@ type ActionModalState = {
   message: string;
   confirmLabel?: string;
   tone?: 'info' | 'danger';
+  successTitle?: string;
+  successMessage?: string;
+  errorTitle?: string;
   onConfirm: () => Promise<void> | void;
 };
 
@@ -332,15 +335,25 @@ export default function QuestsPage() {
     setActionModal(modal);
   };
 
-  const performAction = async (action: () => Promise<void> | void) => {
+  const performAction = async () => {
+    if (!actionModal) return;
+
     setActionLoading(true);
     try {
-      await action();
+      await actionModal.onConfirm();
       closeActionModal();
+      if (actionModal.successTitle || actionModal.successMessage) {
+        setNotification({
+          isOpen: true,
+          title: actionModal.successTitle || 'Готово',
+          message: actionModal.successMessage || 'Действие выполнено успешно.',
+          tone: 'success',
+        });
+      }
     } catch (error) {
       setNotification({
         isOpen: true,
-        title: 'Не удалось удалить квест',
+        title: actionModal.errorTitle || 'Не удалось выполнить действие',
         message: (error as Error).message,
         tone: 'error',
       });
@@ -356,9 +369,12 @@ export default function QuestsPage() {
       message: `Удалить квест «${quest.title}»? Это действие необратимо.`,
       confirmLabel: 'Удалить',
       tone: 'danger',
+      successTitle: 'Квест удалён',
+      successMessage: `Квест «${quest.title}» успешно удалён.`,
+      errorTitle: 'Не удалось удалить квест',
       onConfirm: async () => {
         await api.deleteQuest(quest.id);
-        loadQuests();
+        await loadQuests();
       },
     });
   };
@@ -1639,7 +1655,7 @@ export default function QuestsPage() {
                 Отмена
               </button>
               <button
-                onClick={() => performAction(actionModal.onConfirm)}
+                onClick={performAction}
                 className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors ${
                   actionModal.tone === 'danger'
                     ? 'bg-red-600 hover:bg-red-700'

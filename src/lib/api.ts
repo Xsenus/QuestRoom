@@ -131,15 +131,28 @@ class ApiClient {
 
     if (!response.ok) {
       const rawText = await response.text();
-      try {
-        const error = rawText ? JSON.parse(rawText) : { message: 'Request failed' };
-        if (typeof error === 'string') {
-          throw new Error(error);
+      let parsedError: unknown = null;
+
+      if (rawText) {
+        try {
+          parsedError = JSON.parse(rawText);
+        } catch {
+          parsedError = null;
         }
-        throw new Error(error.message || `HTTP ${response.status}`);
-      } catch (parseError) {
-        throw new Error(rawText || `HTTP ${response.status}`);
       }
+
+      if (typeof parsedError === 'string') {
+        throw new Error(parsedError);
+      }
+
+      if (parsedError && typeof parsedError === 'object') {
+        const message = (parsedError as { message?: unknown }).message;
+        if (typeof message === 'string' && message.trim()) {
+          throw new Error(message);
+        }
+      }
+
+      throw new Error(rawText || `HTTP ${response.status}`);
     }
 
     if (response.status === 204) {
@@ -831,15 +844,28 @@ class ApiClient {
 
     if (!response.ok) {
       const rawText = await response.text();
-      try {
-        const error = rawText ? JSON.parse(rawText) : { message: 'Request failed' };
-        if (typeof error === 'string') {
-          throw new Error(error);
+      let parsedError: unknown = null;
+
+      if (rawText) {
+        try {
+          parsedError = JSON.parse(rawText);
+        } catch {
+          parsedError = null;
         }
-        throw new Error(error.message || `HTTP ${response.status}`);
-      } catch (parseError) {
-        throw new Error(rawText || `HTTP ${response.status}`);
       }
+
+      if (typeof parsedError === 'string') {
+        throw new Error(parsedError);
+      }
+
+      if (parsedError && typeof parsedError === 'object') {
+        const message = (parsedError as { message?: unknown }).message;
+        if (typeof message === 'string' && message.trim()) {
+          throw new Error(message);
+        }
+      }
+
+      throw new Error(rawText || `HTTP ${response.status}`);
     }
 
     const blob = await response.blob();
