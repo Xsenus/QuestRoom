@@ -100,16 +100,6 @@ export default function QuestsPage() {
     const match = trimmed.match(/^(\d+)/);
     return match ? match[1] : '';
   };
-  useEffect(() => {
-    loadQuests();
-    loadDurationBadges();
-    loadStandardExtraServices();
-  }, []);
-
-  if (!canView) {
-    return <AccessDenied />;
-  }
-
   const loadDurationBadges = async () => {
     try {
       const data = await api.getDurationBadges();
@@ -137,6 +127,21 @@ export default function QuestsPage() {
       console.error('Error loading standard extra services:', error);
     }
   };
+
+
+  useEffect(() => {
+    if (!canView) {
+      setLoading(false);
+      return;
+    }
+    loadQuests();
+    loadDurationBadges();
+    loadStandardExtraServices();
+  }, [canView]);
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   const handleCreate = () => {
     if (!canEdit) return;
