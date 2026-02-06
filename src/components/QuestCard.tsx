@@ -61,6 +61,9 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
     getOptimizedImageUrl(image, { width: 600 })
   );
   const hasSecondaryImages = secondaryImagesOptimized.length > 0;
+  const secondaryRows = secondaryImagesOptimized.length <= 1
+    ? 1
+    : Math.ceil(secondaryImagesOptimized.length / 2);
 
   const handleBookingClick = () => {
     navigate(`/quest/${quest.slug || quest.id}`);
@@ -192,11 +195,14 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
 
             {hasSecondaryImages && (
               <div
-                className={`bg-black ${
-                  secondaryImagesOptimized.length === 1
-                    ? 'min-h-[180px] md:min-h-[320px]'
-                    : 'grid grid-cols-2 gap-0'
+                className={`bg-black h-[180px] md:h-[320px] ${
+                  secondaryImagesOptimized.length === 1 ? '' : 'grid grid-cols-2 gap-0'
                 }`}
+                style={
+                  secondaryImagesOptimized.length > 1
+                    ? { gridTemplateRows: `repeat(${secondaryRows}, minmax(0, 1fr))` }
+                    : undefined
+                }
               >
                 {secondaryImagesOptimized.map((img, index) => {
                   const isLastOddItem =
@@ -207,12 +213,8 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
                     <div
                       key={index}
                       onClick={handleBookingClick}
-                      className={`bg-black bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer ${
-                        secondaryImagesOptimized.length === 1
-                          ? 'h-full min-h-[180px] md:min-h-[320px]'
-                          : isLastOddItem
-                            ? 'h-[90px] md:h-[160px] col-span-2'
-                            : 'h-[90px] md:h-[160px]'
+                      className={`h-full bg-black bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer ${
+                        secondaryImagesOptimized.length > 1 && isLastOddItem ? 'col-span-2' : ''
                       }`}
                       style={{ backgroundImage: `url(${img})` }}
                     ></div>
