@@ -131,6 +131,7 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
 
 const bookingPageSizeOptions = [5, 10, 25, 50, 100];
 const defaultBookingPageSize = 10;
+const mobileCardsOnlyMediaQuery = '(max-width: 767px)';
 
 export default function BookingsPage() {
   const { user, hasPermission } = useAuth();
@@ -154,8 +155,17 @@ export default function BookingsPage() {
     if (typeof window === 'undefined') {
       return 'cards';
     }
+    if (window.matchMedia(mobileCardsOnlyMediaQuery).matches) {
+      return 'cards';
+    }
     const saved = localStorage.getItem('admin_bookings_view');
     return saved === 'table' ? 'table' : 'cards';
+  });
+  const [isMobileCardsOnly, setIsMobileCardsOnly] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.matchMedia(mobileCardsOnlyMediaQuery).matches;
   });
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'all'>('all');
   const [questFilter, setQuestFilter] = useState<string>('all');
@@ -516,6 +526,28 @@ export default function BookingsPage() {
       localStorage.setItem('admin_bookings_view', viewMode);
     }
   }, [viewMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const mediaQueryList = window.matchMedia(mobileCardsOnlyMediaQuery);
+    const handleMediaQueryChange = (event: MediaQueryListEvent) => {
+      setIsMobileCardsOnly(event.matches);
+    };
+    setIsMobileCardsOnly(mediaQueryList.matches);
+
+    mediaQueryList.addEventListener('change', handleMediaQueryChange);
+    return () => {
+      mediaQueryList.removeEventListener('change', handleMediaQueryChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMobileCardsOnly && viewMode === 'table') {
+      setViewMode('cards');
+    }
+  }, [isMobileCardsOnly, viewMode]);
 
   useEffect(() => {
     setListDateFromInput(listDateFrom);
@@ -2562,17 +2594,24 @@ export default function BookingsPage() {
               >
                 Карточки
               </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-white text-gray-900 shadow'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Таблица
-              </button>
+              {!isMobileCardsOnly && (
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                    viewMode === 'table'
+                      ? 'bg-white text-gray-900 shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Таблица
+                </button>
+              )}
             </div>
+            {isMobileCardsOnly && (
+              <p className="text-xs text-gray-500">
+                На мобильных устройствах используется карточный режим для удобного просмотра.
+              </p>
+            )}
             {viewMode === 'table' && (
               <button
                 onClick={() => setIsColumnsModalOpen(true)}
