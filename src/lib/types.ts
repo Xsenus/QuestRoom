@@ -44,6 +44,7 @@ export type DurationBadge = {
   label: string;
   badgeImageUrl: string | null;
   createdAt: string;
+  sizeBytes: number;
 };
 
 export type Settings = {
@@ -531,6 +532,7 @@ export type ImageAsset = {
   contentType: string;
   url: string;
   createdAt: string;
+  sizeBytes: number;
 };
 
 export type AdminUser = {
