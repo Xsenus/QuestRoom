@@ -11,13 +11,16 @@ interface QuestCardProps {
 
 export default function QuestCard({ quest, useVideoModal = false }: QuestCardProps) {
   const navigate = useNavigate();
-  const imageCandidates = [quest.mainImage, ...(quest.images || [])]
-    .map((image) => image?.trim())
-    .filter((image): image is string => Boolean(image));
-  const uniqueImages = Array.from(new Set(imageCandidates));
   const fallbackImage = '/images/logo.png';
-  const primaryImage = uniqueImages[0] || fallbackImage;
-  const secondaryImages = uniqueImages.slice(1);
+  const normalizedMainImage = quest.mainImage?.trim() || null;
+  const secondaryImages = Array.from(
+    new Set(
+      (quest.images || [])
+        .map((image) => image?.trim())
+        .filter((image): image is string => Boolean(image) && image !== normalizedMainImage)
+    )
+  );
+  const primaryImage = normalizedMainImage || fallbackImage;
   const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
   const difficultyValue = quest.difficulty || 1;
   const difficultyMax = Math.max(1, quest.difficultyMax || 5);
@@ -195,18 +198,26 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
                     : 'grid grid-cols-2 gap-0'
                 }`}
               >
-                {secondaryImagesOptimized.map((img, index) => (
-                  <div
-                    key={index}
-                    onClick={handleBookingClick}
-                    className={`bg-black bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer ${
-                      secondaryImagesOptimized.length === 1
-                        ? 'h-full min-h-[180px] md:min-h-[320px]'
-                        : 'h-[90px] md:h-[160px]'
-                    }`}
-                    style={{ backgroundImage: `url(${img})` }}
-                  ></div>
-                ))}
+                {secondaryImagesOptimized.map((img, index) => {
+                  const isLastOddItem =
+                    secondaryImagesOptimized.length > 2
+                    && secondaryImagesOptimized.length % 2 !== 0
+                    && index === secondaryImagesOptimized.length - 1;
+                  return (
+                    <div
+                      key={index}
+                      onClick={handleBookingClick}
+                      className={`bg-black bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer ${
+                        secondaryImagesOptimized.length === 1
+                          ? 'h-full min-h-[180px] md:min-h-[320px]'
+                          : isLastOddItem
+                            ? 'h-[90px] md:h-[160px] col-span-2'
+                            : 'h-[90px] md:h-[160px]'
+                      }`}
+                      style={{ backgroundImage: `url(${img})` }}
+                    ></div>
+                  );
+                })}
               </div>
             )}
           </div>

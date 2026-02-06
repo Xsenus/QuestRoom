@@ -7,6 +7,7 @@ import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import { getOptimizedImageUrl } from '../../lib/imageOptimizations';
 
 type ActionModalState = {
   title: string;
@@ -557,14 +558,8 @@ export default function QuestsPage() {
   const removeImage = (index: number) => {
     if (!editingQuest) return;
     const images = [...(editingQuest?.images || [])];
-    const removedUrl = images[index];
     images.splice(index, 1);
-
-    if (editingQuest?.mainImage === removedUrl) {
-      setEditingQuest({ ...editingQuest, images, mainImage: images[0] || null });
-    } else {
-      setEditingQuest({ ...editingQuest, images });
-    }
+    setEditingQuest({ ...editingQuest, images });
   };
 
   const handleImageUpload = async (file?: File) => {
@@ -580,7 +575,6 @@ export default function QuestsPage() {
       setEditingQuest({
         ...editingQuest,
         images,
-        mainImage: editingQuest.mainImage || image.url,
       });
     } catch (error) {
       alert('Ошибка загрузки изображения: ' + (error as Error).message);
@@ -597,7 +591,6 @@ export default function QuestsPage() {
     setEditingQuest({
       ...editingQuest,
       images,
-      mainImage: editingQuest.mainImage || url,
     });
   };
 
@@ -815,8 +808,30 @@ export default function QuestsPage() {
                       Нет второстепенных изображений. Добавьте URL вручную, загрузите файл или выберите изображение в библиотеке.
                     </div>
                   )}
-                  {(editingQuest.images || []).map((img, index) => (
+                  {(editingQuest.images || []).map((img, index) => {
+                    const previewUrl = getOptimizedImageUrl(img, { width: 120 });
+                    return (
                     <div key={index} className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 h-12 rounded-md border border-gray-200 bg-gray-100 overflow-hidden flex-shrink-0">
+                          {img ? (
+                            <img
+                              src={previewUrl}
+                              alt={`Превью ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
+                              нет
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs font-semibold text-gray-500 min-w-6 text-center">
+                          {index + 1}
+                        </span>
+                      </div>
                       <input
                         type="text"
                         value={img}
@@ -864,7 +879,8 @@ export default function QuestsPage() {
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                   <button
                     onClick={() => addImage('')}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
