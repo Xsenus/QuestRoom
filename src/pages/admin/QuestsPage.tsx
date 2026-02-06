@@ -243,7 +243,7 @@ export default function QuestsPage() {
       || finalPayload.standardPriceParticipantsMax > finalPayload.participantsMax
     ) {
       alert(
-        '"Макс. участников по стандартной цене" должен быть не меньше "Мин. участников" и не больше "Макс. участников".'
+        '"Лимит без доплаты" должен быть не меньше "Мин. участников" и не больше "Макс. участников".'
       );
       return;
     }
@@ -968,7 +968,7 @@ export default function QuestsPage() {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Макс. участников по стандартной цене
+              Лимит без доплаты
             </label>
             <input
               type="number"
@@ -985,7 +985,7 @@ export default function QuestsPage() {
               max={editingQuest.participantsMax || 1}
             />
             <p className="mt-2 text-xs text-gray-500">
-              Должен быть в диапазоне от минимума до максимума участников.
+              Количество участников без доплаты за доп. игрока.
             </p>
           </div>
 

@@ -373,12 +373,12 @@ public class QuestService : IQuestService
 
         if (standardPriceParticipantsMax < dto.ParticipantsMin)
         {
-            throw new InvalidOperationException("Максимум участников по стандартной цене не может быть меньше минимума участников.");
+            throw new InvalidOperationException("Лимит без доплаты не может быть меньше минимума участников.");
         }
 
         if (standardPriceParticipantsMax > dto.ParticipantsMax)
         {
-            throw new InvalidOperationException("Максимум участников по стандартной цене не может быть больше максимума участников.");
+            throw new InvalidOperationException("Лимит без доплаты не может быть больше максимума участников.");
         }
     }
 
