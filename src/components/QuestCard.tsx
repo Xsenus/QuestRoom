@@ -11,8 +11,13 @@ interface QuestCardProps {
 
 export default function QuestCard({ quest, useVideoModal = false }: QuestCardProps) {
   const navigate = useNavigate();
-  const mainImage = quest.mainImage || quest.images?.[0] || '/images/logo.png';
-  const additionalImages = quest.images?.slice(0, 4) || [];
+  const imageCandidates = [quest.mainImage, ...(quest.images || [])]
+    .map((image) => image?.trim())
+    .filter((image): image is string => Boolean(image));
+  const uniqueImages = Array.from(new Set(imageCandidates));
+  const fallbackImage = '/images/logo.png';
+  const primaryImage = uniqueImages[0] || fallbackImage;
+  const secondaryImages = uniqueImages.slice(1);
   const durationBadgeUrl = `/images/other/${quest.duration}min.png`;
   const difficultyValue = quest.difficulty || 1;
   const difficultyMax = Math.max(1, quest.difficultyMax || 5);
@@ -48,14 +53,11 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
     return match ? `${match[1]} +` : trimmed;
   };
 
-  while (additionalImages.length < 4) {
-    additionalImages.push(mainImage);
-  }
-
-  const mainImageOptimized = getOptimizedImageUrl(mainImage, { width: 1200 });
-  const additionalImagesOptimized = additionalImages.map((image) =>
+  const mainImageOptimized = getOptimizedImageUrl(primaryImage, { width: 1200 });
+  const secondaryImagesOptimized = secondaryImages.map((image) =>
     getOptimizedImageUrl(image, { width: 600 })
   );
+  const hasSecondaryImages = secondaryImagesOptimized.length > 0;
 
   const handleBookingClick = () => {
     navigate(`/quest/${quest.slug || quest.id}`);
@@ -95,7 +97,11 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
     <div className="relative mb-4 md:mb-6 pt-3 md:pt-5">
       <div className="relative bg-white shadow-2xl overflow-visible border-4 border-white">
         <div className="relative">
-          <div className="grid grid-cols-[1.4fr_1fr] md:grid-cols-[1.6fr_1fr] bg-black">
+          <div
+            className={`grid bg-black ${
+              hasSecondaryImages ? 'grid-cols-[1.4fr_1fr] md:grid-cols-[1.6fr_1fr]' : 'grid-cols-1'
+            }`}
+          >
             <div className="flex flex-col">
               <div
                 className="relative min-h-[180px] md:min-h-[320px] bg-cover bg-center cursor-pointer"
@@ -181,16 +187,28 @@ export default function QuestCard({ quest, useVideoModal = false }: QuestCardPro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-0 bg-black">
-              {additionalImagesOptimized.map((img, index) => (
-                <div
-                  key={index}
-                  onClick={handleBookingClick}
-                  className="h-[90px] md:h-[160px] bg-black bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer"
-                  style={{ backgroundImage: `url(${img})` }}
-                ></div>
-              ))}
-            </div>
+            {hasSecondaryImages && (
+              <div
+                className={`bg-black ${
+                  secondaryImagesOptimized.length === 1
+                    ? 'min-h-[180px] md:min-h-[320px]'
+                    : 'grid grid-cols-2 gap-0'
+                }`}
+              >
+                {secondaryImagesOptimized.map((img, index) => (
+                  <div
+                    key={index}
+                    onClick={handleBookingClick}
+                    className={`bg-black bg-cover bg-center hover:opacity-90 transition-opacity cursor-pointer ${
+                      secondaryImagesOptimized.length === 1
+                        ? 'h-full min-h-[180px] md:min-h-[320px]'
+                        : 'h-[90px] md:h-[160px]'
+                    }`}
+                    style={{ backgroundImage: `url(${img})` }}
+                  ></div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-center gap-3 bg-black p-3 md:hidden text-center">
             <div className="flex flex-wrap items-center justify-center gap-2">
