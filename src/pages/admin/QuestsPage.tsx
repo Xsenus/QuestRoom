@@ -652,7 +652,8 @@ export default function QuestsPage() {
           </div>
 
           {activeTab === 'details' ? (
-          <div className="space-y-6">
+          <>
+          <fieldset disabled={!canEdit} className="space-y-6">
             <div className="border-b border-gray-200 pb-4">
               <h3 className="text-lg font-semibold text-gray-800">Основная информация</h3>
             </div>
@@ -1400,6 +1401,8 @@ export default function QuestsPage() {
               </label>
             </div>
 
+          </fieldset>
+
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
@@ -1421,7 +1424,7 @@ export default function QuestsPage() {
                 Отмена
               </button>
             </div>
-          </div>
+          </>
           ) : scheduleTabDisabled ? (
             <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
               {isChildMode ? (
@@ -1561,12 +1564,7 @@ export default function QuestsPage() {
               <div className="flex gap-2 ml-4">
                 <button
                   onClick={() => handleEditQuest(quest)}
-                  disabled={!canEdit}
-                  className={`p-2 rounded-lg transition-colors ${
-                    canEdit
-                      ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                      : 'cursor-not-allowed bg-blue-50 text-blue-200'
-                  }`}
+                  className="p-2 rounded-lg transition-colors bg-blue-100 text-blue-600 hover:bg-blue-200"
                   title="Редактировать"
                 >
                   <Edit className="w-5 h-5" />
