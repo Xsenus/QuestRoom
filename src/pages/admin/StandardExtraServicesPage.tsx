@@ -4,6 +4,7 @@ import { StandardExtraService, StandardExtraServiceUpsert } from '../../lib/type
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
 
 export default function StandardExtraServicesPage() {
   const { hasPermission } = useAuth();
@@ -16,6 +17,14 @@ export default function StandardExtraServicesPage() {
     (StandardExtraServiceUpsert & { id?: string }) | null
   >(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<StandardExtraService | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({ isOpen: false, title: '', message: '', tone: 'info' });
 
   const loadServices = async () => {
     try {
@@ -63,7 +72,12 @@ export default function StandardExtraServicesPage() {
         await api.updateStandardExtraService(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении услуги: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось сохранить услугу',
+        message: (error as Error).message,
+        tone: 'error',
+      });
       return;
     }
 
@@ -84,19 +98,44 @@ export default function StandardExtraServicesPage() {
       await api.updateStandardExtraService(id, { ...payload, isActive: !service.isActive });
       loadServices();
     } catch (error) {
-      alert('Ошибка при изменении статуса: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось изменить статус',
+        message: (error as Error).message,
+        tone: 'error',
+      });
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (service: StandardExtraService) => {
     if (!canDelete) return;
-    if (!confirm('Вы уверены, что хотите удалить эту услугу?')) return;
+    setServiceToDelete(service);
+  };
 
+  const confirmDelete = async () => {
+    if (!serviceToDelete) return;
+
+    setActionLoading(true);
     try {
-      await api.deleteStandardExtraService(id);
-      loadServices();
+      await api.deleteStandardExtraService(serviceToDelete.id);
+      await loadServices();
+      setServiceToDelete(null);
+      setNotification({
+        isOpen: true,
+        title: 'Услуга удалена',
+        message: `Дополнительная услуга «${serviceToDelete.title}» успешно удалена.`,
+        tone: 'success',
+      });
     } catch (error) {
-      alert('Ошибка при удалении услуги: ' + (error as Error).message);
+      setServiceToDelete(null);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось удалить услугу',
+        message: (error as Error).message,
+        tone: 'error',
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -201,6 +240,14 @@ export default function StandardExtraServicesPage() {
             </button>
           </div>
         </div>
+
+        <NotificationModal
+          isOpen={notification.isOpen}
+          title={notification.title}
+          message={notification.message}
+          tone={notification.tone}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+        />
       </div>
     );
   }
@@ -286,7 +333,7 @@ export default function StandardExtraServicesPage() {
                   {service.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                 </button>
                 <button
-                  onClick={() => handleDelete(service.id)}
+                  onClick={() => handleDelete(service)}
                   disabled={!canDelete}
                   className={`p-2 rounded-lg transition-colors ${
                     canDelete
@@ -302,6 +349,43 @@ export default function StandardExtraServicesPage() {
           ))}
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(serviceToDelete)}
+        title="Удалить услугу?"
+        message={`Удалить услугу «${serviceToDelete?.title || ''}»? Это действие необратимо.`}
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setServiceToDelete(null)}
+              className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-300"
+              disabled={actionLoading}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+              disabled={actionLoading}
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setServiceToDelete(null)}
+      />
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+      />
     </div>
   );
 }
