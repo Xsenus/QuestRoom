@@ -86,6 +86,9 @@ public class QuestService : IQuestService
             Phones = dto.Phones,
             ParticipantsMin = dto.ParticipantsMin,
             ParticipantsMax = dto.ParticipantsMax,
+            StandardPriceParticipantsMax = dto.StandardPriceParticipantsMax > 0
+                ? dto.StandardPriceParticipantsMax
+                : dto.ParticipantsMax,
             ExtraParticipantsMax = dto.ExtraParticipantsMax,
             ExtraParticipantPrice = parentQuest?.ExtraParticipantPrice ?? dto.ExtraParticipantPrice,
             AgeRestriction = dto.AgeRestriction,
@@ -209,6 +212,9 @@ public class QuestService : IQuestService
             Phones = quest.Phones,
             ParticipantsMin = quest.ParticipantsMin,
             ParticipantsMax = quest.ParticipantsMax,
+            StandardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
+                ? quest.StandardPriceParticipantsMax
+                : quest.ParticipantsMax,
             ExtraParticipantsMax = quest.ExtraParticipantsMax,
             ExtraParticipantPrice = pricingQuest.ExtraParticipantPrice,
             AgeRestriction = quest.AgeRestriction,
@@ -322,6 +328,9 @@ public class QuestService : IQuestService
         quest.Phones = dto.Phones;
         quest.ParticipantsMin = dto.ParticipantsMin;
         quest.ParticipantsMax = dto.ParticipantsMax;
+        quest.StandardPriceParticipantsMax = dto.StandardPriceParticipantsMax > 0
+            ? dto.StandardPriceParticipantsMax
+            : dto.ParticipantsMax;
         quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
         quest.ExtraParticipantPrice = parentQuest?.ExtraParticipantPrice ?? dto.ExtraParticipantPrice;
         quest.AgeRestriction = dto.AgeRestriction;

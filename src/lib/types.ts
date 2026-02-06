@@ -8,6 +8,7 @@ export type Quest = {
   phones: string[];
   participantsMin: number;
   participantsMax: number;
+  standardPriceParticipantsMax: number;
   extraParticipantsMax: number;
   extraParticipantPrice: number;
   ageRestriction: string;

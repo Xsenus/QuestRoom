@@ -140,6 +140,7 @@ export default function QuestsPage() {
       phones: [],
       participantsMin: 2,
       participantsMax: 6,
+      standardPriceParticipantsMax: 6,
       extraParticipantsMax: 0,
       extraParticipantPrice: 0,
       ageRestriction: '',
@@ -182,6 +183,9 @@ export default function QuestsPage() {
         phones: parent.phones || [],
         participantsMin: isCreating ? 2 : parent.participantsMin,
         participantsMax: isCreating ? 6 : parent.participantsMax,
+        standardPriceParticipantsMax: isCreating
+          ? 6
+          : parent.standardPriceParticipantsMax || parent.participantsMax,
         extraParticipantsMax: parent.extraParticipantsMax,
         extraParticipantPrice: parent.extraParticipantPrice,
         ageRestriction: parent.ageRestriction,
@@ -268,6 +272,8 @@ export default function QuestsPage() {
         phones: quest.phones || [],
         participantsMin: quest.participantsMin,
         participantsMax: quest.participantsMax,
+        standardPriceParticipantsMax:
+          quest.standardPriceParticipantsMax || quest.participantsMax,
         extraParticipantsMax: quest.extraParticipantsMax,
         extraParticipantPrice: quest.extraParticipantPrice,
         ageRestriction: quest.ageRestriction,
@@ -991,6 +997,28 @@ export default function QuestsPage() {
               <h3 className="text-lg font-semibold text-gray-800">Доплаты и услуги</h3>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Макс. участников по стандартной цене
+                </label>
+                <input
+                  type="number"
+                  value={editingQuest.standardPriceParticipantsMax || 6}
+                  onChange={(e) =>
+                    setEditingQuest({
+                      ...editingQuest,
+                      standardPriceParticipantsMax: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  disabled={isChildMode}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none ${childInputClass}`}
+                  min="1"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  После этого числа применяется доплата за участника.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Доп. участников (максимум)
