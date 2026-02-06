@@ -125,7 +125,8 @@ public class ImagesController : ControllerBase
         var requestedQuality = Math.Clamp(quality ?? 72, 35, 95);
         var requestedFormat = format?.Trim().ToLowerInvariant() ?? "auto";
 
-        using var sourceImage = Image.Load(image.Data, out IImageFormat sourceFormat);
+        using var sourceImage = Image.Load(image.Data);
+        var sourceFormat = sourceImage.Metadata.DecodedImageFormat;
         if (sourceImage.Width > requestedWidth)
         {
             var nextHeight = (int)Math.Round((double)sourceImage.Height * requestedWidth / sourceImage.Width);
@@ -140,7 +141,7 @@ public class ImagesController : ControllerBase
     }
 
     private static (IImageEncoder Encoder, string ContentType) ResolveEncoderAndContentType(
-        IImageFormat sourceFormat,
+        IImageFormat? sourceFormat,
         string requestedFormat,
         int quality)
     {
@@ -149,12 +150,14 @@ public class ImagesController : ControllerBase
             requestedFormat = "webp";
         }
 
-        if (requestedFormat == "webp" || (requestedFormat == "auto" && !string.Equals(sourceFormat.Name, "png", StringComparison.OrdinalIgnoreCase)))
+        var sourceFormatName = sourceFormat?.Name;
+
+        if (requestedFormat == "webp" || (requestedFormat == "auto" && !string.Equals(sourceFormatName, "png", StringComparison.OrdinalIgnoreCase)))
         {
             return (new WebpEncoder { Quality = quality }, "image/webp");
         }
 
-        if (string.Equals(sourceFormat.Name, "png", StringComparison.OrdinalIgnoreCase) && requestedFormat == "auto")
+        if (string.Equals(sourceFormatName, "png", StringComparison.OrdinalIgnoreCase) && requestedFormat == "auto")
         {
             return (new SixLabors.ImageSharp.Formats.Png.PngEncoder(), "image/png");
         }
