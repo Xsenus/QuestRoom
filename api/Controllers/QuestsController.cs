@@ -1,26 +1,20 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuestRoomApi.DTOs.Quests;
 using QuestRoomApi.Data;
-using QuestRoomApi.Models;
+using QuestRoomApi.DTOs.Quests;
 using QuestRoomApi.Services;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 
 namespace QuestRoomApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class QuestsController : ControllerBase
+public class QuestsController : PermissionAwareControllerBase
 {
     private readonly IQuestService _questService;
-    private readonly AppDbContext _context;
 
-    public QuestsController(IQuestService questService, AppDbContext context)
+    public QuestsController(IQuestService questService, AppDbContext context) : base(context)
     {
         _questService = questService;
-        _context = context;
     }
 
     [HttpGet]
@@ -86,24 +80,5 @@ public class QuestsController : ControllerBase
             DeleteQuestResult.NotFound => NotFound(),
             _ => StatusCode(StatusCodes.Status500InternalServerError)
         };
-    }
-
-    private async Task<User?> GetCurrentUserAsync()
-    {
-        var rawUserId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var userId))
-        {
-            return null;
-        }
-
-        return await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Id == userId);
-    }
-
-    private static bool HasPermission(User? user, string permission)
-    {
-        return user?.Role?.Permissions?.Contains(permission) == true;
     }
 }

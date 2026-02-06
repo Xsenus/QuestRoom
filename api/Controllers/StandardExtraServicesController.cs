@@ -1,26 +1,20 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.StandardExtraServices;
-using QuestRoomApi.Models;
 using QuestRoomApi.Services;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 
 namespace QuestRoomApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class StandardExtraServicesController : ControllerBase
+public class StandardExtraServicesController : PermissionAwareControllerBase
 {
     private readonly IStandardExtraServiceService _service;
-    private readonly AppDbContext _context;
 
-    public StandardExtraServicesController(IStandardExtraServiceService service, AppDbContext context)
+    public StandardExtraServicesController(IStandardExtraServiceService service, AppDbContext context) : base(context)
     {
         _service = service;
-        _context = context;
     }
 
     [HttpGet]
@@ -72,24 +66,5 @@ public class StandardExtraServicesController : ControllerBase
 
         var deleted = await _service.DeleteStandardExtraServiceAsync(id);
         return deleted ? NoContent() : NotFound();
-    }
-
-    private async Task<User?> GetCurrentUserAsync()
-    {
-        var rawUserId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var userId))
-        {
-            return null;
-        }
-
-        return await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Id == userId);
-    }
-
-    private static bool HasPermission(User? user, string permission)
-    {
-        return user?.Role?.Permissions?.Contains(permission) == true;
     }
 }
