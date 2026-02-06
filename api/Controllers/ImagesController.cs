@@ -4,6 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Images;
 using QuestRoomApi.Models;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace QuestRoomApi.Controllers;
 
@@ -12,6 +17,7 @@ namespace QuestRoomApi.Controllers;
 public class ImagesController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private const int MaxPreviewWidth = 360;
 
     public ImagesController(AppDbContext context)
     {
@@ -66,13 +72,28 @@ public class ImagesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetImage(Guid id)
+    public async Task<IActionResult> GetImage(
+        Guid id,
+        [FromQuery(Name = "w")] int? width,
+        [FromQuery(Name = "q")] int? quality,
+        [FromQuery] string? format)
     {
         var image = await _context.ImageAssets.FirstOrDefaultAsync(i => i.Id == id);
         if (image == null)
             return NotFound();
 
-        return File(image.Data, image.ContentType, image.FileName);
+        if (!ShouldTransform(width, quality, format))
+            return File(image.Data, image.ContentType, image.FileName);
+
+        try
+        {
+            var transformedImage = BuildTransformedImage(image, width, quality, format);
+            return File(transformedImage.Data, transformedImage.ContentType);
+        }
+        catch
+        {
+            return File(image.Data, image.ContentType, image.FileName);
+        }
     }
 
     [Authorize(Roles = "admin")]
@@ -89,6 +110,58 @@ public class ImagesController : ControllerBase
         return NoContent();
     }
 
+    private static bool ShouldTransform(int? width, int? quality, string? format)
+    {
+        return width.HasValue || quality.HasValue || !string.IsNullOrWhiteSpace(format);
+    }
+
+    private static (byte[] Data, string ContentType) BuildTransformedImage(
+        ImageAsset image,
+        int? width,
+        int? quality,
+        string? format)
+    {
+        var requestedWidth = Math.Clamp(width ?? MaxPreviewWidth, 80, 2200);
+        var requestedQuality = Math.Clamp(quality ?? 72, 35, 95);
+        var requestedFormat = format?.Trim().ToLowerInvariant() ?? "auto";
+
+        using var sourceImage = Image.Load(image.Data, out IImageFormat sourceFormat);
+        if (sourceImage.Width > requestedWidth)
+        {
+            var nextHeight = (int)Math.Round((double)sourceImage.Height * requestedWidth / sourceImage.Width);
+            sourceImage.Mutate(ctx => ctx.Resize(requestedWidth, Math.Max(1, nextHeight)));
+        }
+
+        var (encoder, contentType) = ResolveEncoderAndContentType(sourceFormat, requestedFormat, requestedQuality);
+
+        using var output = new MemoryStream();
+        sourceImage.Save(output, encoder);
+        return (output.ToArray(), contentType);
+    }
+
+    private static (IImageEncoder Encoder, string ContentType) ResolveEncoderAndContentType(
+        IImageFormat sourceFormat,
+        string requestedFormat,
+        int quality)
+    {
+        if (requestedFormat == "avif")
+        {
+            requestedFormat = "webp";
+        }
+
+        if (requestedFormat == "webp" || (requestedFormat == "auto" && !string.Equals(sourceFormat.Name, "png", StringComparison.OrdinalIgnoreCase)))
+        {
+            return (new WebpEncoder { Quality = quality }, "image/webp");
+        }
+
+        if (string.Equals(sourceFormat.Name, "png", StringComparison.OrdinalIgnoreCase) && requestedFormat == "auto")
+        {
+            return (new SixLabors.ImageSharp.Formats.Png.PngEncoder(), "image/png");
+        }
+
+        return (new JpegEncoder { Quality = quality }, "image/jpeg");
+    }
+
     private static ImageAssetDto ToDto(ImageAsset image, HttpRequest request)
     {
         var baseUrl = $"{request.Scheme}://{request.Host}";
@@ -98,7 +171,8 @@ public class ImagesController : ControllerBase
             FileName = image.FileName,
             ContentType = image.ContentType,
             Url = $"{baseUrl}/api/images/{image.Id}",
-            CreatedAt = image.CreatedAt
+            CreatedAt = image.CreatedAt,
+            SizeBytes = image.Data.LongLength
         };
     }
 

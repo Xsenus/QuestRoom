@@ -7,4 +7,5 @@ public class ImageAssetDto
     public string ContentType { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public long SizeBytes { get; set; }
 }

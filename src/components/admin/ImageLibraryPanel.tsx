@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Upload, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Copy, LayoutGrid, List, Trash2, Upload } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getOptimizedImageUrl, getResponsiveSrcSet } from '../../lib/imageOptimizations';
 import { ImageAsset } from '../../lib/types';
@@ -16,7 +16,17 @@ type ImageLibraryPanelProps = {
   emptyText?: string;
 };
 
-const IMAGE_LIBRARY_PAGE_SIZE = 10;
+type ViewMode = 'grid' | 'table';
+
+const IMAGE_LIBRARY_PAGE_SIZE = 20;
+
+const formatBytes = (bytes: number) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 Б';
+  const units = ['Б', 'КБ', 'МБ', 'ГБ'];
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** exponent;
+  return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+};
 
 export default function ImageLibraryPanel({
   onSelect,
@@ -35,6 +45,8 @@ export default function ImageLibraryPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isOpen, setIsOpen] = useState(initialOpen || !showToggle);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [search, setSearch] = useState('');
 
   const loadImages = async (reset = false) => {
     if (isLoading) return;
@@ -76,6 +88,12 @@ export default function ImageLibraryPanel({
     }
   };
 
+  const filteredImages = useMemo(() => {
+    const trimmed = search.trim().toLowerCase();
+    if (!trimmed) return images;
+    return images.filter((image) => image.fileName.toLowerCase().includes(trimmed));
+  }, [images, search]);
+
   useEffect(() => {
     if (isOpen && images.length === 0) {
       loadImages(true);
@@ -87,6 +105,14 @@ export default function ImageLibraryPanel({
     setIsOpen(nextValue);
     if (nextValue && images.length === 0) {
       await loadImages(true);
+    }
+  };
+
+  const copyImageUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      alert('Не удалось скопировать ссылку в буфер обмена');
     }
   };
 
@@ -105,7 +131,27 @@ export default function ImageLibraryPanel({
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold text-gray-700">{title}</p>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ${
+                    viewMode === 'grid' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" /> Плитка
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ${
+                    viewMode === 'table' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <List className="h-3.5 w-3.5" /> Таблица
+                </button>
+              </div>
               {allowUpload && (
                 <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-xs font-semibold text-gray-600 rounded-lg cursor-pointer hover:bg-gray-100">
                   <Upload className="w-4 h-4" />
@@ -128,17 +174,29 @@ export default function ImageLibraryPanel({
               </button>
             </div>
           </div>
-          {images.length === 0 && !isLoading ? (
+
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Поиск по имени файла"
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-red-300 focus:outline-none"
+          />
+
+          {filteredImages.length === 0 && !isLoading ? (
             <p className="text-sm text-gray-500">{emptyText}</p>
-          ) : (
+          ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {images.map((image) => {
+              {filteredImages.map((image) => {
                 const cardContent = (
                   <>
                     <div className="relative aspect-video bg-gray-100">
                       <img
-                        src={getOptimizedImageUrl(image.url, { width: 360 })}
-                        srcSet={getResponsiveSrcSet(image.url, [180, 240, 360, 480])}
+                        src={getOptimizedImageUrl(image.url, { width: 360, quality: 70, format: 'webp' })}
+                        srcSet={getResponsiveSrcSet(image.url, [180, 240, 360, 480], {
+                          quality: 70,
+                          format: 'webp',
+                        })}
                         sizes="(min-width: 768px) 25vw, 50vw"
                         alt={image.fileName}
                         className="w-full h-full object-cover"
@@ -159,8 +217,9 @@ export default function ImageLibraryPanel({
                         </button>
                       )}
                     </div>
-                    <div className="p-2">
+                    <div className="p-2 space-y-1">
                       <p className="text-xs text-gray-600 truncate">{image.fileName}</p>
+                      <p className="text-[11px] text-gray-400">{formatBytes(image.sizeBytes)}</p>
                     </div>
                   </>
                 );
@@ -190,9 +249,78 @@ export default function ImageLibraryPanel({
                 );
               })}
             </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Превью</th>
+                    <th className="px-3 py-2 text-left">Файл</th>
+                    <th className="px-3 py-2 text-left">Тип</th>
+                    <th className="px-3 py-2 text-left">Размер</th>
+                    <th className="px-3 py-2 text-left">Дата</th>
+                    <th className="px-3 py-2 text-right">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredImages.map((image) => (
+                    <tr key={image.id} className="border-t border-gray-100">
+                      <td className="px-3 py-2">
+                        <img
+                          src={getOptimizedImageUrl(image.url, { width: 120, quality: 60, format: 'webp' })}
+                          alt={image.fileName}
+                          className="h-14 w-24 rounded object-cover bg-gray-100"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </td>
+                      <td className="px-3 py-2 max-w-[260px] truncate" title={image.fileName}>
+                        {image.fileName}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">{image.contentType}</td>
+                      <td className="px-3 py-2 text-gray-600">{formatBytes(image.sizeBytes)}</td>
+                      <td className="px-3 py-2 text-gray-600">
+                        {new Date(image.createdAt).toLocaleString('ru-RU')}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center justify-end gap-1">
+                          {onSelect && (
+                            <button
+                              type="button"
+                              onClick={() => onSelect(image.url, image)}
+                              className="rounded px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+                            >
+                              Выбрать
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => copyImageUrl(image.url)}
+                            className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
+                            title="Копировать ссылку"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                          {allowDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(image)}
+                              className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                              title="Удалить"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">Показано {images.length}</span>
+            <span className="text-xs text-gray-500">Показано {filteredImages.length} из {images.length}</span>
             {hasMore && (
               <button
                 type="button"
