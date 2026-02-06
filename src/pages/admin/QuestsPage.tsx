@@ -140,6 +140,7 @@ export default function QuestsPage() {
       phones: [],
       participantsMin: 2,
       participantsMax: 6,
+      standardPriceParticipantsMax: 4,
       extraParticipantsMax: 0,
       extraParticipantPrice: 0,
       ageRestriction: '',
@@ -182,6 +183,9 @@ export default function QuestsPage() {
         phones: parent.phones || [],
         participantsMin: isCreating ? 2 : parent.participantsMin,
         participantsMax: isCreating ? 6 : parent.participantsMax,
+        standardPriceParticipantsMax: isCreating
+          ? 4
+          : parent.standardPriceParticipantsMax || 4,
         extraParticipantsMax: parent.extraParticipantsMax,
         extraParticipantPrice: parent.extraParticipantPrice,
         ageRestriction: parent.ageRestriction,
@@ -232,6 +236,16 @@ export default function QuestsPage() {
         }
       : normalizedPayload;
 
+    if (
+      finalPayload.standardPriceParticipantsMax < finalPayload.participantsMin
+      || finalPayload.standardPriceParticipantsMax > finalPayload.participantsMax
+    ) {
+      alert(
+        '"Лимит без доплаты" должен быть не меньше "Мин. участников" и не больше "Макс. участников".'
+      );
+      return;
+    }
+
     try {
       if (isCreating) {
         await api.createQuest(finalPayload);
@@ -266,6 +280,8 @@ export default function QuestsPage() {
         phones: quest.phones || [],
         participantsMin: quest.participantsMin,
         participantsMax: quest.participantsMax,
+        standardPriceParticipantsMax:
+          quest.standardPriceParticipantsMax || 4,
         extraParticipantsMax: quest.extraParticipantsMax,
         extraParticipantPrice: quest.extraParticipantPrice,
         ageRestriction: quest.ageRestriction,
@@ -950,6 +966,29 @@ export default function QuestsPage() {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Лимит без доплаты
+            </label>
+            <input
+              type="number"
+              value={editingQuest.standardPriceParticipantsMax || 4}
+              onChange={(e) => {
+                const nextValue = parseInt(e.target.value) || 4;
+                setEditingQuest({
+                  ...editingQuest,
+                  standardPriceParticipantsMax: nextValue,
+                });
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              min={editingQuest.participantsMin || 1}
+              max={editingQuest.participantsMax || 1}
+            />
+            <p className="mt-2 text-xs text-gray-500">
+              Количество участников без доплаты за доп. игрока.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Сложность
             </label>
             <input
@@ -1006,7 +1045,7 @@ export default function QuestsPage() {
                   min="0"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  Сколько игроков можно добавить сверх максимума.
+                  Сколько игроков можно добавить по доплате сверх стандартного лимита.
                 </p>
               </div>
 

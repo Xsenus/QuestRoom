@@ -35,6 +35,9 @@ public class Quest
     [Column("participants_max")]
     public int ParticipantsMax { get; set; }
 
+    [Column("standard_price_participants_max")]
+    public int StandardPriceParticipantsMax { get; set; }
+
     [Column("extra_participants_max")]
     public int ExtraParticipantsMax { get; set; }
 

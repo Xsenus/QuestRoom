@@ -151,7 +151,7 @@ public class BookingService : IBookingService
             }
 
             var pricingQuest = quest.ParentQuest ?? quest;
-            var maxParticipants = quest.ParticipantsMax + Math.Max(0, quest.ExtraParticipantsMax);
+            var maxParticipants = quest.ParticipantsMax;
             if (dto.ParticipantsCount < quest.ParticipantsMin || dto.ParticipantsCount > maxParticipants)
             {
                 throw new InvalidOperationException("Количество участников выходит за допустимый диапазон.");
@@ -168,7 +168,10 @@ public class BookingService : IBookingService
                 })
                 .Where(service => !string.IsNullOrWhiteSpace(service.Title))
                 .ToList() ?? new List<BookingExtraServiceCreateDto>();
-            var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - quest.ParticipantsMax);
+            var standardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
+                ? quest.StandardPriceParticipantsMax
+                : 4;
+            var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - standardPriceParticipantsMax);
             var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
             var extrasTotal = selectedExtras.Sum(service => service.Price)
                 + customExtras.Sum(service => service.Price);
@@ -1120,7 +1123,15 @@ public class BookingService : IBookingService
             .Where(service => service.BookingId == booking.Id)
             .ToListAsync();
 
-        var extraParticipantsCount = Math.Max(0, booking.ParticipantsCount - quest.ParticipantsMax);
+        var standardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
+            ? quest.StandardPriceParticipantsMax
+            : 4;
+        if (booking.ParticipantsCount < quest.ParticipantsMin || booking.ParticipantsCount > quest.ParticipantsMax)
+        {
+            throw new InvalidOperationException("Количество участников выходит за допустимый диапазон.");
+        }
+
+        var extraParticipantsCount = Math.Max(0, booking.ParticipantsCount - standardPriceParticipantsMax);
         var pricingQuest = quest.ParentQuest ?? quest;
         var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
         var extrasTotal = extraServices.Sum(service => service.Price);

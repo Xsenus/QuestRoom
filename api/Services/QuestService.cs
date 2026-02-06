@@ -74,6 +74,7 @@ public class QuestService : IQuestService
 
     public async Task<QuestDto> CreateQuestAsync(QuestUpsertDto dto)
     {
+        ValidateParticipantsSettings(dto);
         var parentQuest = await ResolveParentQuestAsync(dto.ParentQuestId);
         var quest = new Quest
         {
@@ -86,6 +87,9 @@ public class QuestService : IQuestService
             Phones = dto.Phones,
             ParticipantsMin = dto.ParticipantsMin,
             ParticipantsMax = dto.ParticipantsMax,
+            StandardPriceParticipantsMax = dto.StandardPriceParticipantsMax > 0
+                ? dto.StandardPriceParticipantsMax
+                : 4,
             ExtraParticipantsMax = dto.ExtraParticipantsMax,
             ExtraParticipantPrice = parentQuest?.ExtraParticipantPrice ?? dto.ExtraParticipantPrice,
             AgeRestriction = dto.AgeRestriction,
@@ -209,6 +213,9 @@ public class QuestService : IQuestService
             Phones = quest.Phones,
             ParticipantsMin = quest.ParticipantsMin,
             ParticipantsMax = quest.ParticipantsMax,
+            StandardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
+                ? quest.StandardPriceParticipantsMax
+                : 4,
             ExtraParticipantsMax = quest.ExtraParticipantsMax,
             ExtraParticipantPrice = pricingQuest.ExtraParticipantPrice,
             AgeRestriction = quest.AgeRestriction,
@@ -312,6 +319,7 @@ public class QuestService : IQuestService
 
     private async Task ApplyQuestUpdateAsync(Quest quest, QuestUpsertDto dto)
     {
+        ValidateParticipantsSettings(dto);
         var parentQuest = await ResolveParentQuestAsync(dto.ParentQuestId, quest.Id);
         quest.Title = dto.Title;
         quest.Description = dto.Description;
@@ -322,6 +330,9 @@ public class QuestService : IQuestService
         quest.Phones = dto.Phones;
         quest.ParticipantsMin = dto.ParticipantsMin;
         quest.ParticipantsMax = dto.ParticipantsMax;
+        quest.StandardPriceParticipantsMax = dto.StandardPriceParticipantsMax > 0
+            ? dto.StandardPriceParticipantsMax
+            : 4;
         quest.ExtraParticipantsMax = dto.ExtraParticipantsMax;
         quest.ExtraParticipantPrice = parentQuest?.ExtraParticipantPrice ?? dto.ExtraParticipantPrice;
         quest.AgeRestriction = dto.AgeRestriction;
@@ -341,6 +352,34 @@ public class QuestService : IQuestService
         quest.UpdatedAt = DateTime.UtcNow;
 
         // Extra services are synced separately after the quest is saved.
+    }
+
+
+    private static void ValidateParticipantsSettings(QuestUpsertDto dto)
+    {
+        if (dto.ParticipantsMin < 1)
+        {
+            throw new InvalidOperationException("Минимальное количество участников должно быть не меньше 1.");
+        }
+
+        if (dto.ParticipantsMax < dto.ParticipantsMin)
+        {
+            throw new InvalidOperationException("Максимальное количество участников не может быть меньше минимального.");
+        }
+
+        var standardPriceParticipantsMax = dto.StandardPriceParticipantsMax > 0
+            ? dto.StandardPriceParticipantsMax
+            : 4;
+
+        if (standardPriceParticipantsMax < dto.ParticipantsMin)
+        {
+            throw new InvalidOperationException("Лимит без доплаты не может быть меньше минимума участников.");
+        }
+
+        if (standardPriceParticipantsMax > dto.ParticipantsMax)
+        {
+            throw new InvalidOperationException("Лимит без доплаты не может быть больше максимума участников.");
+        }
     }
 
     private async Task<string> BuildUniqueSlugAsync(string title, Guid questId)

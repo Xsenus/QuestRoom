@@ -93,8 +93,12 @@ export default function BookingModal({
   const optionalExtraServices = mandatoryQuestServiceIds.length
     ? questExtraServices.filter((service) => !mandatoryQuestServiceIds.includes(service.id))
     : questExtraServices;
-  const maxParticipants = quest.participantsMax + Math.max(0, quest.extraParticipantsMax || 0);
-  const extraParticipantsCount = Math.max(0, participantsCount - quest.participantsMax);
+  const maxParticipants = quest.participantsMax;
+  const standardPriceParticipantsMax =
+    quest.standardPriceParticipantsMax > 0
+      ? quest.standardPriceParticipantsMax
+      : 4;
+  const extraParticipantsCount = Math.max(0, participantsCount - standardPriceParticipantsMax);
   const extraParticipantsTotal = extraParticipantsCount * Math.max(0, quest.extraParticipantPrice || 0);
   const selectedQuestExtraServicesTotal = questExtraServices
     .filter((service) => selectedExtraServices.includes(service.id))

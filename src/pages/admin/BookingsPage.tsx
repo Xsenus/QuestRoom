@@ -1907,11 +1907,15 @@ export default function BookingsPage() {
     return quest?.extraParticipantPrice ?? null;
   };
 
-  const getQuestParticipantsMax = (booking: { questId: string | null }) => {
+  const getQuestStandardPriceParticipantsMax = (booking: { questId: string | null }) => {
     if (!booking.questId) {
       return null;
     }
-    return questLookup.get(booking.questId)?.participantsMax ?? null;
+    const quest = questLookup.get(booking.questId);
+    if (!quest) {
+      return null;
+    }
+    return quest.standardPriceParticipantsMax || 4;
   };
 
   const getExtraServicesTotal = (booking: Booking) => {
@@ -1951,19 +1955,19 @@ export default function BookingsPage() {
     [visibleTableColumns]
   );
 
-  const editingQuestMaxParticipants = useMemo(() => {
+  const editingQuestStandardPriceParticipantsMax = useMemo(() => {
     if (!editingBooking) {
       return null;
     }
-    return getQuestParticipantsMax(editingBooking);
+    return getQuestStandardPriceParticipantsMax(editingBooking);
   }, [editingBooking, questLookup]);
 
   const autoExtraParticipants = useMemo(() => {
-    if (!editingBooking || editingQuestMaxParticipants == null) {
+    if (!editingBooking || editingQuestStandardPriceParticipantsMax == null) {
       return 0;
     }
-    return Math.max(0, editingBooking.participantsCount - editingQuestMaxParticipants);
-  }, [editingBooking?.participantsCount, editingQuestMaxParticipants]);
+    return Math.max(0, editingBooking.participantsCount - editingQuestStandardPriceParticipantsMax);
+  }, [editingBooking?.participantsCount, editingQuestStandardPriceParticipantsMax]);
 
   const availableQuestExtras = useMemo(() => {
     if (bookingFormMode !== 'create' || !editingBooking?.questId) {
@@ -3188,7 +3192,10 @@ export default function BookingsPage() {
                       onChange={(e) => {
                         const questId = e.target.value || null;
                         const quest = quests.find((item) => item.id === questId);
-                        const questMax = quest?.participantsMax ?? null;
+                        const questMax =
+                          quest != null
+                            ? quest.standardPriceParticipantsMax || 4
+                            : null;
                         const nextExtraParticipants =
                           questMax != null
                             ? Math.max(0, editingBooking.participantsCount - questMax)
@@ -3372,7 +3379,7 @@ export default function BookingsPage() {
                       value={editingBooking.participantsCount}
                       onChange={(e) => {
                         const nextParticipants = parseInt(e.target.value) || 1;
-                        const questMax = editingQuestMaxParticipants;
+                        const questMax = editingQuestStandardPriceParticipantsMax;
                         const nextExtraParticipants =
                           questMax != null
                             ? Math.max(0, nextParticipants - questMax)
@@ -3385,9 +3392,9 @@ export default function BookingsPage() {
                       }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                     />
-                    {editingQuestMaxParticipants != null && (
+                    {editingQuestStandardPriceParticipantsMax != null && (
                       <p className="text-xs text-gray-500 mt-1">
-                        В квесте до {editingQuestMaxParticipants} участников.
+                        Без доплаты до {editingQuestStandardPriceParticipantsMax} участников.
                       </p>
                     )}
                   </div>
@@ -3418,7 +3425,7 @@ export default function BookingsPage() {
                       value={editingBooking.extraParticipantsCount}
                       onChange={(e) => {
                         const nextExtra = parseInt(e.target.value, 10) || 0;
-                        const questMax = editingQuestMaxParticipants;
+                        const questMax = editingQuestStandardPriceParticipantsMax;
                         const nextParticipants =
                           questMax != null
                             ? questMax + nextExtra
@@ -3431,7 +3438,7 @@ export default function BookingsPage() {
                       }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                     />
-                    {editingQuestMaxParticipants != null && (
+                    {editingQuestStandardPriceParticipantsMax != null && (
                       <p className="text-xs text-gray-500 mt-1">
                         Авторасчёт: {autoExtraParticipants} доп. участников при текущем количестве.
                       </p>

@@ -11,6 +11,7 @@ public class QuestDto
     public string[] Phones { get; set; } = Array.Empty<string>();
     public int ParticipantsMin { get; set; }
     public int ParticipantsMax { get; set; }
+    public int StandardPriceParticipantsMax { get; set; }
     public int ExtraParticipantsMax { get; set; }
     public int ExtraParticipantPrice { get; set; }
     public string AgeRestriction { get; set; } = string.Empty;
