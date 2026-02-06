@@ -97,7 +97,7 @@ export default function BookingModal({
   const standardPriceParticipantsMax =
     quest.standardPriceParticipantsMax > 0
       ? quest.standardPriceParticipantsMax
-      : quest.participantsMax;
+      : 4;
   const extraParticipantsCount = Math.max(0, participantsCount - standardPriceParticipantsMax);
   const extraParticipantsTotal = extraParticipantsCount * Math.max(0, quest.extraParticipantPrice || 0);
   const selectedQuestExtraServicesTotal = questExtraServices

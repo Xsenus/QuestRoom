@@ -1915,7 +1915,7 @@ export default function BookingsPage() {
     if (!quest) {
       return null;
     }
-    return quest.standardPriceParticipantsMax || quest.participantsMax;
+    return quest.standardPriceParticipantsMax || 4;
   };
 
   const getExtraServicesTotal = (booking: Booking) => {
@@ -3194,7 +3194,7 @@ export default function BookingsPage() {
                         const quest = quests.find((item) => item.id === questId);
                         const questMax =
                           quest != null
-                            ? quest.standardPriceParticipantsMax || quest.participantsMax
+                            ? quest.standardPriceParticipantsMax || 4
                             : null;
                         const nextExtraParticipants =
                           questMax != null

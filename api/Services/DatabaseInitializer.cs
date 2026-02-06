@@ -280,7 +280,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     Phones = new[] { "8 (391) 294-59-50" },
                     ParticipantsMin = 2,
                     ParticipantsMax = 5,
-                    StandardPriceParticipantsMax = 5,
+                    StandardPriceParticipantsMax = 4,
                     AgeRestriction = "с 10 лет с родителями или нашим аниматором; с 16 лет самостоятельно",
                     AgeRating = "16+",
                     Price = 4500,

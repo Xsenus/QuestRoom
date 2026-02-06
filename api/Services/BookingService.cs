@@ -170,7 +170,7 @@ public class BookingService : IBookingService
                 .ToList() ?? new List<BookingExtraServiceCreateDto>();
             var standardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
                 ? quest.StandardPriceParticipantsMax
-                : quest.ParticipantsMax;
+                : 4;
             var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - standardPriceParticipantsMax);
             var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
             var extrasTotal = selectedExtras.Sum(service => service.Price)
@@ -1125,7 +1125,7 @@ public class BookingService : IBookingService
 
         var standardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
             ? quest.StandardPriceParticipantsMax
-            : quest.ParticipantsMax;
+            : 4;
         var extraParticipantsCount = Math.Max(0, booking.ParticipantsCount - standardPriceParticipantsMax);
         var pricingQuest = quest.ParentQuest ?? quest;
         var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);

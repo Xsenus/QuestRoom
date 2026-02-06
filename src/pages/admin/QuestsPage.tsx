@@ -140,7 +140,7 @@ export default function QuestsPage() {
       phones: [],
       participantsMin: 2,
       participantsMax: 6,
-      standardPriceParticipantsMax: 6,
+      standardPriceParticipantsMax: 4,
       extraParticipantsMax: 0,
       extraParticipantPrice: 0,
       ageRestriction: '',
@@ -184,8 +184,8 @@ export default function QuestsPage() {
         participantsMin: isCreating ? 2 : parent.participantsMin,
         participantsMax: isCreating ? 6 : parent.participantsMax,
         standardPriceParticipantsMax: isCreating
-          ? 6
-          : parent.standardPriceParticipantsMax || parent.participantsMax,
+          ? 4
+          : parent.standardPriceParticipantsMax || 4,
         extraParticipantsMax: parent.extraParticipantsMax,
         extraParticipantPrice: parent.extraParticipantPrice,
         ageRestriction: parent.ageRestriction,
@@ -273,7 +273,7 @@ export default function QuestsPage() {
         participantsMin: quest.participantsMin,
         participantsMax: quest.participantsMax,
         standardPriceParticipantsMax:
-          quest.standardPriceParticipantsMax || quest.participantsMax,
+          quest.standardPriceParticipantsMax || 4,
         extraParticipantsMax: quest.extraParticipantsMax,
         extraParticipantPrice: quest.extraParticipantPrice,
         ageRestriction: quest.ageRestriction,
@@ -1003,11 +1003,11 @@ export default function QuestsPage() {
                 </label>
                 <input
                   type="number"
-                  value={editingQuest.standardPriceParticipantsMax || 6}
+                  value={editingQuest.standardPriceParticipantsMax || 4}
                   onChange={(e) =>
                     setEditingQuest({
                       ...editingQuest,
-                      standardPriceParticipantsMax: parseInt(e.target.value) || 0,
+                      standardPriceParticipantsMax: parseInt(e.target.value) || 4,
                     })
                   }
                   disabled={isChildMode}
