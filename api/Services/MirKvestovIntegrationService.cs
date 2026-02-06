@@ -163,8 +163,9 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return new MirKvestovBookingResult(false, "Не заполнены обязательные поля");
         }
 
+        var bookingQuest = quest.ParentQuest ?? quest;
         var participantsCount = request.Players
-            ?? Math.Max(1, quest.ParticipantsMin);
+            ?? Math.Max(1, bookingQuest.ParticipantsMin);
 
         var notes = BuildNotes(request);
         try
@@ -172,7 +173,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             var aggregator = ResolveAggregator(request.Source);
             await _bookingService.CreateBookingAsync(new BookingCreateDto
             {
-                QuestId = quest.Id,
+                QuestId = bookingQuest.Id,
                 QuestScheduleId = schedule.Id,
                 CustomerName = customerName,
                 CustomerPhone = request.Phone ?? string.Empty,
