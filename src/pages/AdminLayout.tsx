@@ -23,6 +23,7 @@ import {
   Coffee,
   Images,
 } from 'lucide-react';
+import AdminNotificationHost from '../components/admin/AdminNotificationHost';
 
 export default function AdminLayout() {
   const { signOut, user, hasPermission, hasAnyPermission, isAdmin } = useAuth();
@@ -187,7 +188,7 @@ export default function AdminLayout() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 <ClipboardList className="w-5 h-5" />
-                {!isMenuCollapsed && 'Доп. услуги'}
+                {!isMenuCollapsed && 'Дополнительные услуги'}
               </NavLink>
             )}
             {canViewBookings && (
@@ -364,6 +365,7 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <AdminNotificationHost />
     </div>
   );
 }

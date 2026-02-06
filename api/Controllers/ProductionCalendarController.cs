@@ -11,12 +11,12 @@ namespace QuestRoomApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProductionCalendarController : ControllerBase
+public class ProductionCalendarController : PermissionAwareControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
 
-    public ProductionCalendarController(AppDbContext context, IHttpClientFactory httpClientFactory)
+    public ProductionCalendarController(AppDbContext context, IHttpClientFactory httpClientFactory) : base(context)
     {
         _context = context;
         _httpClientFactory = httpClientFactory;
@@ -44,11 +44,16 @@ public class ProductionCalendarController : ControllerBase
         return Ok(days);
     }
 
-    [Authorize(Roles = "admin")]
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<ProductionCalendarDayDto>> CreateDay(
         [FromBody] ProductionCalendarDayUpsertDto dto)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "calendar.production.edit"))
+        {
+            return Forbid();
+        }
         var existing = await _context.ProductionCalendarDays
             .FirstOrDefaultAsync(day => day.Date == dto.Date);
         if (existing != null)
@@ -78,10 +83,15 @@ public class ProductionCalendarController : ControllerBase
         return CreatedAtAction(nameof(GetDays), new { id = day.Id }, ToDto(day));
     }
 
-    [Authorize(Roles = "admin")]
+    [Authorize]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateDay(Guid id, [FromBody] ProductionCalendarDayUpsertDto dto)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "calendar.production.edit"))
+        {
+            return Forbid();
+        }
         var day = await _context.ProductionCalendarDays.FindAsync(id);
         if (day == null)
         {
@@ -98,10 +108,15 @@ public class ProductionCalendarController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "admin")]
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteDay(Guid id)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "calendar.production.delete"))
+        {
+            return Forbid();
+        }
         var day = await _context.ProductionCalendarDays.FindAsync(id);
         if (day == null)
         {
@@ -113,10 +128,15 @@ public class ProductionCalendarController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "admin")]
+    [Authorize]
     [HttpPost("import")]
     public async Task<IActionResult> Import([FromBody] ProductionCalendarImportDto dto)
     {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "calendar.production.edit"))
+        {
+            return Forbid();
+        }
         if (string.IsNullOrWhiteSpace(dto.SourceUrl))
         {
             return BadRequest("Не указан URL.");

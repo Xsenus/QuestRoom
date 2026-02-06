@@ -6,6 +6,8 @@ import { TeaZone, TeaZoneUpsert } from '../../lib/types';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 export default function TeaZonesAdminPage() {
   const { hasPermission } = useAuth();
@@ -19,6 +21,7 @@ export default function TeaZonesAdminPage() {
   );
   const [isCreating, setIsCreating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [zoneToDelete, setZoneToDelete] = useState<TeaZone | null>(null);
 
   useEffect(() => {
     loadTeaZones();
@@ -61,7 +64,7 @@ export default function TeaZonesAdminPage() {
         await api.updateTeaZone(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении зоны: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении зоны: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -82,19 +85,25 @@ export default function TeaZonesAdminPage() {
       await api.updateTeaZone(id, { ...payload, isActive: !zone.isActive });
       loadTeaZones();
     } catch (error) {
-      alert('Ошибка при изменении статуса: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении статуса: ' + (error as Error).message), tone: 'info' });
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (zone: TeaZone) => {
     if (!canDelete) return;
-    if (!confirm('Вы уверены, что хотите удалить эту зону?')) return;
+    setZoneToDelete(zone);
+  };
+
+  const confirmDelete = async () => {
+    if (!zoneToDelete) return;
 
     try {
-      await api.deleteTeaZone(id);
+      await api.deleteTeaZone(zoneToDelete.id);
       loadTeaZones();
     } catch (error) {
-      alert('Ошибка при удалении зоны: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении зоны: ' + (error as Error).message), tone: 'info' });
+    } finally {
+      setZoneToDelete(null);
     }
   };
 
@@ -123,7 +132,7 @@ export default function TeaZonesAdminPage() {
       const images = [...(editingZone.images || []), ...uploaded.map((img) => img.url)];
       setEditingZone({ ...editingZone, images });
     } catch (error) {
-      alert('Ошибка загрузки изображения: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка загрузки изображения: ' + (error as Error).message), tone: 'info' });
     } finally {
       setIsUploadingImage(false);
     }
@@ -413,7 +422,7 @@ export default function TeaZonesAdminPage() {
                 {zone.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
               </button>
               <button
-                onClick={() => handleDelete(zone.id)}
+                onClick={() => handleDelete(zone)}
                 disabled={!canDelete}
                 className={`p-2 rounded-lg transition-colors ${
                   canDelete
@@ -434,6 +443,37 @@ export default function TeaZonesAdminPage() {
             <p className="text-gray-500 mt-2">Создайте первую зону</p>
           </div>
         )}
+
+        <NotificationModal
+          isOpen={Boolean(zoneToDelete)}
+          title="Удаление зоны"
+          message={
+            zoneToDelete
+              ? `Вы уверены, что хотите удалить зону "${zoneToDelete.name}"?`
+              : ''
+          }
+          tone="info"
+          showToneLabel={false}
+          actions={(
+            <>
+              <button
+                type="button"
+                onClick={() => setZoneToDelete(null)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Удалить
+              </button>
+            </>
+          )}
+          onClose={() => setZoneToDelete(null)}
+        />
       </div>
     </div>
   );

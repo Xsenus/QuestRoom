@@ -6,6 +6,8 @@ import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 export default function PromotionsAdminPage() {
   const { hasPermission } = useAuth();
@@ -19,6 +21,7 @@ export default function PromotionsAdminPage() {
   >(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [promoToDelete, setPromoToDelete] = useState<Promotion | null>(null);
 
   useEffect(() => {
     loadPromotions();
@@ -68,7 +71,7 @@ export default function PromotionsAdminPage() {
         await api.updatePromotion(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении акции: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении акции: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -89,19 +92,25 @@ export default function PromotionsAdminPage() {
       await api.updatePromotion(id, { ...payload, isActive: !promo.isActive });
       loadPromotions();
     } catch (error) {
-      alert('Ошибка при изменении статуса: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении статуса: ' + (error as Error).message), tone: 'info' });
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (promo: Promotion) => {
     if (!canDelete) return;
-    if (!confirm('Вы уверены, что хотите удалить эту акцию?')) return;
+    setPromoToDelete(promo);
+  };
+
+  const confirmDelete = async () => {
+    if (!promoToDelete) return;
 
     try {
-      await api.deletePromotion(id);
+      await api.deletePromotion(promoToDelete.id);
       loadPromotions();
     } catch (error) {
-      alert('Ошибка при удалении акции: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении акции: ' + (error as Error).message), tone: 'info' });
+    } finally {
+      setPromoToDelete(null);
     }
   };
 
@@ -196,7 +205,7 @@ export default function PromotionsAdminPage() {
                         const uploaded = await api.uploadImage(file);
                         setEditingPromo({ ...editingPromo, imageUrl: uploaded.url });
                       } catch (error) {
-                        alert('Ошибка загрузки изображения: ' + (error as Error).message);
+                        showAdminNotification({ title: 'Уведомление', message: String('Ошибка загрузки изображения: ' + (error as Error).message), tone: 'info' });
                       } finally {
                         setIsUploadingImage(false);
                       }
@@ -509,7 +518,7 @@ export default function PromotionsAdminPage() {
                 {promo.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
               </button>
               <button
-                onClick={() => handleDelete(promo.id)}
+                onClick={() => handleDelete(promo)}
                 disabled={!canDelete}
                 className={`p-2 rounded-lg transition-colors ${
                   canDelete
@@ -530,6 +539,33 @@ export default function PromotionsAdminPage() {
             <p className="text-gray-500 mt-2">Создайте первую акцию</p>
           </div>
         )}
+
+        <NotificationModal
+          isOpen={Boolean(promoToDelete)}
+          title="Удаление акции"
+          message={promoToDelete ? `Вы уверены, что хотите удалить акцию "${promoToDelete.title}"?` : ''}
+          tone="info"
+          showToneLabel={false}
+          actions={(
+            <>
+              <button
+                type="button"
+                onClick={() => setPromoToDelete(null)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Удалить
+              </button>
+            </>
+          )}
+          onClose={() => setPromoToDelete(null)}
+        />
       </div>
     </div>
   );

@@ -6,6 +6,11 @@ import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 
+const ALWAYS_ENABLED_PERMISSIONS = ['gallery.view'] as const;
+
+const ensureAlwaysEnabledPermissions = (permissions: string[]) =>
+  Array.from(new Set([...permissions, ...ALWAYS_ENABLED_PERMISSIONS]));
+
 interface EditableRole {
   id: string;
   name: string;
@@ -30,6 +35,7 @@ export default function RolesPage() {
     message: string;
     tone: 'success' | 'error' | 'info';
   }>({ isOpen: false, title: '', message: '', tone: 'info' });
+  const [roleToDelete, setRoleToDelete] = useState<RoleDefinition | null>(null);
 
   useEffect(() => {
     loadData();
@@ -84,7 +90,7 @@ export default function RolesPage() {
       id: `role-${Date.now()}`,
       name: '',
       description: '',
-      permissions: [],
+      permissions: ensureAlwaysEnabledPermissions([]),
     });
     setIsCreating(true);
   };
@@ -94,7 +100,7 @@ export default function RolesPage() {
       id: role.id,
       name: role.name,
       description: role.description ?? '',
-      permissions: [...role.permissions],
+      permissions: ensureAlwaysEnabledPermissions([...role.permissions]),
       system: role.code === 'admin',
     });
     setIsCreating(false);
@@ -116,7 +122,7 @@ export default function RolesPage() {
         const created = await api.createRole({
           name: editor.name,
           description: editor.description,
-          permissions: editor.permissions,
+          permissions: ensureAlwaysEnabledPermissions(editor.permissions),
         });
         setRoles((prev) => [created, ...prev]);
         setSelectedId(created.id);
@@ -130,7 +136,7 @@ export default function RolesPage() {
         const updated = await api.updateRole(editor.id, {
           name: editor.name,
           description: editor.description,
-          permissions: editor.permissions,
+          permissions: ensureAlwaysEnabledPermissions(editor.permissions),
         });
         setRoles((prev) => prev.map((role) => (role.id === updated.id ? updated : role)));
         setNotification({
@@ -153,7 +159,7 @@ export default function RolesPage() {
     }
   };
 
-  const deleteRole = async (role: RoleDefinition) => {
+  const deleteRole = (role: RoleDefinition) => {
     if (role.isSystem) {
       setNotification({
         isOpen: true,
@@ -163,14 +169,26 @@ export default function RolesPage() {
       });
       return;
     }
-    if (!confirm(`Удалить роль ${role.name}?`)) return;
+
+    setRoleToDelete(role);
+  };
+
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return;
+
     try {
-      await api.deleteRole(role.id);
-      const remaining = roles.filter((item) => item.id !== role.id);
+      await api.deleteRole(roleToDelete.id);
+      const remaining = roles.filter((item) => item.id !== roleToDelete.id);
       setRoles(remaining);
-      if (selectedId === role.id) {
+      if (selectedId === roleToDelete.id) {
         setSelectedId(remaining[0]?.id ?? null);
       }
+      setNotification({
+        isOpen: true,
+        title: 'Роль удалена',
+        message: `Роль "${roleToDelete.name}" успешно удалена.`,
+        tone: 'success',
+      });
     } catch (deleteError) {
       setNotification({
         isOpen: true,
@@ -178,16 +196,25 @@ export default function RolesPage() {
         message: (deleteError as Error).message,
         tone: 'error',
       });
+    } finally {
+      setRoleToDelete(null);
     }
   };
 
   const togglePermission = (permissionId: string) => {
-    if (!editor) return;
+    if (
+      !editor
+      || ALWAYS_ENABLED_PERMISSIONS.includes(
+        permissionId as (typeof ALWAYS_ENABLED_PERMISSIONS)[number]
+      )
+    ) {
+      return;
+    }
     const hasPermission = editor.permissions.includes(permissionId);
     const nextPermissions = hasPermission
       ? editor.permissions.filter((id) => id !== permissionId)
       : [...editor.permissions, permissionId];
-    setEditor({ ...editor, permissions: nextPermissions });
+    setEditor({ ...editor, permissions: ensureAlwaysEnabledPermissions(nextPermissions) });
   };
 
   return (
@@ -472,10 +499,19 @@ export default function RolesPage() {
                           >
                             <input
                               type="checkbox"
-                              checked={editor.permissions.includes(permission.id)}
+                              checked={
+                                ALWAYS_ENABLED_PERMISSIONS.includes(
+                                  permission.id as (typeof ALWAYS_ENABLED_PERMISSIONS)[number]
+                                ) || editor.permissions.includes(permission.id)
+                              }
                               onChange={() => togglePermission(permission.id)}
                               className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                              disabled={editor.system}
+                              disabled={
+                                editor.system
+                                || ALWAYS_ENABLED_PERMISSIONS.includes(
+                                  permission.id as (typeof ALWAYS_ENABLED_PERMISSIONS)[number]
+                                )
+                              }
                             />
                             <span>
                               <span className="font-semibold text-gray-800">{permission.title}</span>
@@ -517,6 +553,37 @@ export default function RolesPage() {
           </div>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(roleToDelete)}
+        title="Удаление роли"
+        message={
+          roleToDelete
+            ? `Вы уверены, что хотите удалить роль "${roleToDelete.name}"?`
+            : ''
+        }
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setRoleToDelete(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteRole}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setRoleToDelete(null)}
+      />
 
       <NotificationModal
         isOpen={notification.isOpen}

@@ -10,8 +10,8 @@ namespace QuestRoomApi.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Roles = "admin")]
-public class AdminUsersController : ControllerBase
+[Authorize]
+public class AdminUsersController : PermissionAwareControllerBase
 {
     private static readonly HashSet<string> AllowedStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -24,7 +24,7 @@ public class AdminUsersController : ControllerBase
     private readonly AppDbContext _context;
     private readonly IAuthService _authService;
 
-    public AdminUsersController(AppDbContext context, IAuthService authService)
+    public AdminUsersController(AppDbContext context, IAuthService authService) : base(context)
     {
         _context = context;
         _authService = authService;
@@ -33,6 +33,11 @@ public class AdminUsersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<AdminUserDto>>> GetUsers()
     {
+        var currentUser = await GetCurrentUserAsync();
+        if (!HasPermission(currentUser, "users.view"))
+        {
+            return Forbid();
+        }
         var users = await _context.Users
             .Include(user => user.Role)
             .OrderByDescending(user => user.CreatedAt)
@@ -45,6 +50,11 @@ public class AdminUsersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<AdminUserDto>> GetUser(Guid id)
     {
+        var currentUser = await GetCurrentUserAsync();
+        if (!HasPermission(currentUser, "users.view"))
+        {
+            return Forbid();
+        }
         var user = await _context.Users
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Id == id);
@@ -60,6 +70,11 @@ public class AdminUsersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<AdminUserDto>> CreateUser([FromBody] AdminUserUpsertDto dto)
     {
+        var currentUser = await GetCurrentUserAsync();
+        if (!HasPermission(currentUser, "users.edit"))
+        {
+            return Forbid();
+        }
         if (!AllowedStatuses.Contains(dto.Status))
         {
             return BadRequest("Недопустимый статус пользователя.");
@@ -108,6 +123,11 @@ public class AdminUsersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<AdminUserDto>> UpdateUser(Guid id, [FromBody] AdminUserUpsertDto dto)
     {
+        var currentUser = await GetCurrentUserAsync();
+        if (!HasPermission(currentUser, "users.edit"))
+        {
+            return Forbid();
+        }
         if (!AllowedStatuses.Contains(dto.Status))
         {
             return BadRequest("Недопустимый статус пользователя.");
@@ -167,6 +187,11 @@ public class AdminUsersController : ControllerBase
     [HttpPut("{id}/status")]
     public async Task<ActionResult<AdminUserDto>> UpdateStatus(Guid id, [FromBody] AdminUserStatusDto dto)
     {
+        var currentUser = await GetCurrentUserAsync();
+        if (!HasPermission(currentUser, "users.edit"))
+        {
+            return Forbid();
+        }
         if (!AllowedStatuses.Contains(dto.Status))
         {
             return BadRequest("Недопустимый статус пользователя.");
@@ -193,6 +218,11 @@ public class AdminUsersController : ControllerBase
     [HttpPut("{id}/password")]
     public async Task<IActionResult> UpdatePassword(Guid id, [FromBody] AdminUserPasswordDto dto)
     {
+        var currentUser = await GetCurrentUserAsync();
+        if (!HasPermission(currentUser, "users.edit"))
+        {
+            return Forbid();
+        }
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
@@ -209,6 +239,11 @@ public class AdminUsersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
+        var currentUser = await GetCurrentUserAsync();
+        if (!HasPermission(currentUser, "users.delete"))
+        {
+            return Forbid();
+        }
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {

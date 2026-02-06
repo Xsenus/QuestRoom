@@ -5,6 +5,7 @@ import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Star } from 'lucide-react';
 import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 export default function ReviewsAdminPage() {
   const { hasPermission } = useAuth();
@@ -85,7 +86,7 @@ export default function ReviewsAdminPage() {
         await api.updateReview(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении отзыва: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении отзыва: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -106,7 +107,7 @@ export default function ReviewsAdminPage() {
       await api.updateReview(id, { ...payload, isVisible: !review.isVisible });
       loadReviews();
     } catch (error) {
-      alert('Ошибка при изменении видимости: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении видимости: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -117,7 +118,7 @@ export default function ReviewsAdminPage() {
       await api.updateReview(id, { ...payload, isFeatured: !review.isFeatured });
       loadReviews();
     } catch (error) {
-      alert('Ошибка при изменении статуса избранного: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении статуса избранного: ' + (error as Error).message), tone: 'info' });
     }
   };
 

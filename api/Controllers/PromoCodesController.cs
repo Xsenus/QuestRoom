@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +10,11 @@ namespace QuestRoomApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class PromoCodesController : ControllerBase
+public class PromoCodesController : PermissionAwareControllerBase
 {
     private readonly AppDbContext _context;
 
-    public PromoCodesController(AppDbContext context)
+    public PromoCodesController(AppDbContext context) : base(context)
     {
         _context = context;
     }
@@ -116,25 +114,6 @@ public class PromoCodesController : ControllerBase
         _context.PromoCodes.Remove(promo);
         await _context.SaveChangesAsync();
         return NoContent();
-    }
-
-    private async Task<User?> GetCurrentUserAsync()
-    {
-        var rawUserId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var userId))
-        {
-            return null;
-        }
-
-        return await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Id == userId);
-    }
-
-    private static bool HasPermission(User? user, string permission)
-    {
-        return user?.Role?.Permissions?.Contains(permission) == true;
     }
 
     private static PromoCodeDto ToDto(PromoCode promo)

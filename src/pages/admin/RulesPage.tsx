@@ -4,6 +4,8 @@ import { Rule, RuleUpsert } from '../../lib/types';
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 export default function RulesPage() {
   const { hasPermission } = useAuth();
@@ -23,6 +25,7 @@ export default function RulesPage() {
     const saved = localStorage.getItem('admin_rules_view');
     return saved === 'table' ? 'table' : 'cards';
   });
+  const [ruleToDelete, setRuleToDelete] = useState<Rule | null>(null);
 
   useEffect(() => {
     loadRules();
@@ -68,7 +71,7 @@ export default function RulesPage() {
         await api.updateRule(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении правила: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении правила: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -89,19 +92,25 @@ export default function RulesPage() {
       await api.updateRule(id, { ...payload, isVisible: !rule.isVisible });
       loadRules();
     } catch (error) {
-      alert('Ошибка при изменении видимости: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении видимости: ' + (error as Error).message), tone: 'info' });
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (rule: Rule) => {
     if (!canDelete) return;
-    if (!confirm('Вы уверены, что хотите удалить это правило?')) return;
+    setRuleToDelete(rule);
+  };
+
+  const confirmDelete = async () => {
+    if (!ruleToDelete) return;
 
     try {
-      await api.deleteRule(id);
+      await api.deleteRule(ruleToDelete.id);
       loadRules();
     } catch (error) {
-      alert('Ошибка при удалении правила: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении правила: ' + (error as Error).message), tone: 'info' });
+    } finally {
+      setRuleToDelete(null);
     }
   };
 
@@ -318,7 +327,7 @@ export default function RulesPage() {
                         )}
                       </button>
                       <button
-                        onClick={() => handleDelete(rule.id)}
+                        onClick={() => handleDelete(rule)}
                         disabled={!canDelete}
                         className={`p-2 rounded-lg transition-colors ${
                           canDelete
@@ -394,7 +403,7 @@ export default function RulesPage() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleDelete(rule.id)}
+                    onClick={() => handleDelete(rule)}
                     disabled={!canDelete}
                     className={`rounded-lg border border-transparent p-2 transition-colors ${
                       canDelete
@@ -418,6 +427,37 @@ export default function RulesPage() {
           <p className="text-gray-500 mt-2">Создайте первое правило</p>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(ruleToDelete)}
+        title="Удаление правила"
+        message={
+          ruleToDelete
+            ? `Вы уверены, что хотите удалить правило "${ruleToDelete.title}"?`
+            : ''
+        }
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setRuleToDelete(null)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setRuleToDelete(null)}
+      />
     </div>
   );
 }

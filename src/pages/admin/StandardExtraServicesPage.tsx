@@ -4,6 +4,7 @@ import { StandardExtraService, StandardExtraServiceUpsert } from '../../lib/type
 import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import NotificationModal from '../../components/NotificationModal';
 
 export default function StandardExtraServicesPage() {
   const { hasPermission } = useAuth();
@@ -16,6 +17,14 @@ export default function StandardExtraServicesPage() {
     (StandardExtraServiceUpsert & { id?: string }) | null
   >(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<StandardExtraService | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    tone: 'success' | 'error' | 'info';
+  }>({ isOpen: false, title: '', message: '', tone: 'info' });
 
   const loadServices = async () => {
     try {
@@ -63,7 +72,12 @@ export default function StandardExtraServicesPage() {
         await api.updateStandardExtraService(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении услуги: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось сохранить услугу',
+        message: (error as Error).message,
+        tone: 'error',
+      });
       return;
     }
 
@@ -84,19 +98,44 @@ export default function StandardExtraServicesPage() {
       await api.updateStandardExtraService(id, { ...payload, isActive: !service.isActive });
       loadServices();
     } catch (error) {
-      alert('Ошибка при изменении статуса: ' + (error as Error).message);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось изменить статус',
+        message: (error as Error).message,
+        tone: 'error',
+      });
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (service: StandardExtraService) => {
     if (!canDelete) return;
-    if (!confirm('Вы уверены, что хотите удалить эту услугу?')) return;
+    setServiceToDelete(service);
+  };
 
+  const confirmDelete = async () => {
+    if (!serviceToDelete) return;
+
+    setActionLoading(true);
     try {
-      await api.deleteStandardExtraService(id);
-      loadServices();
+      await api.deleteStandardExtraService(serviceToDelete.id);
+      await loadServices();
+      setServiceToDelete(null);
+      setNotification({
+        isOpen: true,
+        title: 'Услуга удалена',
+        message: `Дополнительная услуга «${serviceToDelete.title}» успешно удалена.`,
+        tone: 'success',
+      });
     } catch (error) {
-      alert('Ошибка при удалении услуги: ' + (error as Error).message);
+      setServiceToDelete(null);
+      setNotification({
+        isOpen: true,
+        title: 'Не удалось удалить услугу',
+        message: (error as Error).message,
+        tone: 'error',
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -109,10 +148,10 @@ export default function StandardExtraServicesPage() {
       <div className="max-w-3xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold mb-6">
-            {isCreating ? 'Создание доп. услуги' : 'Редактирование доп. услуги'}
+            {isCreating ? 'Создание дополнительной услуги' : 'Редактирование дополнительной услуги'}
           </h2>
 
-          <div className="space-y-6">
+          <fieldset disabled={!canEdit} className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Название услуги
@@ -177,30 +216,38 @@ export default function StandardExtraServicesPage() {
                 </label>
               </div>
             </div>
+          </fieldset>
 
-            <div className="flex gap-4 pt-4">
-              <button
-                onClick={handleSave}
-                disabled={!canEdit}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                  canEdit
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'cursor-not-allowed bg-red-200 text-white/80'
-                }`}
-              >
-                <Save className="w-5 h-5" />
-                Сохранить
-              </button>
-              <button
-                onClick={handleCancel}
-                className="flex items-center gap-2 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                <X className="w-5 h-5" />
-                Отмена
-              </button>
-            </div>
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleSave}
+              disabled={!canEdit}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                canEdit
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'cursor-not-allowed bg-red-200 text-white/80'
+              }`}
+            >
+              <Save className="w-5 h-5" />
+              Сохранить
+            </button>
+            <button
+              onClick={handleCancel}
+              className="flex items-center gap-2 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              <X className="w-5 h-5" />
+              Отмена
+            </button>
           </div>
         </div>
+
+        <NotificationModal
+          isOpen={notification.isOpen}
+          title={notification.title}
+          message={notification.message}
+          tone={notification.tone}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+        />
       </div>
     );
   }
@@ -209,8 +256,8 @@ export default function StandardExtraServicesPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Стандартные доп. услуги</h1>
-          <p className="text-gray-600">Управляйте базовым списком доп. услуг для квестов.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Дополнительные услуги</h1>
+          <p className="text-gray-600">Управляйте базовым списком дополнительных услуг.</p>
         </div>
         <button
           onClick={handleCreate}
@@ -228,34 +275,36 @@ export default function StandardExtraServicesPage() {
 
       {services.length === 0 ? (
         <div className="bg-white rounded-lg shadow-lg p-8 text-center text-gray-600">
-          Нет доп. услуг. Добавьте первую.
+          Нет дополнительных услуг. Добавьте первую.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {services.map((service) => (
             <div
               key={service.id}
-              className="bg-white rounded-lg shadow-md p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+              className={`flex h-full flex-col rounded-lg bg-white p-6 shadow-lg ${
+                !service.isActive ? 'opacity-60' : ''
+              }`}
             >
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{service.title}</h3>
-                <p className="text-sm text-gray-600">{service.price} ₽</p>
+              <div className="flex flex-wrap gap-2">
                 <span
-                  className={`inline-flex mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                    service.isActive
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
+                  className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    service.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
                   {service.isActive ? 'Активна' : 'Неактивна'}
                 </span>
                 {service.mandatoryForChildQuests && (
-                  <span className="ml-2 inline-flex mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                  <span className="inline-flex w-fit items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
                     Обязательна для детских
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <h3 className="mt-4 text-xl font-bold text-gray-900">{service.title}</h3>
+              <p className="mt-2 text-sm text-gray-600">{service.price} ₽</p>
+
+              <div className="mt-auto pt-4 flex justify-end gap-2">
                 <button
                   onClick={() =>
                     setEditingService({
@@ -266,56 +315,77 @@ export default function StandardExtraServicesPage() {
                       mandatoryForChildQuests: service.mandatoryForChildQuests,
                     })
                   }
-                  disabled={!canEdit}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                    canEdit
-                      ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                      : 'cursor-not-allowed bg-blue-50 text-blue-200'
-                  }`}
+                  className="p-2 rounded-lg transition-colors bg-blue-100 text-blue-600 hover:bg-blue-200"
+                  title="Редактировать"
                 >
-                  <Edit className="w-4 h-4" />
-                  Изменить
+                  <Edit className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => handleToggleActive(service)}
                   disabled={!canEdit}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                  className={`p-2 rounded-lg transition-colors ${
                     canEdit
-                      ? service.isActive
-                        ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                        : 'bg-green-50 text-green-700 hover:bg-green-100'
-                      : 'cursor-not-allowed bg-gray-50 text-gray-300'
+                      ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                      : 'cursor-not-allowed bg-yellow-50 text-yellow-200'
                   }`}
+                  title={service.isActive ? 'Деактивировать' : 'Активировать'}
                 >
-                  {service.isActive ? (
-                    <>
-                      <EyeOff className="w-4 h-4" />
-                      Деактивировать
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-4 h-4" />
-                      Активировать
-                    </>
-                  )}
+                  {service.isActive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                 </button>
                 <button
-                  onClick={() => handleDelete(service.id)}
+                  onClick={() => handleDelete(service)}
                   disabled={!canDelete}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                  className={`p-2 rounded-lg transition-colors ${
                     canDelete
-                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
                       : 'cursor-not-allowed bg-red-50 text-red-200'
                   }`}
+                  title="Удалить"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Удалить
+                  <Trash2 className="w-5 h-5" />
                 </button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <NotificationModal
+        isOpen={Boolean(serviceToDelete)}
+        title="Удалить услугу?"
+        message={`Удалить услугу «${serviceToDelete?.title || ''}»? Это действие необратимо.`}
+        tone="info"
+        showToneLabel={false}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setServiceToDelete(null)}
+              className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-300"
+              disabled={actionLoading}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+              disabled={actionLoading}
+            >
+              Удалить
+            </button>
+          </>
+        )}
+        onClose={() => setServiceToDelete(null)}
+      />
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        title={notification.title}
+        message={notification.message}
+        tone={notification.tone}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+      />
     </div>
   );
 }

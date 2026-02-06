@@ -8,12 +8,16 @@ import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 import { getOptimizedImageUrl } from '../../lib/imageOptimizations';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 type ActionModalState = {
   title: string;
   message: string;
   confirmLabel?: string;
   tone?: 'info' | 'danger';
+  successTitle?: string;
+  successMessage?: string;
+  errorTitle?: string;
   onConfirm: () => Promise<void> | void;
 };
 
@@ -100,16 +104,6 @@ export default function QuestsPage() {
     const match = trimmed.match(/^(\d+)/);
     return match ? match[1] : '';
   };
-  useEffect(() => {
-    loadQuests();
-    loadDurationBadges();
-    loadStandardExtraServices();
-  }, []);
-
-  if (!canView) {
-    return <AccessDenied />;
-  }
-
   const loadDurationBadges = async () => {
     try {
       const data = await api.getDurationBadges();
@@ -137,6 +131,21 @@ export default function QuestsPage() {
       console.error('Error loading standard extra services:', error);
     }
   };
+
+
+  useEffect(() => {
+    if (!canView) {
+      setLoading(false);
+      return;
+    }
+    loadQuests();
+    loadDurationBadges();
+    loadStandardExtraServices();
+  }, [canView]);
+
+  if (!canView) {
+    return <AccessDenied />;
+  }
 
   const handleCreate = () => {
     if (!canEdit) return;
@@ -252,9 +261,7 @@ export default function QuestsPage() {
       finalPayload.standardPriceParticipantsMax < finalPayload.participantsMin
       || finalPayload.standardPriceParticipantsMax > finalPayload.participantsMax
     ) {
-      alert(
-        '"Лимит без доплаты" должен быть не меньше "Мин. участников" и не больше "Макс. участников".'
-      );
+      showAdminNotification({ title: 'Уведомление', message: String('"Лимит без доплаты" должен быть не меньше "Мин. участников" и не больше "Макс. участников".'), tone: 'info' });
       return;
     }
 
@@ -265,7 +272,7 @@ export default function QuestsPage() {
         await api.updateQuest(id, finalPayload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении квеста: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении квеста: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -315,7 +322,7 @@ export default function QuestsPage() {
       await api.updateQuest(quest.id, payload);
       loadQuests();
     } catch (error) {
-      alert('Ошибка при изменении видимости: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении видимости: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -327,15 +334,25 @@ export default function QuestsPage() {
     setActionModal(modal);
   };
 
-  const performAction = async (action: () => Promise<void> | void) => {
+  const performAction = async () => {
+    if (!actionModal) return;
+
     setActionLoading(true);
     try {
-      await action();
+      await actionModal.onConfirm();
       closeActionModal();
+      if (actionModal.successTitle || actionModal.successMessage) {
+        setNotification({
+          isOpen: true,
+          title: actionModal.successTitle || 'Готово',
+          message: actionModal.successMessage || 'Действие выполнено успешно.',
+          tone: 'success',
+        });
+      }
     } catch (error) {
       setNotification({
         isOpen: true,
-        title: 'Не удалось удалить квест',
+        title: actionModal.errorTitle || 'Не удалось выполнить действие',
         message: (error as Error).message,
         tone: 'error',
       });
@@ -351,9 +368,12 @@ export default function QuestsPage() {
       message: `Удалить квест «${quest.title}»? Это действие необратимо.`,
       confirmLabel: 'Удалить',
       tone: 'danger',
+      successTitle: 'Квест удалён',
+      successMessage: `Квест «${quest.title}» успешно удалён.`,
+      errorTitle: 'Не удалось удалить квест',
       onConfirm: async () => {
         await api.deleteQuest(quest.id);
-        loadQuests();
+        await loadQuests();
       },
     });
   };
@@ -577,7 +597,7 @@ export default function QuestsPage() {
         images,
       });
     } catch (error) {
-      alert('Ошибка загрузки изображения: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка загрузки изображения: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -652,7 +672,8 @@ export default function QuestsPage() {
           </div>
 
           {activeTab === 'details' ? (
-          <div className="space-y-6">
+          <>
+          <fieldset disabled={!canEdit} className="space-y-6">
             <div className="border-b border-gray-200 pb-4">
               <h3 className="text-lg font-semibold text-gray-800">Основная информация</h3>
             </div>
@@ -1400,6 +1421,8 @@ export default function QuestsPage() {
               </label>
             </div>
 
+          </fieldset>
+
             <div className="flex gap-4 pt-4">
               <button
                 onClick={handleSave}
@@ -1421,7 +1444,7 @@ export default function QuestsPage() {
                 Отмена
               </button>
             </div>
-          </div>
+          </>
           ) : scheduleTabDisabled ? (
             <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
               {isChildMode ? (
@@ -1561,12 +1584,7 @@ export default function QuestsPage() {
               <div className="flex gap-2 ml-4">
                 <button
                   onClick={() => handleEditQuest(quest)}
-                  disabled={!canEdit}
-                  className={`p-2 rounded-lg transition-colors ${
-                    canEdit
-                      ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                      : 'cursor-not-allowed bg-blue-50 text-blue-200'
-                  }`}
+                  className="p-2 rounded-lg transition-colors bg-blue-100 text-blue-600 hover:bg-blue-200"
                   title="Редактировать"
                 >
                   <Edit className="w-5 h-5" />
@@ -1636,7 +1654,7 @@ export default function QuestsPage() {
                 Отмена
               </button>
               <button
-                onClick={() => performAction(actionModal.onConfirm)}
+                onClick={performAction}
                 className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors ${
                   actionModal.tone === 'danger'
                     ? 'bg-red-600 hover:bg-red-700'

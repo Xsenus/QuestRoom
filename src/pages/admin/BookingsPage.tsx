@@ -35,6 +35,7 @@ import {
 import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 type ActionModalState = {
   title: string;
@@ -1152,7 +1153,7 @@ export default function BookingsPage() {
     }
 
     if (!editingBooking.customerName || !editingBooking.customerPhone) {
-      alert('Укажите имя и телефон клиента.');
+      showAdminNotification({ title: 'Уведомление', message: String('Укажите имя и телефон клиента.'), tone: 'info' });
       return;
     }
 

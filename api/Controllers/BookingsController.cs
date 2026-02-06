@@ -1,26 +1,20 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Bookings;
-using QuestRoomApi.Models;
 using QuestRoomApi.Services;
 
 namespace QuestRoomApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class BookingsController : ControllerBase
+public class BookingsController : PermissionAwareControllerBase
 {
     private readonly IBookingService _bookingService;
-    private readonly AppDbContext _context;
 
-    public BookingsController(IBookingService bookingService, AppDbContext context)
+    public BookingsController(IBookingService bookingService, AppDbContext context) : base(context)
     {
         _bookingService = bookingService;
-        _context = context;
     }
 
     [Authorize]
@@ -104,25 +98,6 @@ public class BookingsController : ControllerBase
 
         var result = await _bookingService.ImportBookingsAsync(request.Content);
         return Ok(result);
-    }
-
-    private async Task<User?> GetCurrentUserAsync()
-    {
-        var rawUserId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var userId))
-        {
-            return null;
-        }
-
-        return await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Id == userId);
-    }
-
-    private static bool HasPermission(User? user, string permission)
-    {
-        return user?.Role?.Permissions?.Contains(permission) == true;
     }
 
     private static bool HasEditPayload(BookingUpdateDto booking)
