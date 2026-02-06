@@ -5,6 +5,7 @@ import { Plus, Save, X, Trash2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 const dayOptions = [
   { value: 1, label: 'Пн' },
@@ -166,7 +167,7 @@ export default function PricingRulesPage() {
     }
     if (!editingRule) return;
     if (editingRule.questIds.length === 0) {
-      alert('Выберите хотя бы один квест для правила.');
+      showAdminNotification({ title: 'Уведомление', message: String('Выберите хотя бы один квест для правила.'), tone: 'info' });
       return;
     }
 
@@ -180,7 +181,7 @@ export default function PricingRulesPage() {
       setEditingRule(null);
       loadRules();
     } catch (error) {
-      alert('Ошибка сохранения: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка сохранения: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -197,7 +198,7 @@ export default function PricingRulesPage() {
       await api.deletePricingRule(ruleToDeleteId);
       loadRules();
     } catch (error) {
-      alert('Ошибка удаления: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка удаления: ' + (error as Error).message), tone: 'info' });
     } finally {
       setRuleToDeleteId(null);
     }

@@ -7,6 +7,7 @@ import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 export default function TeaZonesAdminPage() {
   const { hasPermission } = useAuth();
@@ -63,7 +64,7 @@ export default function TeaZonesAdminPage() {
         await api.updateTeaZone(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении зоны: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении зоны: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -84,7 +85,7 @@ export default function TeaZonesAdminPage() {
       await api.updateTeaZone(id, { ...payload, isActive: !zone.isActive });
       loadTeaZones();
     } catch (error) {
-      alert('Ошибка при изменении статуса: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении статуса: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -100,7 +101,7 @@ export default function TeaZonesAdminPage() {
       await api.deleteTeaZone(zoneToDelete.id);
       loadTeaZones();
     } catch (error) {
-      alert('Ошибка при удалении зоны: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении зоны: ' + (error as Error).message), tone: 'info' });
     } finally {
       setZoneToDelete(null);
     }
@@ -131,7 +132,7 @@ export default function TeaZonesAdminPage() {
       const images = [...(editingZone.images || []), ...uploaded.map((img) => img.url)];
       setEditingZone({ ...editingZone, images });
     } catch (error) {
-      alert('Ошибка загрузки изображения: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка загрузки изображения: ' + (error as Error).message), tone: 'info' });
     } finally {
       setIsUploadingImage(false);
     }

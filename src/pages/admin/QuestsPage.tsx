@@ -8,6 +8,7 @@ import NotificationModal from '../../components/NotificationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 import { getOptimizedImageUrl } from '../../lib/imageOptimizations';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 type ActionModalState = {
   title: string;
@@ -260,9 +261,7 @@ export default function QuestsPage() {
       finalPayload.standardPriceParticipantsMax < finalPayload.participantsMin
       || finalPayload.standardPriceParticipantsMax > finalPayload.participantsMax
     ) {
-      alert(
-        '"Лимит без доплаты" должен быть не меньше "Мин. участников" и не больше "Макс. участников".'
-      );
+      showAdminNotification({ title: 'Уведомление', message: String('"Лимит без доплаты" должен быть не меньше "Мин. участников" и не больше "Макс. участников".'), tone: 'info' });
       return;
     }
 
@@ -273,7 +272,7 @@ export default function QuestsPage() {
         await api.updateQuest(id, finalPayload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении квеста: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении квеста: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -323,7 +322,7 @@ export default function QuestsPage() {
       await api.updateQuest(quest.id, payload);
       loadQuests();
     } catch (error) {
-      alert('Ошибка при изменении видимости: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении видимости: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -598,7 +597,7 @@ export default function QuestsPage() {
         images,
       });
     } catch (error) {
-      alert('Ошибка загрузки изображения: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка загрузки изображения: ' + (error as Error).message), tone: 'info' });
     }
   };
 

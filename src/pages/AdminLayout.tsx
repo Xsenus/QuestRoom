@@ -23,6 +23,7 @@ import {
   Coffee,
   Images,
 } from 'lucide-react';
+import AdminNotificationHost from '../components/admin/AdminNotificationHost';
 
 export default function AdminLayout() {
   const { signOut, user, hasPermission, hasAnyPermission, isAdmin } = useAuth();
@@ -364,6 +365,7 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <AdminNotificationHost />
     </div>
   );
 }

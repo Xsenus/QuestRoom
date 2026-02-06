@@ -17,6 +17,7 @@ import NotificationModal from '../../components/NotificationModal';
 import type { CertificateOrder, CertificateOrderUpdate, Settings } from '../../lib/types';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 const statusLabels: Record<string, string> = {
   pending: 'Новая',
@@ -151,7 +152,7 @@ export default function CertificateOrdersAdminPage() {
       );
       setEditingOrder(null);
     } catch (saveError) {
-      alert('Ошибка при сохранении заявки: ' + (saveError as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении заявки: ' + (saveError as Error).message), tone: 'info' });
     } finally {
       setIsSaving(false);
     }

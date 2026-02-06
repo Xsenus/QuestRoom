@@ -5,6 +5,7 @@ import { Edit, PlusCircle, Save, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 const getToday = () => new Date().toISOString().split('T')[0];
 
@@ -91,7 +92,7 @@ export default function PromoCodesPage() {
     if (!canEdit) return;
     try {
       if (isDateRangeInvalid) {
-        alert('Дата начала не может быть позже даты окончания.');
+        showAdminNotification({ title: 'Уведомление', message: String('Дата начала не может быть позже даты окончания.'), tone: 'info' });
         return;
       }
       if (editingId) {
@@ -103,7 +104,7 @@ export default function PromoCodesPage() {
       resetForm();
       closeModal();
     } catch (error) {
-      alert('Ошибка при сохранении промокода: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении промокода: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -134,7 +135,7 @@ export default function PromoCodesPage() {
       await api.deletePromoCode(promoToDelete.id);
       await loadPromoCodes();
     } catch (error) {
-      alert('Ошибка при удалении: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении: ' + (error as Error).message), tone: 'info' });
     } finally {
       setPromoToDelete(null);
     }

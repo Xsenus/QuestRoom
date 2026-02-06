@@ -6,6 +6,7 @@ import { Plus, Edit, Eye, EyeOff, Trash2, Save, X, Upload } from 'lucide-react';
 import ImageLibraryPanel from '../../components/admin/ImageLibraryPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 type ActionModalState = {
   title: string;
@@ -70,7 +71,7 @@ export default function CertificatesPage() {
         await api.updateCertificate(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении сертификата: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении сертификата: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -91,7 +92,7 @@ export default function CertificatesPage() {
       await api.updateCertificate(id, { ...payload, isVisible: !cert.isVisible });
       loadCertificates();
     } catch (error) {
-      alert('Ошибка при изменении видимости: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении видимости: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -109,7 +110,7 @@ export default function CertificatesPage() {
       await action();
       closeActionModal();
     } catch (error) {
-      alert('Ошибка при удалении сертификата: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении сертификата: ' + (error as Error).message), tone: 'info' });
     } finally {
       setActionLoading(false);
     }
@@ -329,7 +330,7 @@ export default function CertificatesPage() {
                           const uploaded = await api.uploadImage(file);
                           setEditingCert({ ...editingCert, imageUrl: uploaded.url });
                         } catch (error) {
-                          alert('Ошибка загрузки изображения: ' + (error as Error).message);
+                          showAdminNotification({ title: 'Уведомление', message: String('Ошибка загрузки изображения: ' + (error as Error).message), tone: 'info' });
                         } finally {
                           setIsUploadingImage(false);
                         }

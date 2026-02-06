@@ -4,6 +4,7 @@ import { AboutInfo, AboutInfoUpdate } from '../../lib/types';
 import { Save } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 export default function AboutPage() {
   const { hasPermission } = useAuth();
@@ -42,9 +43,9 @@ export default function AboutPage() {
 
     try {
       await api.updateAboutInfo(payload);
-      alert('Информация успешно сохранена');
+      showAdminNotification({ title: 'Уведомление', message: String('Информация успешно сохранена'), tone: 'info' });
     } catch (error) {
-      alert('Ошибка при сохранении: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении: ' + (error as Error).message), tone: 'info' });
     }
 
     setSaving(false);

@@ -5,6 +5,7 @@ import { Plus, Edit, Eye, EyeOff, Trash2, Save, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 export default function RulesPage() {
   const { hasPermission } = useAuth();
@@ -70,7 +71,7 @@ export default function RulesPage() {
         await api.updateRule(id, payload);
       }
     } catch (error) {
-      alert('Ошибка при сохранении правила: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении правила: ' + (error as Error).message), tone: 'info' });
       return;
     }
 
@@ -91,7 +92,7 @@ export default function RulesPage() {
       await api.updateRule(id, { ...payload, isVisible: !rule.isVisible });
       loadRules();
     } catch (error) {
-      alert('Ошибка при изменении видимости: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при изменении видимости: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -107,7 +108,7 @@ export default function RulesPage() {
       await api.deleteRule(ruleToDelete.id);
       loadRules();
     } catch (error) {
-      alert('Ошибка при удалении правила: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении правила: ' + (error as Error).message), tone: 'info' });
     } finally {
       setRuleToDelete(null);
     }

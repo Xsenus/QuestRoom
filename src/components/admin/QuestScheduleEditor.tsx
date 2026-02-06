@@ -8,6 +8,7 @@ import {
 } from '../../lib/types';
 import { CalendarClock, Plus, Save, Trash2, X } from 'lucide-react';
 import NotificationModal from '../NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 const dayOptions = [
   { value: 1, label: 'Понедельник' },
@@ -127,7 +128,7 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
       });
       await loadWeeklySlots();
     } catch (error) {
-      alert('Ошибка сохранения слота: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка сохранения слота: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -142,7 +143,7 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
           await api.deleteQuestWeeklySlot(slotId);
           await loadWeeklySlots();
         } catch (error) {
-          alert('Ошибка удаления слота: ' + (error as Error).message);
+          showAdminNotification({ title: 'Уведомление', message: String('Ошибка удаления слота: ' + (error as Error).message), tone: 'info' });
         }
       },
     });
@@ -151,12 +152,12 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
   const handleAddSlot = async () => {
     if (!canEdit) return;
     if (!newSlotTime) {
-      alert('Укажите время.');
+      showAdminNotification({ title: 'Уведомление', message: String('Укажите время.'), tone: 'info' });
       return;
     }
     const price = Number(newSlotPrice);
     if (!Number.isFinite(price)) {
-      alert('Укажите цену.');
+      showAdminNotification({ title: 'Уведомление', message: String('Укажите цену.'), tone: 'info' });
       return;
     }
 
@@ -171,7 +172,7 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
       setNewSlotPrice('');
       await loadWeeklySlots();
     } catch (error) {
-      alert('Ошибка добавления слота: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка добавления слота: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -190,7 +191,7 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
           : String(updated.holidayPrice)
       );
     } catch (error) {
-      alert('Ошибка сохранения настроек: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка сохранения настроек: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -244,7 +245,7 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
     if (!canEdit) return;
     if (!editingOverride) return;
     if (!editingOverride.date) {
-      alert('Укажите дату.');
+      showAdminNotification({ title: 'Уведомление', message: String('Укажите дату.'), tone: 'info' });
       return;
     }
 
@@ -264,7 +265,7 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
       setEditingOverride(null);
       await loadOverrides();
     } catch (error) {
-      alert('Ошибка сохранения: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка сохранения: ' + (error as Error).message), tone: 'info' });
     }
   };
 
@@ -279,7 +280,7 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
           await api.deleteQuestScheduleOverride(overrideId);
           await loadOverrides();
         } catch (error) {
-          alert('Ошибка удаления: ' + (error as Error).message);
+          showAdminNotification({ title: 'Уведомление', message: String('Ошибка удаления: ' + (error as Error).message), tone: 'info' });
         }
       },
     });

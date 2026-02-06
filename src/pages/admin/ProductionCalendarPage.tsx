@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
 import NotificationModal from '../../components/NotificationModal';
+import { showAdminNotification } from '../../lib/adminNotifications';
 
 type DayType = 'holidays' | 'preholidays' | 'nowork';
 
@@ -176,7 +177,7 @@ export default function ProductionCalendarPage() {
       await loadDays();
       setIsModalOpen(false);
     } catch (error) {
-      alert('Ошибка при сохранении дня: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при сохранении дня: ' + (error as Error).message), tone: 'info' });
     } finally {
       setSaving(false);
     }
@@ -194,7 +195,7 @@ export default function ProductionCalendarPage() {
       await api.deleteProductionCalendarDay(dayToDeleteId);
       await loadDays();
     } catch (error) {
-      alert('Ошибка при удалении: ' + (error as Error).message);
+      showAdminNotification({ title: 'Уведомление', message: String('Ошибка при удалении: ' + (error as Error).message), tone: 'info' });
     } finally {
       setDayToDeleteId(null);
     }
