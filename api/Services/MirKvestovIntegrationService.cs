@@ -163,7 +163,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
             return new MirKvestovBookingResult(false, "Не заполнены обязательные поля");
         }
 
-        var bookingQuest = quest.ParentQuest ?? quest;
+        var bookingQuest = quest;
         var participantsCount = request.Players
             ?? Math.Max(1, bookingQuest.ParticipantsMin);
 
