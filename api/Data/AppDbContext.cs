@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<CertificateOrder> CertificateOrders { get; set; }
     public DbSet<AboutInfo> AboutInfos { get; set; }
     public DbSet<Settings> Settings { get; set; }
+    public DbSet<BlacklistEntry> BlacklistEntries { get; set; }
     public DbSet<PromoCode> PromoCodes { get; set; }
     public DbSet<ProductionCalendarDay> ProductionCalendarDays { get; set; }
     public DbSet<ApiRequestLog> ApiRequestLogs { get; set; }

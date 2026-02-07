@@ -404,6 +404,8 @@ export default function SettingsPage() {
             ? data.mirKvestovScheduleFields
             : defaultMirKvestovScheduleFields,
         mirKvestovApiLoggingEnabled: data.mirKvestovApiLoggingEnabled ?? false,
+        blockBlacklistedSiteBookings: data.blockBlacklistedSiteBookings ?? false,
+        blockBlacklistedApiBookings: data.blockBlacklistedApiBookings ?? false,
       });
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -477,6 +479,8 @@ export default function SettingsPage() {
         mirKvestovScheduleDaysAhead: 14,
         mirKvestovScheduleFields: defaultMirKvestovScheduleFields,
         mirKvestovApiLoggingEnabled: false,
+        blockBlacklistedSiteBookings: false,
+        blockBlacklistedApiBookings: false,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -557,6 +561,8 @@ export default function SettingsPage() {
       mirKvestovScheduleDaysAhead: settings.mirKvestovScheduleDaysAhead,
       mirKvestovScheduleFields: settings.mirKvestovScheduleFields,
       mirKvestovApiLoggingEnabled: settings.mirKvestovApiLoggingEnabled,
+      blockBlacklistedSiteBookings: settings.blockBlacklistedSiteBookings,
+      blockBlacklistedApiBookings: settings.blockBlacklistedApiBookings,
     };
 
     try {
@@ -1615,6 +1621,28 @@ export default function SettingsPage() {
               <p className="mt-2 text-xs text-gray-500">
                 Используется для расчета времени закрытия слотов на публичной странице.
               </p>
+            </div>
+            <div className="md:col-span-2 space-y-3 rounded-lg border border-red-100 bg-red-50/40 p-4">
+              <label className="flex items-center gap-2 text-sm text-gray-800">
+                <input
+                  type="checkbox"
+                  checked={settings.blockBlacklistedSiteBookings}
+                  onChange={(e) =>
+                    setSettings({ ...settings, blockBlacklistedSiteBookings: e.target.checked })
+                  }
+                />
+                Запретить бронирование с сайта для контактов из черного списка
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-800">
+                <input
+                  type="checkbox"
+                  checked={settings.blockBlacklistedApiBookings}
+                  onChange={(e) =>
+                    setSettings({ ...settings, blockBlacklistedApiBookings: e.target.checked })
+                  }
+                />
+                Запретить бронирование по API для контактов из черного списка
+              </label>
             </div>
             <div className="md:col-span-2">
               <h4 className="text-lg font-semibold text-gray-900">Цвета статусов брони</h4>

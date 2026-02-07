@@ -117,6 +117,8 @@ export type Settings = {
   mirKvestovScheduleDaysAhead: number;
   mirKvestovScheduleFields: string[];
   mirKvestovApiLoggingEnabled: boolean;
+  blockBlacklistedSiteBookings: boolean;
+  blockBlacklistedApiBookings: boolean;
   updatedAt: string;
 };
 
@@ -156,6 +158,8 @@ export type Booking = {
   notes: string | null;
   aggregatorUniqueId: string | null;
   extraServices: BookingExtraService[];
+  blacklistMatches: BlacklistMatch[];
+  isBlacklisted: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -218,6 +222,32 @@ export type BookingUpdate = Partial<
     | 'aggregatorUniqueId'
   >
 >;
+
+
+export type BlacklistMatch = {
+  id: string;
+  name: string;
+  comment: string | null;
+  matchedPhones: string[];
+  matchedEmails: string[];
+};
+
+export type BlacklistEntry = {
+  id: string;
+  name: string;
+  phones: string[];
+  emails: string[];
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BlacklistEntryUpsert = {
+  name: string;
+  phones: string[];
+  emails: string[];
+  comment: string | null;
+};
 
 export type QuestExtraService = {
   id: string;

@@ -108,6 +108,9 @@ export default function BookingModal({
     0
   );
   const extraServicesTotal = selectedQuestExtraServicesTotal + missingMandatoryServicesTotal;
+  const supportPhone = quest.phones?.[0] || '';
+  const supportPhoneLabel = supportPhone || 'нашему телефону';
+
   const totalPrice =
     formData.paymentType === 'certificate'
       ? extraServicesTotal
@@ -248,16 +251,34 @@ export default function BookingModal({
     } catch (error) {
       console.error('Error creating booking:', error);
       const errorMessage = (error as Error).message || '';
-      const isSlotBooked = errorMessage.toLowerCase().includes('уже забронировано');
+      const lowerMessage = errorMessage.toLowerCase();
+      const isSlotBooked = lowerMessage.includes('уже забронировано');
+      const isBlacklistedBlocked = lowerMessage.includes('бронирование запрещено');
 
       setNotification({
         isOpen: true,
-        title: isSlotBooked ? 'Это время уже занято' : 'Не удалось создать бронь',
-        tone: isSlotBooked ? 'info' : 'error',
-        action: isSlotBooked ? 'conflict' : 'error',
+        title: isSlotBooked
+          ? 'Это время уже занято'
+          : isBlacklistedBlocked
+            ? 'Бронирование недоступно'
+            : 'Не удалось создать бронь',
+        tone: isSlotBooked || isBlacklistedBlocked ? 'info' : 'error',
+        action: isSlotBooked || isBlacklistedBlocked ? 'conflict' : 'error',
         message: isSlotBooked
           ? 'Похоже, другой пользователь уже забронировал выбранное время. Пожалуйста, выберите другой слот.'
-          : 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
+          : isBlacklistedBlocked
+            ? (
+              <span>
+                Бронирование временно недоступно. Если это ошибка, позвоните нам{' '}
+                {supportPhone ? (
+                  <a href={`tel:${supportPhone}`} className="font-semibold text-red-600 underline">{supportPhoneLabel}</a>
+                ) : (
+                  supportPhoneLabel
+                )}
+                .
+              </span>
+            )
+            : 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
       });
     } finally {
       setSubmitting(false);

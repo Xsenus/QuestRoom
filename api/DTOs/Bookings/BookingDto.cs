@@ -27,4 +27,6 @@ public class BookingDto
     public List<BookingExtraServiceDto> ExtraServices { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public List<BlacklistMatchDto> BlacklistMatches { get; set; } = new();
+    public bool IsBlacklisted { get; set; }
 }

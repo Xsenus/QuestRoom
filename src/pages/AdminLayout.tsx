@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Coffee,
   Images,
+  ShieldBan,
 } from 'lucide-react';
 import AdminNotificationHost from '../components/admin/AdminNotificationHost';
 
@@ -56,6 +57,7 @@ export default function AdminLayout() {
   const canViewUsers = hasPermission('users.view');
   const canViewRoles = isAdmin();
   const canViewSettings = hasPermission('settings.view');
+  const canViewBlacklist = hasPermission('blacklist.view');
 
   const handleLogout = async () => {
     await signOut();
@@ -85,6 +87,7 @@ export default function AdminLayout() {
     if (path.startsWith('/adm/users')) return 'users.view';
     if (path.startsWith('/adm/roles')) return 'roles.view';
     if (path.startsWith('/adm/settings')) return 'settings.view';
+    if (path.startsWith('/adm/blacklist')) return 'blacklist.view';
     return null;
   }, [location.pathname]);
 
@@ -350,6 +353,12 @@ export default function AdminLayout() {
               <NavLink to="/adm/roles" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
                 <ShieldCheck className="w-5 h-5" />
                 {!isMenuCollapsed && 'Роли и права'}
+              </NavLink>
+            )}
+            {canViewBlacklist && (
+              <NavLink to="/adm/blacklist" className={navLinkClass} onClick={() => setIsMenuOpen(false)}>
+                <ShieldBan className="w-5 h-5" />
+                {!isMenuCollapsed && 'Черный список'}
               </NavLink>
             )}
             {canViewSettings && (

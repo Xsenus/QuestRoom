@@ -174,6 +174,16 @@ public static class PermissionCatalog
                 new PermissionDefinition("users.delete", "Удаление", "Удалять пользователей.")
             }),
         new PermissionGroupDefinition(
+            "blacklist",
+            "Черный список",
+            "Управление черным списком контактов.",
+            new[]
+            {
+                new PermissionDefinition("blacklist.view", "Просмотр", "Просматривать черный список."),
+                new PermissionDefinition("blacklist.edit", "Редактирование", "Добавлять и изменять записи черного списка."),
+                new PermissionDefinition("blacklist.delete", "Удаление", "Удалять записи черного списка.")
+            }),
+        new PermissionGroupDefinition(
             "settings",
             "Настройки",
             "Системные настройки проекта.",
@@ -208,6 +218,8 @@ public static class PermissionCatalog
                 "bookings.edit",
                 "bookings.confirm",
                 "bookings.import",
+                "blacklist.view",
+                "blacklist.edit",
                 "certificates.view",
                 "certificates.edit",
                 "certificate-orders.view",
@@ -245,6 +257,7 @@ public static class PermissionCatalog
             new[]
             {
                 "bookings.view",
+                "blacklist.view",
                 "certificates.view",
                 "certificate-orders.view",
                 "reviews.view"

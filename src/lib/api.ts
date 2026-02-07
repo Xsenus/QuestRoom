@@ -3,6 +3,9 @@ import type {
   AboutInfoUpdate,
   AdminUser,
   AdminUserUpsert,
+  BlacklistEntry,
+  BlacklistEntryUpsert,
+  BlacklistMatch,
   Booking,
   BookingCreate,
   BookingImportResult,
@@ -577,6 +580,37 @@ class ApiClient {
     return this.request('/bookings/import', {
       method: 'POST',
       body: JSON.stringify({ content }),
+    });
+  }
+
+  async getBlacklistEntries(): Promise<BlacklistEntry[]> {
+    return this.request('/blacklist');
+  }
+
+  async createBlacklistEntry(payload: BlacklistEntryUpsert): Promise<BlacklistEntry> {
+    return this.request('/blacklist', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateBlacklistEntry(id: string, payload: BlacklistEntryUpsert) {
+    return this.request(`/blacklist/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteBlacklistEntry(id: string) {
+    return this.request(`/blacklist/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async checkBlacklist(phone?: string | null, email?: string | null): Promise<BlacklistMatch[]> {
+    return this.request('/blacklist/check', {
+      method: 'POST',
+      body: JSON.stringify({ phone, email }),
     });
   }
 
