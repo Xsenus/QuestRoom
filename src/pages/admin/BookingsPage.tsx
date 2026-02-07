@@ -1962,7 +1962,29 @@ export default function BookingsPage() {
       if (!isCompactTableView) {
         return column.width;
       }
-      return Math.max(96, Math.round(column.width * 0.75));
+      const compactWidthByColumn: Partial<Record<BookingTableColumnKey, number>> = {
+        status: 132,
+        bookingDate: 140,
+        createdAt: 140,
+        quest: 150,
+        questPrice: 120,
+        participants: 108,
+        extraParticipants: 112,
+        extraParticipantPrice: 120,
+        extraServices: 160,
+        extraServicesPrice: 128,
+        aggregator: 124,
+        promoCode: 120,
+        totalPrice: 110,
+        customer: 200,
+        notes: 180,
+        actions: 168,
+      };
+      const compactWidth = compactWidthByColumn[column.key];
+      if (compactWidth) {
+        return compactWidth;
+      }
+      return Math.max(110, Math.round(column.width * 0.82));
     },
     [isCompactTableView]
   );
@@ -2898,13 +2920,13 @@ export default function BookingsPage() {
               className="bg-white rounded-lg shadow w-full max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]"
             >
               {isCompactTableView && (
-                <div className="px-3 pt-3 pb-1 space-y-2">
-                  <p className="text-xs text-gray-500">
-                    На мобильном отображаются все колонки. Используйте быстрый переход, чтобы
-                    моментально перейти к нужной колонке.
+                <div className="m-3 rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+                  <p className="text-xs leading-relaxed text-gray-600">
+                    Показаны все колонки. Выберите нужную, чтобы быстро прокрутить таблицу без
+                    длинного горизонтального скролла.
                   </p>
                   <label className="flex items-center gap-2 text-xs text-gray-600">
-                    <span className="font-semibold">Перейти к колонке:</span>
+                    <span className="font-semibold">Перейти к:</span>
                     <select
                       defaultValue=""
                       onChange={(event) => {
@@ -2913,9 +2935,9 @@ export default function BookingsPage() {
                           scrollToColumn(key);
                         }
                       }}
-                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                      className="h-8 flex-1 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-700"
                     >
-                      <option value="" disabled>Выберите…</option>
+                      <option value="" disabled>Выберите колонку…</option>
                       {visibleTableColumns.map((column) => (
                         <option key={column.key} value={column.key}>
                           {column.label}
@@ -2926,7 +2948,7 @@ export default function BookingsPage() {
                 </div>
               )}
               <table
-                className={`table-fixed min-w-max ${isCompactTableView ? 'text-xs' : 'text-sm'}`}
+                className={`table-fixed min-w-max ${isCompactTableView ? 'text-[11px]' : 'text-sm'}`}
                 style={{
                   width: totalTableWidth ? `${totalTableWidth}px` : '100%',
                   minWidth: '100%',
@@ -2946,11 +2968,7 @@ export default function BookingsPage() {
                           }}
                           className={`group relative ${isCompactTableView ? 'px-2 py-2' : 'px-4 py-3'} font-semibold ${
                             column.key === 'actions' ? 'text-right' : 'text-left'
-                          } ${column.locked ? 'cursor-default' : 'cursor-move'} ${
-                            isCompactTableView && column.key === 'status'
-                              ? 'sticky left-0 z-10 bg-gray-50 shadow-[2px_0_4px_rgba(0,0,0,0.06)]'
-                              : ''
-                          }`}
+                          } ${column.locked ? 'cursor-default' : 'cursor-move'}`}
                           style={{ width: getRenderedColumnWidth(column) }}
                           draggable={!column.locked && !isCompactTableView}
                           onDragStart={handleColumnDragStart(column.key, column.locked || isCompactTableView)}
@@ -3014,11 +3032,7 @@ export default function BookingsPage() {
                       {visibleTableColumns.map((column) => (
                         <td
                           key={column.key}
-                          className={`${isCompactTableView ? 'px-2 py-2 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : 'text-gray-700'} ${
-                            isCompactTableView && column.key === 'status'
-                              ? 'sticky left-0 z-[1] bg-white shadow-[2px_0_4px_rgba(0,0,0,0.04)]'
-                              : ''
-                          }`}
+                          className={`${isCompactTableView ? 'px-2 py-2.5 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : 'text-gray-700'}`}
                           style={{ width: getRenderedColumnWidth(column) }}
                         >
                           {renderTableCell(booking, column.key, isCompactTableView)}
