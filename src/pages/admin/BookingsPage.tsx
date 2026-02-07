@@ -1955,6 +1955,7 @@ export default function BookingsPage() {
     [tableColumns]
   );
   const isCompactTableView = viewMode === 'table' && isMobileViewport;
+  const isCompactCardsView = viewMode === 'cards' && isMobileViewport;
   const getRenderedColumnWidth = useCallback(
     (column: BookingTableColumnConfig) => {
       if (!isCompactTableView) {
@@ -2596,7 +2597,7 @@ export default function BookingsPage() {
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
+            <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>
               {(
                 [
                   { key: 'all', label: 'Все', count: statusCounts.all },
@@ -2655,7 +2656,7 @@ export default function BookingsPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>
             <button
               onClick={() => setQuestFilter('all')}
               className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
@@ -3006,14 +3007,14 @@ export default function BookingsPage() {
               {paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="rounded-lg shadow p-4 border border-transparent"
+                  className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'}`}
                   style={getCardStyle(booking.status)}
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className={`flex items-start justify-between ${isCompactCardsView ? 'mb-2' : 'mb-3'}`}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <span
-                          className="px-3 py-1 rounded-full text-xs font-bold border"
+                          className={`rounded-full text-xs font-bold border ${isCompactCardsView ? 'px-2 py-0.5' : 'px-3 py-1'}`}
                           style={getStatusBadgeStyle(booking.status)}
                         >
                           {highlightText(getStatusText(booking.status), highlightTerms)}
@@ -3022,7 +3023,7 @@ export default function BookingsPage() {
                           ID: {booking.id.slice(0, 8)}
                         </span>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className={`font-semibold text-gray-900 ${isCompactCardsView ? 'text-xs' : 'text-sm'}`}>
                         {highlightText(getQuestTitle(booking), highlightTerms)}
                       </p>
                       <p className="text-xs text-gray-500">
@@ -3031,18 +3032,18 @@ export default function BookingsPage() {
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">{renderActionButtons(booking)}</div>
+                    <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>{renderActionButtons(booking)}</div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 ${isCompactCardsView ? 'gap-x-3 gap-y-1.5 text-xs' : 'gap-x-4 gap-y-2 text-sm'}`}>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <User className="w-4 h-4 text-red-600" />
+                      <User className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                       <span className="font-semibold">Клиент:</span>
                       <span>{highlightText(booking.customerName, highlightTerms)}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Phone className="w-4 h-4 text-red-600" />
+                      <Phone className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                       <span className="font-semibold">Телефон:</span>
                       <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
                         {highlightText(booking.customerPhone, highlightTerms)}
@@ -3050,29 +3051,29 @@ export default function BookingsPage() {
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Calendar className="w-4 h-4 text-red-600" />
+                      <Calendar className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                       <span className="font-semibold">Дата:</span>
                       <span>{highlightText(formatBookingDateTime(booking), highlightTerms)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Calendar className="w-4 h-4 text-red-600" />
+                      <Calendar className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                       <span className="font-semibold">Создано:</span>
                       <span>{highlightText(formatDateTime(booking.createdAt), highlightTerms)}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Users className="w-4 h-4 text-red-600" />
+                      <Users className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                       <span className="font-semibold">Участников:</span>
                       <span>{booking.participantsCount}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Users className="w-4 h-4 text-red-600" />
-                      <span className="font-semibold">Доп. участников:</span>
+                      <Users className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+                      <span className="font-semibold whitespace-nowrap">Доп. участ.:</span>
                       <span>{booking.extraParticipantsCount ?? 0}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <BadgeDollarSign className="w-4 h-4 text-red-600" />
-                      <span className="font-semibold">Цена доп. участников:</span>
+                      <BadgeDollarSign className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+                      <span className="font-semibold whitespace-nowrap">Доп. уч. цена:</span>
                       <span>
                         {getExtraParticipantPrice(booking) != null
                           ? `${getExtraParticipantPrice(booking)} ₽`
@@ -3080,7 +3081,7 @@ export default function BookingsPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <BadgeDollarSign className="w-4 h-4 text-red-600" />
+                      <BadgeDollarSign className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                       <span className="font-semibold">Сумма:</span>
                       <span>{highlightText(`${booking.totalPrice} ₽`, highlightTerms)}</span>
                     </div>
@@ -3101,7 +3102,7 @@ export default function BookingsPage() {
                     )}
                     {booking.customerEmail && (
                       <div className="flex items-center gap-2 text-gray-700">
-                        <Mail className="w-4 h-4 text-red-600" />
+                        <Mail className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                         <span className="font-semibold">Email:</span>
                       <a
                         href={`mailto:${booking.customerEmail}`}
@@ -3111,7 +3112,7 @@ export default function BookingsPage() {
                       </a>
                     </div>
                     )}
-                    <div className="flex items-start gap-2 text-gray-700 sm:col-span-2">
+                    <div className={`flex items-start gap-2 text-gray-700 sm:col-span-2 ${isCompactCardsView ? 'pt-1' : ''}`}>
                       <span className="font-semibold">Доп. услуги:</span>
                       <div>
                         {booking.extraServices?.length ? (
@@ -3125,22 +3126,24 @@ export default function BookingsPage() {
                         ) : (
                           <span>—</span>
                         )}
-                        <div className="text-xs text-gray-500 mt-1">
-                          Цена доп. услуг:{' '}
-                          {getExtraServicesTotal(booking)
-                            ? `${getExtraServicesTotal(booking)} ₽`
-                            : '—'}
-                        </div>
+                        {!isCompactCardsView && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Цена доп. услуг:{' '}
+                            {getExtraServicesTotal(booking)
+                              ? `${getExtraServicesTotal(booking)} ₽`
+                              : '—'}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className={`border-t border-gray-200 ${isCompactCardsView ? 'mt-2 pt-2' : 'mt-3 pt-3'}`}>
                     <div className="flex items-start gap-2 text-gray-700">
-                      <FileText className="w-4 h-4 text-red-600 mt-1" />
+                      <FileText className={`text-red-600 mt-1 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
                       <div>
                         <span className="font-semibold">Комментарий:</span>
-                        <p className="text-xs mt-1">
+                        <p className={`mt-1 ${isCompactCardsView ? 'text-[11px] leading-4' : 'text-xs'}`}>
                           {highlightText(booking.notes || '—', highlightTerms)}
                         </p>
                       </div>
