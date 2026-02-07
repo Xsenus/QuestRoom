@@ -15,7 +15,7 @@ import AdminLayout from './pages/AdminLayout';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import QuestsPage from './pages/admin/QuestsPage';
 import SettingsPage from './pages/admin/SettingsPage';
-import BookingsPage from './pages/admin/BookingsPage';
+import BookingsPage, { BookingsMobileTablePage } from './pages/admin/BookingsPage';
 import BookingsImportPage from './pages/admin/BookingsImportPage';
 import RulesAdminPage from './pages/admin/RulesPage';
 import AboutAdminPage from './pages/admin/AboutPage';
@@ -85,6 +85,7 @@ function App() {
                 <Route path="overview" element={<AdminHomePage />} />
                 <Route path="quests" element={<QuestsPage />} />
                 <Route path="bookings" element={<BookingsPage />} />
+                <Route path="bookings/mobile-table" element={<BookingsMobileTablePage />} />
                 <Route path="bookings/import" element={<BookingsImportPage />} />
                 <Route path="pricing" element={<PricingRulesPage />} />
                 <Route path="production-calendar" element={<ProductionCalendarPage />} />

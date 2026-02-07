@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import {
   Booking,
@@ -133,13 +134,18 @@ const bookingPageSizeOptions = [5, 10, 25, 50, 100];
 const defaultBookingPageSize = 10;
 const mobileTableMediaQuery = '(max-width: 767px)';
 
-export default function BookingsPage() {
+type BookingsPageProps = {
+  rawMobileTable?: boolean;
+};
+
+function BookingsPage({ rawMobileTable = false }: BookingsPageProps) {
   const { user, hasPermission } = useAuth();
   const canView = hasPermission('bookings.view');
   const canEdit = hasPermission('bookings.edit');
   const canDelete = hasPermission('bookings.delete');
   const canConfirm = hasPermission('bookings.confirm');
   const canViewPromoCodes = hasPermission('promo-codes.view');
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [countBookings, setCountBookings] = useState<Booking[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -180,8 +186,6 @@ export default function BookingsPage() {
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const tableContainerRef = useRef<HTMLDivElement | null>(null);
-  const tableHeaderRefs = useRef<Partial<Record<BookingTableColumnKey, HTMLTableCellElement | null>>>({});
   const [notification, setNotification] = useState<{
     isOpen: boolean;
     title: string;
@@ -525,6 +529,12 @@ export default function BookingsPage() {
       localStorage.setItem('admin_bookings_view', viewMode);
     }
   }, [viewMode]);
+
+  useEffect(() => {
+    if (rawMobileTable && viewMode !== 'table') {
+      setViewMode('table');
+    }
+  }, [rawMobileTable, viewMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -1956,7 +1966,7 @@ export default function BookingsPage() {
     () => tableColumns.filter((column) => column.visible),
     [tableColumns]
   );
-  const isCompactTableView = viewMode === 'table' && isMobileViewport;
+  const isCompactTableView = viewMode === 'table' && isMobileViewport && !rawMobileTable;
   const getRenderedColumnWidth = useCallback(
     (column: BookingTableColumnConfig) => {
       if (!isCompactTableView) {
@@ -1994,15 +2004,7 @@ export default function BookingsPage() {
     [getRenderedColumnWidth, visibleTableColumns]
   );
 
-  const scrollToColumn = useCallback((columnKey: BookingTableColumnKey) => {
-    const container = tableContainerRef.current;
-    const header = tableHeaderRefs.current[columnKey];
-    if (!container || !header) {
-      return;
-    }
-    const left = header.offsetLeft - 12;
-    container.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
-  }, []);
+
 
   const availableSlots = useMemo(() => {
     if (!editingBooking?.bookingDate) {
@@ -2633,16 +2635,18 @@ export default function BookingsPage() {
               ))}
             </div>
             <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
-                  viewMode === 'cards'
-                    ? 'bg-white text-gray-900 shadow'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Карточки
-              </button>
+              {!rawMobileTable && (
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                    viewMode === 'cards'
+                      ? 'bg-white text-gray-900 shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Карточки
+                </button>
+              )}
               <button
                 onClick={() => setViewMode('table')}
                 className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
@@ -2654,6 +2658,22 @@ export default function BookingsPage() {
                 Таблица
               </button>
             </div>
+            {isMobileViewport && !rawMobileTable && (
+              <button
+                onClick={() => navigate('/adm/bookings/mobile-table')}
+                className="px-3 py-1.5 text-sm font-semibold rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+              >
+                Таблица 1:1 (моб.)
+              </button>
+            )}
+            {rawMobileTable && (
+              <button
+                onClick={() => navigate('/adm/bookings')}
+                className="px-3 py-1.5 text-sm font-semibold rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+              >
+                Вернуться к обычному виду
+              </button>
+            )}
             {viewMode === 'table' && (
               <button
                 onClick={() => setIsColumnsModalOpen(true)}
@@ -2916,37 +2936,8 @@ export default function BookingsPage() {
 
           {viewMode === 'table' ? (
             <div
-              ref={tableContainerRef}
               className="bg-white rounded-lg shadow w-full max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]"
             >
-              {isCompactTableView && (
-                <div className="m-3 rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
-                  <p className="text-xs leading-relaxed text-gray-600">
-                    Показаны все колонки. Выберите нужную, чтобы быстро прокрутить таблицу без
-                    длинного горизонтального скролла.
-                  </p>
-                  <label className="flex items-center gap-2 text-xs text-gray-600">
-                    <span className="font-semibold">Перейти к:</span>
-                    <select
-                      defaultValue=""
-                      onChange={(event) => {
-                        const key = event.target.value as BookingTableColumnKey;
-                        if (key) {
-                          scrollToColumn(key);
-                        }
-                      }}
-                      className="h-8 flex-1 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-700"
-                    >
-                      <option value="" disabled>Выберите колонку…</option>
-                      {visibleTableColumns.map((column) => (
-                        <option key={column.key} value={column.key}>
-                          {column.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              )}
               <table
                 className={`table-fixed min-w-max ${isCompactTableView ? 'text-[11px]' : 'text-sm'}`}
                 style={{
@@ -2963,9 +2954,6 @@ export default function BookingsPage() {
                       return (
                         <th
                           key={column.key}
-                          ref={(element) => {
-                            tableHeaderRefs.current[column.key] = element;
-                          }}
                           className={`group relative ${isCompactTableView ? 'px-2 py-2' : 'px-4 py-3'} font-semibold ${
                             column.key === 'actions' ? 'text-right' : 'text-left'
                           } ${column.locked ? 'cursor-default' : 'cursor-move'}`}
@@ -4019,3 +4007,9 @@ export default function BookingsPage() {
     </div>
   );
 }
+
+export function BookingsMobileTablePage() {
+  return <BookingsPage rawMobileTable />;
+}
+
+export default BookingsPage;
