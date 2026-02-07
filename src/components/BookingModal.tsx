@@ -108,6 +108,9 @@ export default function BookingModal({
     0
   );
   const extraServicesTotal = selectedQuestExtraServicesTotal + missingMandatoryServicesTotal;
+  const supportPhone = quest.phones?.[0] || '';
+  const supportPhoneLabel = supportPhone || 'нашему телефону';
+
   const totalPrice =
     formData.paymentType === 'certificate'
       ? extraServicesTotal
@@ -264,7 +267,17 @@ export default function BookingModal({
         message: isSlotBooked
           ? 'Похоже, другой пользователь уже забронировал выбранное время. Пожалуйста, выберите другой слот.'
           : isBlacklistedBlocked
-            ? 'Невозможно оформить бронирование: контакт найден в черном списке и в настройках включен запрет для этого канала.'
+            ? (
+              <span>
+                Бронирование временно недоступно. Если это ошибка, позвоните нам{' '}
+                {supportPhone ? (
+                  <a href={`tel:${supportPhone}`} className="font-semibold text-red-600 underline">{supportPhoneLabel}</a>
+                ) : (
+                  supportPhoneLabel
+                )}
+                .
+              </span>
+            )
             : 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
       });
     } finally {

@@ -1548,8 +1548,14 @@ export default function BookingsPage() {
     };
   };
 
-  const getRowStyle = (status: Booking['status']) => {
-    const color = getStatusColorValue(status);
+  const getRowStyle = (booking: Booking) => {
+    const color = getStatusColorValue(booking.status);
+    if (booking.isBlacklisted) {
+      return {
+        backgroundColor: '#fff1f2',
+        boxShadow: 'inset 6px 0 0 #dc2626',
+      };
+    }
     return {
       backgroundColor: hexToRgba(color, 0.18),
       boxShadow: `inset 4px 0 0 ${hexToRgba(color, 0.7)}`,
@@ -2622,7 +2628,11 @@ export default function BookingsPage() {
             <div className="font-semibold text-gray-900 truncate">
               {highlightText(booking.customerName, highlightTerms)}
             </div>
-            {booking.isBlacklisted && <div className="text-xs text-red-600">⚠ В черном списке</div>}
+            {booking.isBlacklisted && (
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                ⛔ ЧС: бронирование ограничено
+              </div>
+            )}
             <div className="truncate">
               <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
                 {highlightText(booking.customerPhone, highlightTerms)}
@@ -3086,7 +3096,7 @@ export default function BookingsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {paginatedBookings.map((booking) => (
-                    <tr key={booking.id} style={getRowStyle(booking.status)}>
+                    <tr key={booking.id} style={getRowStyle(booking)}>
                       {visibleTableColumns.map((column) => (
                         <td
                           key={column.key}
@@ -3144,7 +3154,7 @@ export default function BookingsPage() {
                     <div className={`text-gray-700 ${isCompactCardsView ? 'rounded-md bg-white/40 px-2 py-1.5' : 'flex items-center gap-2'}`}>
                       {!isCompactCardsView && <User className="w-4 h-4 text-red-600" />}
                       <p className={`font-semibold ${isCompactCardsView ? 'text-[11px] text-gray-500' : ''}`}>Клиент</p>
-                      <p className={isCompactCardsView ? 'font-medium text-gray-900' : ''}>{highlightText(booking.customerName, highlightTerms)}</p>{booking.isBlacklisted && <p className="text-xs text-red-600">⚠ В черном списке</p>}
+                      <p className={isCompactCardsView ? 'font-medium text-gray-900' : ''}>{highlightText(booking.customerName, highlightTerms)}</p>{booking.isBlacklisted && <p className="mt-1 inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">⛔ ЧС: ограничение</p>}
                     </div>
 
                     <div className={`text-gray-700 ${isCompactCardsView ? 'rounded-md bg-white/40 px-2 py-1.5' : 'flex items-center gap-2'}`}>
