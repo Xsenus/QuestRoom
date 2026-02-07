@@ -116,7 +116,43 @@ export default function BookingModal({
       ? extraServicesTotal
       : slot.price + extraParticipantsTotal + extraServicesTotal;
 
+  const formatPhoneNumber = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    const normalizedDigits = digits.startsWith('7') || digits.startsWith('8')
+      ? digits.slice(1)
+      : digits;
+    const limitedDigits = normalizedDigits.slice(0, 10);
+
+    let formatted = '+7';
+
+    if (limitedDigits.length > 0) {
+      formatted += '-(' + limitedDigits.slice(0, 3);
+    }
+    if (limitedDigits.length >= 3) {
+      formatted += ')';
+    }
+    if (limitedDigits.length > 3) {
+      formatted += '-' + limitedDigits.slice(3, 6);
+    }
+    if (limitedDigits.length > 6) {
+      formatted += '-' + limitedDigits.slice(6, 8);
+    }
+    if (limitedDigits.length > 8) {
+      formatted += '-' + limitedDigits.slice(8, 10);
+    }
+
+    return formatted;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.target.name === 'phone') {
+      setFormData({
+        ...formData,
+        phone: formatPhoneNumber(e.target.value),
+      });
+      return;
+    }
+
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -316,7 +352,9 @@ export default function BookingModal({
                 value={formData.phone}
                 onChange={handleChange}
                 required
-                placeholder="ТЕЛЕФОН *"
+                placeholder="+7-(___)-___-__-__"
+                inputMode="numeric"
+                pattern="\+7-\(\d{3}\)-\d{3}-\d{2}-\d{2}"
                 className="w-full px-3 py-2 text-sm bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
               <input
