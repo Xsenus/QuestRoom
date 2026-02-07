@@ -151,7 +151,10 @@ public class BookingService : IBookingService
             }
 
             var pricingQuest = quest.ParentQuest ?? quest;
-            var maxParticipants = quest.ParticipantsMax;
+            var standardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
+                ? quest.StandardPriceParticipantsMax
+                : 4;
+            var maxParticipants = ResolveParticipantsMax(quest, standardPriceParticipantsMax);
             if (dto.ParticipantsCount < quest.ParticipantsMin || dto.ParticipantsCount > maxParticipants)
             {
                 throw new InvalidOperationException("Количество участников выходит за допустимый диапазон.");
@@ -168,9 +171,6 @@ public class BookingService : IBookingService
                 })
                 .Where(service => !string.IsNullOrWhiteSpace(service.Title))
                 .ToList() ?? new List<BookingExtraServiceCreateDto>();
-            var standardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
-                ? quest.StandardPriceParticipantsMax
-                : 4;
             var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - standardPriceParticipantsMax);
             var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
             var extrasTotal = selectedExtras.Sum(service => service.Price)
@@ -1126,7 +1126,8 @@ public class BookingService : IBookingService
         var standardPriceParticipantsMax = quest.StandardPriceParticipantsMax > 0
             ? quest.StandardPriceParticipantsMax
             : 4;
-        if (booking.ParticipantsCount < quest.ParticipantsMin || booking.ParticipantsCount > quest.ParticipantsMax)
+        var maxParticipants = ResolveParticipantsMax(quest, standardPriceParticipantsMax);
+        if (booking.ParticipantsCount < quest.ParticipantsMin || booking.ParticipantsCount > maxParticipants)
         {
             throw new InvalidOperationException("Количество участников выходит за допустимый диапазон.");
         }
@@ -1150,5 +1151,22 @@ public class BookingService : IBookingService
             totalPrice = Math.Max(0, totalPrice - discountAmount);
         }
         booking.TotalPrice = totalPrice;
+    }
+
+    private static int ResolveParticipantsMax(Quest quest, int standardPriceParticipantsMax)
+    {
+        var maxParticipants = quest.ParticipantsMax > 0
+            ? quest.ParticipantsMax
+            : standardPriceParticipantsMax;
+        if (quest.ExtraParticipantsMax > 0)
+        {
+            var extraParticipantsTotal = standardPriceParticipantsMax + quest.ExtraParticipantsMax;
+            if (extraParticipantsTotal > maxParticipants)
+            {
+                maxParticipants = extraParticipantsTotal;
+            }
+        }
+
+        return maxParticipants;
     }
 }
