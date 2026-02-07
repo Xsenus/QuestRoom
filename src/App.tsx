@@ -33,6 +33,7 @@ import PricingRulesPage from './pages/admin/PricingRulesPage';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import ProductionCalendarPage from './pages/admin/ProductionCalendarPage';
 import StandardExtraServicesPage from './pages/admin/StandardExtraServicesPage';
+import BlacklistPage from './pages/admin/BlacklistPage';
 import { api } from './lib/api';
 import { Settings } from './lib/types';
 
@@ -101,6 +102,7 @@ function App() {
                 <Route path="users" element={<UsersPage />} />
                 <Route path="roles" element={<RolesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="blacklist" element={<BlacklistPage />} />
               </Route>
             </Routes>
           </ProtectedRoute>

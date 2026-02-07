@@ -72,4 +72,6 @@ public class SettingsUpdateDto
     public int MirKvestovScheduleDaysAhead { get; set; }
     public List<string>? MirKvestovScheduleFields { get; set; }
     public bool? MirKvestovApiLoggingEnabled { get; set; }
+    public bool? BlockBlacklistedSiteBookings { get; set; }
+    public bool? BlockBlacklistedApiBookings { get; set; }
 }

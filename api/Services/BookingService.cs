@@ -18,7 +18,7 @@ public interface IBookingService
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
         string? sort = null);
-    Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
+    Task<BookingDto> CreateBookingAsync(BookingCreateDto dto, bool isAdminRequest = false);
     Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto);
     Task<bool> DeleteBookingAsync(Guid id);
     Task<BookingImportResultDto> ImportBookingsAsync(string content);
@@ -29,16 +29,19 @@ public class BookingService : IBookingService
     private readonly AppDbContext _context;
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IBlacklistService _blacklistService;
     private static readonly CultureInfo ImportCulture = new("ru-RU");
 
     public BookingService(
         AppDbContext context,
         IEmailNotificationService emailNotificationService,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IBlacklistService blacklistService)
     {
         _context = context;
         _emailNotificationService = emailNotificationService;
         _scopeFactory = scopeFactory;
+        _blacklistService = blacklistService;
     }
 
     public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync(
@@ -102,13 +105,20 @@ public class BookingService : IBookingService
 
         var orderedQuery = ApplySorting(query, sort);
 
-        return await orderedQuery
-            .Select(b => ToDto(b))
-            .ToListAsync();
+        var items = await orderedQuery.ToListAsync();
+        var dtos = items.Select(ToDto).ToList();
+        await EnrichWithBlacklistAsync(dtos);
+        return dtos;
     }
 
-    public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto)
+    public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto, bool isAdminRequest = false)
     {
+        var isApiBooking = !string.IsNullOrWhiteSpace(dto.Aggregator);
+        if (!isAdminRequest && await _blacklistService.IsBookingBlockedAsync(dto.CustomerPhone, dto.CustomerEmail, isApiBooking))
+        {
+            throw new InvalidOperationException("Бронирование запрещено для этого контакта.");
+        }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         Booking? booking = null;
         BookingDto result;
@@ -268,6 +278,7 @@ public class BookingService : IBookingService
 
             await transaction.CommitAsync();
             result = ToDto(booking);
+            await EnrichWithBlacklistAsync(new List<BookingDto> { result });
         }
         catch
         {
@@ -544,6 +555,16 @@ public class BookingService : IBookingService
         };
     }
 
+
+    private async Task EnrichWithBlacklistAsync(List<BookingDto> bookings)
+    {
+        foreach (var booking in bookings)
+        {
+            var matches = await _blacklistService.FindMatchesAsync(booking.CustomerPhone, booking.CustomerEmail);
+            booking.BlacklistMatches = matches.ToList();
+            booking.IsBlacklisted = booking.BlacklistMatches.Count > 0;
+        }
+    }
     public async Task<BookingImportResultDto> ImportBookingsAsync(string content)
     {
         var result = new BookingImportResultDto();

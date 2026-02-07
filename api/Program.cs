@@ -70,6 +70,7 @@ builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
 builder.Services.AddScoped<IUserPreferencesService, UserPreferencesService>();
+builder.Services.AddScoped<IBlacklistService, BlacklistService>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<BookingStatusMonitorService>();
 

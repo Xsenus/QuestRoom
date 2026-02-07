@@ -149,6 +149,7 @@ export default function BookingsPage() {
   const [defaultQuestId, setDefaultQuestId] = useState<string>('');
   const [scheduleSlots, setScheduleSlots] = useState<QuestSchedule[]>([]);
   const [createResult, setCreateResult] = useState<string>('');
+  const [contactBlacklistWarning, setContactBlacklistWarning] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [bookingFormMode, setBookingFormMode] = useState<'create' | 'edit' | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
@@ -939,6 +940,42 @@ export default function BookingsPage() {
     setListDateToInput(listDateTo);
   };
 
+
+  const checkEditingContactBlacklist = async (phone: string, email: string) => {
+    try {
+      const matches = await api.checkBlacklist(phone || null, email || null);
+      if (matches.length > 0) {
+        setContactBlacklistWarning('Контакт найден в черном списке. Проверьте перед сохранением.');
+      } else {
+        setContactBlacklistWarning('');
+      }
+    } catch {
+      setContactBlacklistWarning('');
+    }
+  };
+
+  const addEditingContactToBlacklist = async () => {
+    if (!editingBooking) return;
+    const name = editingBooking.customerName.trim() || 'Контакт из брони';
+    await api.createBlacklistEntry({
+      name,
+      phones: editingBooking.customerPhone ? [editingBooking.customerPhone] : [],
+      emails: editingBooking.customerEmail ? [editingBooking.customerEmail] : [],
+      comment: `Добавлено из бронирования ${editingBooking.id}`,
+    });
+    setContactBlacklistWarning('Контакт добавлен в черный список.');
+    await loadBookings(false);
+  };
+
+
+  useEffect(() => {
+    if (!editingBooking) {
+      setContactBlacklistWarning('');
+      return;
+    }
+    void checkEditingContactBlacklist(editingBooking.customerPhone, editingBooking.customerEmail);
+  }, [editingBooking?.id]);
+
   const handleCreateBooking = async () => {
     if (!canEdit) {
       return;
@@ -963,7 +1000,7 @@ export default function BookingsPage() {
     }
 
     try {
-      await api.createBooking({
+      const createdBooking = await api.createBooking({
         questId: editingBooking.questId,
         questScheduleId: slot.id,
         customerName: editingBooking.customerName,
@@ -982,7 +1019,7 @@ export default function BookingsPage() {
         paymentType: editingBooking.paymentType || undefined,
         promoCode: editingBooking.promoCode || null,
       });
-      setCreateResult('Бронь создана.');
+      setCreateResult(createdBooking.isBlacklisted ? 'Бронь создана (контакт в черном списке).' : 'Бронь создана.');
       setEditingBooking(null);
       setBookingFormMode(null);
       await loadBookings(false);
@@ -2524,6 +2561,7 @@ export default function BookingsPage() {
             <div className="font-semibold text-gray-900 truncate">
               {highlightText(booking.customerName, highlightTerms)}
             </div>
+            {booking.isBlacklisted && <div className="text-xs text-red-600">⚠ В черном списке</div>}
             <div className="truncate">
               <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
                 {highlightText(booking.customerPhone, highlightTerms)}
@@ -3045,7 +3083,7 @@ export default function BookingsPage() {
                     <div className={`text-gray-700 ${isCompactCardsView ? 'rounded-md bg-white/40 px-2 py-1.5' : 'flex items-center gap-2'}`}>
                       {!isCompactCardsView && <User className="w-4 h-4 text-red-600" />}
                       <p className={`font-semibold ${isCompactCardsView ? 'text-[11px] text-gray-500' : ''}`}>Клиент</p>
-                      <p className={isCompactCardsView ? 'font-medium text-gray-900' : ''}>{highlightText(booking.customerName, highlightTerms)}</p>
+                      <p className={isCompactCardsView ? 'font-medium text-gray-900' : ''}>{highlightText(booking.customerName, highlightTerms)}</p>{booking.isBlacklisted && <p className="text-xs text-red-600">⚠ В черном списке</p>}
                     </div>
 
                     <div className={`text-gray-700 ${isCompactCardsView ? 'rounded-md bg-white/40 px-2 py-1.5' : 'flex items-center gap-2'}`}>
@@ -3339,6 +3377,19 @@ export default function BookingsPage() {
                   </div>
                 </div>
 
+                {contactBlacklistWarning && (
+                  <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {contactBlacklistWarning}
+                    <button
+                      type="button"
+                      className="ml-3 rounded border border-red-300 px-2 py-1 text-xs"
+                      onClick={() => void addEditingContactToBlacklist()}
+                    >
+                      Добавить/обновить в черном списке
+                    </button>
+                  </div>
+                )}
+
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -3412,6 +3463,19 @@ export default function BookingsPage() {
                   </div>
                 </div>
 
+                {contactBlacklistWarning && (
+                  <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {contactBlacklistWarning}
+                    <button
+                      type="button"
+                      className="ml-3 rounded border border-red-300 px-2 py-1 text-xs"
+                      onClick={() => void addEditingContactToBlacklist()}
+                    >
+                      Добавить/обновить в черном списке
+                    </button>
+                  </div>
+                )}
+
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -3433,9 +3497,11 @@ export default function BookingsPage() {
                     <input
                       type="text"
                       value={editingBooking.customerPhone}
-                      onChange={(e) =>
-                        setEditingBooking({ ...editingBooking, customerPhone: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const nextPhone = e.target.value;
+                        setEditingBooking({ ...editingBooking, customerPhone: nextPhone });
+                        void checkEditingContactBlacklist(nextPhone, editingBooking.customerEmail);
+                      }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                     />
                   </div>
@@ -3446,13 +3512,28 @@ export default function BookingsPage() {
                     <input
                       type="email"
                       value={editingBooking.customerEmail}
-                      onChange={(e) =>
-                        setEditingBooking({ ...editingBooking, customerEmail: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const nextEmail = e.target.value;
+                        setEditingBooking({ ...editingBooking, customerEmail: nextEmail });
+                        void checkEditingContactBlacklist(editingBooking.customerPhone, nextEmail);
+                      }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                     />
                   </div>
                 </div>
+
+                {contactBlacklistWarning && (
+                  <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {contactBlacklistWarning}
+                    <button
+                      type="button"
+                      className="ml-3 rounded border border-red-300 px-2 py-1 text-xs"
+                      onClick={() => void addEditingContactToBlacklist()}
+                    >
+                      Добавить/обновить в черном списке
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
@@ -3612,6 +3693,19 @@ export default function BookingsPage() {
                     />
                   </div>
                 </div>
+
+                {contactBlacklistWarning && (
+                  <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {contactBlacklistWarning}
+                    <button
+                      type="button"
+                      className="ml-3 rounded border border-red-300 px-2 py-1 text-xs"
+                      onClick={() => void addEditingContactToBlacklist()}
+                    >
+                      Добавить/обновить в черном списке
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>

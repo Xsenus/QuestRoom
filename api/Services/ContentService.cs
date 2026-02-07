@@ -529,6 +529,8 @@ public class ContentService : IContentService
                     dto.MirKvestovScheduleDaysAhead > 0 ? dto.MirKvestovScheduleDaysAhead : 14,
                 MirKvestovScheduleFields = NormalizeMirKvestovScheduleFields(dto.MirKvestovScheduleFields),
                 MirKvestovApiLoggingEnabled = dto.MirKvestovApiLoggingEnabled ?? false,
+                BlockBlacklistedSiteBookings = dto.BlockBlacklistedSiteBookings ?? false,
+                BlockBlacklistedApiBookings = dto.BlockBlacklistedApiBookings ?? false,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -653,6 +655,14 @@ public class ContentService : IContentService
             if (dto.MirKvestovApiLoggingEnabled.HasValue)
             {
                 existing.MirKvestovApiLoggingEnabled = dto.MirKvestovApiLoggingEnabled.Value;
+            }
+            if (dto.BlockBlacklistedSiteBookings.HasValue)
+            {
+                existing.BlockBlacklistedSiteBookings = dto.BlockBlacklistedSiteBookings.Value;
+            }
+            if (dto.BlockBlacklistedApiBookings.HasValue)
+            {
+                existing.BlockBlacklistedApiBookings = dto.BlockBlacklistedApiBookings.Value;
             }
             existing.UpdatedAt = DateTime.UtcNow;
         }
@@ -836,6 +846,8 @@ public class ContentService : IContentService
             MirKvestovScheduleDaysAhead = settings.MirKvestovScheduleDaysAhead,
             MirKvestovScheduleFields = ParseMirKvestovScheduleFields(settings.MirKvestovScheduleFields),
             MirKvestovApiLoggingEnabled = settings.MirKvestovApiLoggingEnabled,
+            BlockBlacklistedSiteBookings = settings.BlockBlacklistedSiteBookings,
+            BlockBlacklistedApiBookings = settings.BlockBlacklistedApiBookings,
             UpdatedAt = settings.UpdatedAt
         };
     }

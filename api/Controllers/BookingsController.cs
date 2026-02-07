@@ -47,8 +47,15 @@ public class BookingsController : PermissionAwareControllerBase
     [HttpPost]
     public async Task<ActionResult<BookingDto>> CreateBooking([FromBody] BookingCreateDto booking)
     {
-        var created = await _bookingService.CreateBookingAsync(booking);
-        return CreatedAtAction(nameof(GetBookings), new { id = created.Id }, created);
+        try
+        {
+            var created = await _bookingService.CreateBookingAsync(booking, User?.Identity?.IsAuthenticated == true);
+            return CreatedAtAction(nameof(GetBookings), new { id = created.Id }, created);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [Authorize]

@@ -220,6 +220,12 @@ public class Settings
     [Column("mir_kvestov_api_logging_enabled")]
     public bool MirKvestovApiLoggingEnabled { get; set; }
 
+    [Column("block_blacklisted_site_bookings")]
+    public bool BlockBlacklistedSiteBookings { get; set; }
+
+    [Column("block_blacklisted_api_bookings")]
+    public bool BlockBlacklistedApiBookings { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }
