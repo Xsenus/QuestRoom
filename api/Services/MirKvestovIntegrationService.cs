@@ -270,25 +270,63 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
         date = default;
         time = default;
 
-        if (string.IsNullOrWhiteSpace(dateValue) || string.IsNullOrWhiteSpace(timeValue))
+        if (!string.IsNullOrWhiteSpace(dateValue)
+            && !string.IsNullOrWhiteSpace(timeValue)
+            && DateOnly.TryParseExact(
+                dateValue.Trim(),
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out date)
+            && TimeOnly.TryParseExact(
+                timeValue.Trim(),
+                "HH:mm",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out time))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(dateValue))
         {
             return false;
         }
 
-        var dateParsed = DateOnly.TryParseExact(
-            dateValue,
-            "yyyy-MM-dd",
-            CultureInfo.InvariantCulture,
-            DateTimeStyles.None,
-            out date);
-        var timeParsed = TimeOnly.TryParseExact(
-            timeValue,
-            "HH:mm",
-            CultureInfo.InvariantCulture,
-            DateTimeStyles.None,
-            out time);
+        return TryParseCombinedDateTime(dateValue.Trim(), out date, out time);
+    }
 
-        return dateParsed && timeParsed;
+    private static bool TryParseCombinedDateTime(string value, out DateOnly date, out TimeOnly time)
+    {
+        date = default;
+        time = default;
+
+        var trimmed = value.Trim();
+        if (trimmed.Length >= 22 && DateOnly.TryParseExact(trimmed[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var leadingDate))
+        {
+            var suffix = trimmed[10..];
+            if (suffix.Length == 12 && suffix.All(char.IsDigit)
+                && DateOnly.TryParseExact(suffix[..8], "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var nestedDate)
+                && TimeOnly.TryParseExact(suffix[8..], "HHmm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var nestedTime)
+                && nestedDate == leadingDate)
+            {
+                date = nestedDate;
+                time = nestedTime;
+                return true;
+            }
+        }
+
+        if (trimmed.Length == 12
+            && trimmed.All(char.IsDigit)
+            && DateOnly.TryParseExact(trimmed[..8], "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var compactDate)
+            && TimeOnly.TryParseExact(trimmed[8..], "HHmm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var compactTime))
+        {
+            date = compactDate;
+            time = compactTime;
+            return true;
+        }
+
+        return false;
     }
 
     private static string BuildCustomerName(MirKvestovOrderRequest request)
