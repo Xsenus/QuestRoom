@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import {
   Booking,
@@ -134,18 +133,13 @@ const bookingPageSizeOptions = [5, 10, 25, 50, 100];
 const defaultBookingPageSize = 10;
 const mobileTableMediaQuery = '(max-width: 767px)';
 
-type BookingsPageProps = {
-  rawMobileTable?: boolean;
-};
-
-function BookingsPage({ rawMobileTable = false }: BookingsPageProps) {
+export default function BookingsPage() {
   const { user, hasPermission } = useAuth();
   const canView = hasPermission('bookings.view');
   const canEdit = hasPermission('bookings.edit');
   const canDelete = hasPermission('bookings.delete');
   const canConfirm = hasPermission('bookings.confirm');
   const canViewPromoCodes = hasPermission('promo-codes.view');
-  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [countBookings, setCountBookings] = useState<Booking[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -529,12 +523,6 @@ function BookingsPage({ rawMobileTable = false }: BookingsPageProps) {
       localStorage.setItem('admin_bookings_view', viewMode);
     }
   }, [viewMode]);
-
-  useEffect(() => {
-    if (rawMobileTable && viewMode !== 'table') {
-      setViewMode('table');
-    }
-  }, [rawMobileTable, viewMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -1966,7 +1954,7 @@ function BookingsPage({ rawMobileTable = false }: BookingsPageProps) {
     () => tableColumns.filter((column) => column.visible),
     [tableColumns]
   );
-  const isCompactTableView = viewMode === 'table' && isMobileViewport && !rawMobileTable;
+  const isCompactTableView = viewMode === 'table' && isMobileViewport;
   const getRenderedColumnWidth = useCallback(
     (column: BookingTableColumnConfig) => {
       if (!isCompactTableView) {
@@ -2635,18 +2623,16 @@ function BookingsPage({ rawMobileTable = false }: BookingsPageProps) {
               ))}
             </div>
             <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
-              {!rawMobileTable && (
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
-                    viewMode === 'cards'
-                      ? 'bg-white text-gray-900 shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Карточки
-                </button>
-              )}
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                  viewMode === 'cards'
+                    ? 'bg-white text-gray-900 shadow'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Карточки
+              </button>
               <button
                 onClick={() => setViewMode('table')}
                 className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
@@ -2658,22 +2644,6 @@ function BookingsPage({ rawMobileTable = false }: BookingsPageProps) {
                 Таблица
               </button>
             </div>
-            {isMobileViewport && !rawMobileTable && (
-              <button
-                onClick={() => navigate('/adm/bookings/mobile-table')}
-                className="px-3 py-1.5 text-sm font-semibold rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-              >
-                Таблица 1:1 (моб.)
-              </button>
-            )}
-            {rawMobileTable && (
-              <button
-                onClick={() => navigate('/adm/bookings')}
-                className="px-3 py-1.5 text-sm font-semibold rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
-              >
-                Вернуться к обычному виду
-              </button>
-            )}
             {viewMode === 'table' && (
               <button
                 onClick={() => setIsColumnsModalOpen(true)}
@@ -4008,8 +3978,3 @@ function BookingsPage({ rawMobileTable = false }: BookingsPageProps) {
   );
 }
 
-export function BookingsMobileTablePage() {
-  return <BookingsPage rawMobileTable />;
-}
-
-export default BookingsPage;
