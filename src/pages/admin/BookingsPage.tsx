@@ -3035,63 +3035,63 @@ export default function BookingsPage() {
                     <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>{renderActionButtons(booking)}</div>
                   </div>
 
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 ${isCompactCardsView ? 'gap-x-3 gap-y-1.5 text-xs' : 'gap-x-4 gap-y-2 text-sm'}`}>
-                    <div className="flex items-center gap-2 text-gray-700">
+                  <div className={`grid ${isCompactCardsView ? 'grid-cols-2 gap-x-3 gap-y-2 text-xs' : 'grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm'}`}>
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <User className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold">Клиент:</span>
+                      <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Клиент:</span>
                       <span>{highlightText(booking.customerName, highlightTerms)}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <Phone className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold">Телефон:</span>
+                      <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Телефон:</span>
                       <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
                         {highlightText(booking.customerPhone, highlightTerms)}
                       </a>
                     </div>
 
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <Calendar className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold">Дата:</span>
+                      <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Дата:</span>
                       <span>{highlightText(formatBookingDateTime(booking), highlightTerms)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <Calendar className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold">Создано:</span>
+                      <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Создано:</span>
                       <span>{highlightText(formatDateTime(booking.createdAt), highlightTerms)}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <Users className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold">Участников:</span>
+                      <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Участников:</span>
                       <span>{booking.participantsCount}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <Users className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold whitespace-nowrap">Доп. участ.:</span>
+                      <span className={`font-semibold whitespace-nowrap ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Доп. участ.:</span>
                       <span>{booking.extraParticipantsCount ?? 0}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <BadgeDollarSign className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold whitespace-nowrap">Доп. уч. цена:</span>
+                      <span className={`font-semibold whitespace-nowrap ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Доп. уч. цена:</span>
                       <span>
                         {getExtraParticipantPrice(booking) != null
                           ? `${getExtraParticipantPrice(booking)} ₽`
                           : '—'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
                       <BadgeDollarSign className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                      <span className="font-semibold">Сумма:</span>
+                      <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Сумма:</span>
                       <span>{highlightText(`${booking.totalPrice} ₽`, highlightTerms)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <span className="font-semibold">Агрегатор:</span>
+                    <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5' : 'items-center gap-2'}`}>
+                      <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Агрегатор:</span>
                       <span>{highlightText(getAggregatorLabel(booking), highlightTerms)}</span>
                     </div>
                     {booking.promoCode && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <span className="font-semibold">Промокод:</span>
+                      <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5 col-span-2' : 'items-center gap-2'}`}>
+                        <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Промокод:</span>
                         <span>{highlightText(booking.promoCode, highlightTerms)}</span>
                         {booking.promoDiscountAmount != null && (
                           <span className="text-xs text-gray-500">
@@ -3101,9 +3101,9 @@ export default function BookingsPage() {
                       </div>
                     )}
                     {booking.customerEmail && (
-                      <div className="flex items-center gap-2 text-gray-700">
+                      <div className={`flex text-gray-700 ${isCompactCardsView ? 'flex-col items-start gap-0.5 col-span-2' : 'items-center gap-2'}`}>
                         <Mail className={`text-red-600 ${isCompactCardsView ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
-                        <span className="font-semibold">Email:</span>
+                        <span className={`font-semibold ${isCompactCardsView ? 'text-[10px] text-gray-500' : ''}`}>Email:</span>
                       <a
                         href={`mailto:${booking.customerEmail}`}
                         className="hover:text-red-600"
