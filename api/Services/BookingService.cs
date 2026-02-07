@@ -113,7 +113,7 @@ public class BookingService : IBookingService
 
     public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto, bool isAdminRequest = false)
     {
-        var isApiBooking = !string.IsNullOrWhiteSpace(dto.Aggregator);
+        var isApiBooking = !string.IsNullOrWhiteSpace(dto.Aggregator) || !string.IsNullOrWhiteSpace(dto.AggregatorUniqueId);
         if (!isAdminRequest && await _blacklistService.IsBookingBlockedAsync(dto.CustomerPhone, dto.CustomerEmail, isApiBooking))
         {
             throw new InvalidOperationException("Бронирование запрещено для этого контакта.");

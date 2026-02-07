@@ -1623,7 +1623,7 @@ export default function SettingsPage() {
               </p>
             </div>
             <div className="md:col-span-2 space-y-3 rounded-lg border border-red-100 bg-red-50/40 p-4">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-800">
+              <label className="flex items-center gap-2 text-sm text-gray-800">
                 <input
                   type="checkbox"
                   checked={settings.blockBlacklistedSiteBookings}
@@ -1633,7 +1633,7 @@ export default function SettingsPage() {
                 />
                 Запретить бронирование с сайта для контактов из черного списка
               </label>
-              <label className="inline-flex items-center gap-2 text-sm text-gray-800">
+              <label className="flex items-center gap-2 text-sm text-gray-800">
                 <input
                   type="checkbox"
                   checked={settings.blockBlacklistedApiBookings}
