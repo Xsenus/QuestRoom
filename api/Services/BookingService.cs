@@ -18,7 +18,7 @@ public interface IBookingService
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
         string? sort = null);
-    Task<BookingDto> CreateBookingAsync(BookingCreateDto dto, bool isAdminRequest = false);
+    Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
     Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto);
     Task<bool> DeleteBookingAsync(Guid id);
     Task<BookingImportResultDto> ImportBookingsAsync(string content);
@@ -111,10 +111,10 @@ public class BookingService : IBookingService
         return dtos;
     }
 
-    public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto, bool isAdminRequest = false)
+    public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto)
     {
         var isApiBooking = !string.IsNullOrWhiteSpace(dto.Aggregator) || !string.IsNullOrWhiteSpace(dto.AggregatorUniqueId);
-        if (!isAdminRequest && await _blacklistService.IsBookingBlockedAsync(dto.CustomerPhone, dto.CustomerEmail, isApiBooking))
+        if (await _blacklistService.IsBookingBlockedAsync(dto.CustomerPhone, dto.CustomerEmail, isApiBooking))
         {
             throw new InvalidOperationException("Бронирование запрещено для этого контакта.");
         }

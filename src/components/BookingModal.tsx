@@ -248,16 +248,24 @@ export default function BookingModal({
     } catch (error) {
       console.error('Error creating booking:', error);
       const errorMessage = (error as Error).message || '';
-      const isSlotBooked = errorMessage.toLowerCase().includes('уже забронировано');
+      const lowerMessage = errorMessage.toLowerCase();
+      const isSlotBooked = lowerMessage.includes('уже забронировано');
+      const isBlacklistedBlocked = lowerMessage.includes('бронирование запрещено');
 
       setNotification({
         isOpen: true,
-        title: isSlotBooked ? 'Это время уже занято' : 'Не удалось создать бронь',
-        tone: isSlotBooked ? 'info' : 'error',
-        action: isSlotBooked ? 'conflict' : 'error',
+        title: isSlotBooked
+          ? 'Это время уже занято'
+          : isBlacklistedBlocked
+            ? 'Бронирование недоступно'
+            : 'Не удалось создать бронь',
+        tone: isSlotBooked || isBlacklistedBlocked ? 'info' : 'error',
+        action: isSlotBooked || isBlacklistedBlocked ? 'conflict' : 'error',
         message: isSlotBooked
           ? 'Похоже, другой пользователь уже забронировал выбранное время. Пожалуйста, выберите другой слот.'
-          : 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
+          : isBlacklistedBlocked
+            ? 'Невозможно оформить бронирование: контакт найден в черном списке и в настройках включен запрет для этого канала.'
+            : 'Произошла ошибка при создании брони. Пожалуйста, попробуйте ещё раз.',
       });
     } finally {
       setSubmitting(false);
