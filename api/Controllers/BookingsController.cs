@@ -49,7 +49,7 @@ public class BookingsController : PermissionAwareControllerBase
     {
         try
         {
-            var created = await _bookingService.CreateBookingAsync(booking, User?.Identity?.IsAuthenticated == true);
+            var created = await _bookingService.CreateBookingAsync(booking);
             return CreatedAtAction(nameof(GetBookings), new { id = created.Id }, created);
         }
         catch (InvalidOperationException ex)
