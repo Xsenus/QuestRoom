@@ -131,7 +131,14 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
 
 const bookingPageSizeOptions = [5, 10, 25, 50, 100];
 const defaultBookingPageSize = 10;
-const mobileCardsOnlyMediaQuery = '(max-width: 767px)';
+const mobileTableMediaQuery = '(max-width: 767px)';
+const mobileTablePriorityColumns: BookingTableColumnKey[] = [
+  'status',
+  'bookingDate',
+  'customer',
+  'totalPrice',
+  'actions',
+];
 
 export default function BookingsPage() {
   const { user, hasPermission } = useAuth();
@@ -155,17 +162,14 @@ export default function BookingsPage() {
     if (typeof window === 'undefined') {
       return 'cards';
     }
-    if (window.matchMedia(mobileCardsOnlyMediaQuery).matches) {
-      return 'cards';
-    }
     const saved = localStorage.getItem('admin_bookings_view');
     return saved === 'table' ? 'table' : 'cards';
   });
-  const [isMobileCardsOnly, setIsMobileCardsOnly] = useState<boolean>(() => {
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() => {
     if (typeof window === 'undefined') {
       return false;
     }
-    return window.matchMedia(mobileCardsOnlyMediaQuery).matches;
+    return window.matchMedia(mobileTableMediaQuery).matches;
   });
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'all'>('all');
   const [questFilter, setQuestFilter] = useState<string>('all');
@@ -531,23 +535,17 @@ export default function BookingsPage() {
     if (typeof window === 'undefined') {
       return;
     }
-    const mediaQueryList = window.matchMedia(mobileCardsOnlyMediaQuery);
+    const mediaQueryList = window.matchMedia(mobileTableMediaQuery);
     const handleMediaQueryChange = (event: MediaQueryListEvent) => {
-      setIsMobileCardsOnly(event.matches);
+      setIsMobileViewport(event.matches);
     };
-    setIsMobileCardsOnly(mediaQueryList.matches);
+    setIsMobileViewport(mediaQueryList.matches);
 
     mediaQueryList.addEventListener('change', handleMediaQueryChange);
     return () => {
       mediaQueryList.removeEventListener('change', handleMediaQueryChange);
     };
   }, []);
-
-  useEffect(() => {
-    if (isMobileCardsOnly && viewMode === 'table') {
-      setViewMode('cards');
-    }
-  }, [isMobileCardsOnly, viewMode]);
 
   useEffect(() => {
     setListDateFromInput(listDateFrom);
@@ -1963,6 +1961,26 @@ export default function BookingsPage() {
     () => tableColumns.filter((column) => column.visible),
     [tableColumns]
   );
+  const mobileTableColumns = useMemo(() => {
+    const byKey = new Map(tableColumns.map((column) => [column.key, column]));
+    return mobileTablePriorityColumns
+      .map((key) => byKey.get(key))
+      .filter((column): column is BookingTableColumnConfig => Boolean(column))
+      .map((column) => {
+        if (column.key === 'customer') {
+          return { ...column, width: 180 };
+        }
+        if (column.key === 'actions') {
+          return { ...column, width: 160 };
+        }
+        return column;
+      });
+  }, [tableColumns]);
+  const isCompactTableView = viewMode === 'table' && isMobileViewport;
+  const renderedTableColumns = useMemo(
+    () => (isCompactTableView ? mobileTableColumns : visibleTableColumns),
+    [isCompactTableView, mobileTableColumns, visibleTableColumns]
+  );
 
   const availableSlots = useMemo(() => {
     if (!editingBooking?.bookingDate) {
@@ -1984,8 +2002,8 @@ export default function BookingsPage() {
   );
 
   const totalTableWidth = useMemo(
-    () => visibleTableColumns.reduce((sum, column) => sum + column.width, 0),
-    [visibleTableColumns]
+    () => renderedTableColumns.reduce((sum, column) => sum + column.width, 0),
+    [renderedTableColumns]
   );
 
   const editingQuestStandardPriceParticipantsMax = useMemo(() => {
@@ -2424,7 +2442,11 @@ export default function BookingsPage() {
     </>
   );
 
-  const renderTableCell = (booking: Booking, columnKey: BookingTableColumnKey) => {
+  const renderTableCell = (
+    booking: Booking,
+    columnKey: BookingTableColumnKey,
+    isCompact = false
+  ) => {
     const questPrice = getQuestPrice(booking);
     const extraParticipantPrice = getExtraParticipantPrice(booking);
     const extraServicesTotal = getExtraServicesTotal(booking);
@@ -2432,14 +2454,18 @@ export default function BookingsPage() {
       case 'status':
         return (
           <span
-            className="inline-flex px-3 py-1 rounded-full text-xs font-bold border"
+            className={`inline-flex rounded-full text-xs font-bold border ${isCompact ? 'px-2 py-1' : 'px-3 py-1'}`}
             style={getStatusBadgeStyle(booking.status)}
           >
             {highlightText(getStatusText(booking.status), highlightTerms)}
           </span>
         );
       case 'bookingDate':
-        return <span>{highlightText(formatBookingDateTime(booking), highlightTerms)}</span>;
+        return (
+          <span className={isCompact ? 'whitespace-nowrap' : undefined}>
+            {highlightText(formatBookingDateTime(booking), highlightTerms)}
+          </span>
+        );
       case 'createdAt':
         return <span>{highlightText(formatDateTime(booking.createdAt), highlightTerms)}</span>;
       case 'quest':
@@ -2485,17 +2511,17 @@ export default function BookingsPage() {
         return <span>{highlightText(`${booking.totalPrice} ₽`, highlightTerms)}</span>;
       case 'customer':
         return (
-          <div>
-            <div className="font-semibold text-gray-900">
+          <div className={isCompact ? 'max-w-44' : undefined}>
+            <div className="font-semibold text-gray-900 truncate">
               {highlightText(booking.customerName, highlightTerms)}
             </div>
-            <div>
+            <div className="truncate">
               <a href={`tel:${booking.customerPhone}`} className="hover:text-red-600">
                 {highlightText(booking.customerPhone, highlightTerms)}
               </a>
             </div>
-            {booking.customerEmail && (
-              <div>
+            {!isCompact && booking.customerEmail && (
+              <div className="truncate">
                 <a href={`mailto:${booking.customerEmail}`} className="hover:text-red-600">
                   {highlightText(booking.customerEmail, highlightTerms)}
                 </a>
@@ -2510,11 +2536,16 @@ export default function BookingsPage() {
           </p>
         );
       case 'actions':
-        return <div className="flex justify-end gap-2">{renderActionButtons(booking)}</div>;
+        return (
+          <div className={`flex justify-end ${isCompact ? 'flex-wrap gap-1.5 min-w-36' : 'gap-2'}`}>
+            {renderActionButtons(booking)}
+          </div>
+        );
       default:
         return null;
     }
   };
+
 
   if (!canView) {
     return <AccessDenied />;
@@ -2594,24 +2625,17 @@ export default function BookingsPage() {
               >
                 Карточки
               </button>
-              {!isMobileCardsOnly && (
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
-                    viewMode === 'table'
-                      ? 'bg-white text-gray-900 shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Таблица
-                </button>
-              )}
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-white text-gray-900 shadow'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Таблица
+              </button>
             </div>
-            {isMobileCardsOnly && (
-              <p className="text-xs text-gray-500">
-                На мобильных устройствах используется карточный режим для удобного просмотра.
-              </p>
-            )}
             {viewMode === 'table' && (
               <button
                 onClick={() => setIsColumnsModalOpen(true)}
@@ -2873,9 +2897,15 @@ export default function BookingsPage() {
           </div>
 
           {viewMode === 'table' ? (
-            <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-auto">
+            <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
+              {isCompactTableView && (
+                <p className="px-3 pt-3 text-xs text-gray-500">
+                  Мобильная таблица показывает ключевые колонки. Для полного набора используйте
+                  планшет/десктоп.
+                </p>
+              )}
               <table
-                className="text-sm table-fixed min-w-max"
+                className={`table-fixed min-w-max ${isCompactTableView ? 'text-xs' : 'text-sm'}`}
                 style={{
                   width: totalTableWidth ? `${totalTableWidth}px` : '100%',
                   minWidth: '100%',
@@ -2883,25 +2913,25 @@ export default function BookingsPage() {
               >
                 <thead className="bg-gray-50 text-gray-700">
                   <tr>
-                    {visibleTableColumns.map((column) => {
+                    {renderedTableColumns.map((column) => {
                       const sortIndex = tableSorts.findIndex((sort) => sort.key === column.key);
                       const sort = sortIndex >= 0 ? tableSorts[sortIndex] : null;
                       const isSortable = sortableColumnKeys.has(column.key);
                       return (
                         <th
                           key={column.key}
-                          className={`group relative px-4 py-3 font-semibold ${
+                          className={`group relative ${isCompactTableView ? 'px-2 py-2' : 'px-4 py-3'} font-semibold ${
                             column.key === 'actions' ? 'text-right' : 'text-left'
                           } ${column.locked ? 'cursor-default' : 'cursor-move'}`}
                           style={{ width: column.width }}
-                          draggable={!column.locked}
-                          onDragStart={handleColumnDragStart(column.key, column.locked)}
-                          onDragOver={handleColumnDragOver(column.key, column.locked)}
-                          onDrop={handleColumnDrop(column.key, column.locked)}
+                          draggable={!column.locked && !isCompactTableView}
+                          onDragStart={handleColumnDragStart(column.key, column.locked || isCompactTableView)}
+                          onDragOver={handleColumnDragOver(column.key, column.locked || isCompactTableView)}
+                          onDrop={handleColumnDrop(column.key, column.locked || isCompactTableView)}
                           onDragEnd={handleColumnDragEnd}
                         >
                           <div className="flex items-center gap-2">
-                            {!column.locked && <GripVertical className="h-4 w-4 text-gray-400" />}
+                            {!column.locked && !isCompactTableView && <GripVertical className="h-4 w-4 text-gray-400" />}
                             <span>{column.label}</span>
                             {isSortable && (
                               <button
@@ -2943,7 +2973,7 @@ export default function BookingsPage() {
                                 startWidth: column.width,
                               });
                             }}
-                            className="absolute right-0 top-0 h-full w-2 cursor-col-resize opacity-0 transition-opacity group-hover:opacity-100"
+                            className={`absolute right-0 top-0 h-full w-2 cursor-col-resize transition-opacity ${isCompactTableView ? 'hidden' : 'opacity-0 group-hover:opacity-100'}`}
                           />
                         </th>
                       );
@@ -2953,13 +2983,13 @@ export default function BookingsPage() {
                 <tbody className="divide-y divide-gray-200">
                   {paginatedBookings.map((booking) => (
                     <tr key={booking.id} style={getRowStyle(booking.status)}>
-                      {visibleTableColumns.map((column) => (
+                      {renderedTableColumns.map((column) => (
                         <td
                           key={column.key}
-                          className={`px-4 py-3 ${column.key === 'actions' ? 'text-right' : 'text-gray-700'}`}
+                          className={`${isCompactTableView ? 'px-2 py-2 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : 'text-gray-700'}`}
                           style={{ width: column.width }}
                         >
-                          {renderTableCell(booking, column.key)}
+                          {renderTableCell(booking, column.key, isCompactTableView)}
                         </td>
                       ))}
                     </tr>
