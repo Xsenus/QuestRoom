@@ -1560,12 +1560,6 @@ export default function BookingsPage() {
 
   const getRowStyle = (booking: Booking) => {
     const color = getStatusColorValue(booking.status);
-    if (booking.isBlacklisted) {
-      return {
-        backgroundColor: '#fff1f2',
-        boxShadow: 'inset 6px 0 0 #dc2626',
-      };
-    }
     return {
       backgroundColor: hexToRgba(color, 0.18),
       boxShadow: `inset 4px 0 0 ${hexToRgba(color, 0.7)}`,
@@ -3109,11 +3103,15 @@ export default function BookingsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {paginatedBookings.map((booking) => (
-                    <tr key={booking.id} style={getRowStyle(booking)}>
+                    <tr
+                      key={booking.id}
+                      style={getRowStyle(booking)}
+                      className={booking.isBlacklisted ? 'blacklisted-booking-row' : undefined}
+                    >
                       {visibleTableColumns.map((column) => (
                         <td
                           key={column.key}
-                          className={`${isCompactTableView ? 'px-2 py-2.5 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : 'text-gray-700'}`}
+                          className={`${isCompactTableView ? 'px-2 py-2.5 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : 'text-gray-700'} ${booking.isBlacklisted ? 'blacklisted-booking-watermark' : ''}`}
                           style={{ width: getRenderedColumnWidth(column) }}
                         >
                           {renderTableCell(booking, column.key, isCompactTableView)}
@@ -3129,7 +3127,7 @@ export default function BookingsPage() {
               {paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'}`}
+                  className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'} ${booking.isBlacklisted ? 'blacklisted-booking-card blacklisted-booking-watermark' : ''}`}
                   style={getCardStyle(booking.status)}
                 >
                   <div className={`flex items-start justify-between ${isCompactCardsView ? 'mb-2' : 'mb-3'}`}>
