@@ -5,6 +5,8 @@ public class BookingDto
     public Guid Id { get; set; }
     public Guid? QuestId { get; set; }
     public Guid? QuestScheduleId { get; set; }
+    public int? QuestPrice { get; set; }
+    public int? ExtraParticipantPrice { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
     public string? CustomerEmail { get; set; }

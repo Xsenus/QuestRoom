@@ -57,6 +57,7 @@ public class BookingService : IBookingService
             .Include(b => b.ExtraServices)
             .Include(b => b.QuestSchedule)
             .Include(b => b.Quest)
+            .ThenInclude(q => q!.ParentQuest)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status))
@@ -182,7 +183,8 @@ public class BookingService : IBookingService
                 .Where(service => !string.IsNullOrWhiteSpace(service.Title))
                 .ToList() ?? new List<BookingExtraServiceCreateDto>();
             var extraParticipantsCount = Math.Max(0, dto.ParticipantsCount - standardPriceParticipantsMax);
-            var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
+            var extraParticipantPrice = Math.Max(0, pricingQuest.ExtraParticipantPrice);
+            var extraParticipantsTotal = extraParticipantsCount * extraParticipantPrice;
             var extrasTotal = selectedExtras.Sum(service => service.Price)
                 + customExtras.Sum(service => service.Price);
             var paymentType = string.IsNullOrWhiteSpace(dto.PaymentType)
@@ -224,6 +226,8 @@ public class BookingService : IBookingService
                 ParticipantsCount = dto.ParticipantsCount,
                 ExtraParticipantsCount = extraParticipantsCount,
                 TotalPrice = totalPrice,
+                QuestPrice = basePrice,
+                ExtraParticipantPrice = extraParticipantPrice,
                 PaymentType = paymentType,
                 PromoCodeId = promoCode?.Id,
                 PromoCode = promoCode?.Code,
@@ -277,6 +281,8 @@ public class BookingService : IBookingService
             }
 
             await transaction.CommitAsync();
+            booking.Quest = quest;
+            booking.QuestSchedule = schedule;
             result = ToDto(booking);
             await EnrichWithBlacklistAsync(new List<BookingDto> { result });
         }
@@ -325,10 +331,25 @@ public class BookingService : IBookingService
         if (dto.QuestId.HasValue)
         {
             booking.QuestId = dto.QuestId.Value;
+            booking.QuestPrice = null;
+            booking.ExtraParticipantPrice = null;
+            shouldRecalculate = true;
         }
         if (dto.QuestScheduleId.HasValue)
         {
             booking.QuestScheduleId = dto.QuestScheduleId.Value;
+            booking.QuestPrice = null;
+            shouldRecalculate = true;
+        }
+        if (dto.QuestPrice.HasValue)
+        {
+            booking.QuestPrice = dto.QuestPrice.Value;
+            shouldRecalculate = true;
+        }
+        if (dto.ExtraParticipantPrice.HasValue)
+        {
+            booking.ExtraParticipantPrice = dto.ExtraParticipantPrice.Value;
+            shouldRecalculate = true;
         }
         if (dto.CustomerName != null)
         {
@@ -518,11 +539,17 @@ public class BookingService : IBookingService
             bookingDateTime = booking.BookingDate.ToDateTime(bookingTime.Value);
         }
 
+        var pricingQuest = booking.Quest?.ParentQuest ?? booking.Quest;
+        var questPrice = booking.QuestPrice ?? booking.QuestSchedule?.Price ?? pricingQuest?.Price;
+        var extraParticipantPrice = booking.ExtraParticipantPrice ?? pricingQuest?.ExtraParticipantPrice;
+
         return new BookingDto
         {
             Id = booking.Id,
             QuestId = booking.QuestId,
             QuestScheduleId = booking.QuestScheduleId,
+            QuestPrice = questPrice,
+            ExtraParticipantPrice = extraParticipantPrice,
             CustomerName = booking.CustomerName,
             CustomerPhone = booking.CustomerPhone,
             CustomerEmail = booking.CustomerEmail,
@@ -870,10 +897,10 @@ public class BookingService : IBookingService
             "bookingdate" => ApplyDateSort(query, descending, isThenBy),
             "createdat" => ApplyOrder(query, b => b.CreatedAt, descending, isThenBy),
             "quest" => ApplyOrder(query, b => b.Quest != null ? b.Quest.Title : string.Empty, descending, isThenBy),
-            "questprice" => ApplyOrder(query, b => b.Quest != null ? b.Quest.Price : 0, descending, isThenBy),
+            "questprice" => ApplyOrder(query, b => b.QuestPrice ?? (b.QuestSchedule != null ? b.QuestSchedule.Price : (b.Quest != null ? b.Quest.Price : 0)), descending, isThenBy),
             "participants" => ApplyOrder(query, b => b.ParticipantsCount, descending, isThenBy),
             "extraparticipants" => ApplyOrder(query, b => b.ExtraParticipantsCount, descending, isThenBy),
-            "extraparticipantprice" => ApplyOrder(query, b => b.Quest != null ? b.Quest.ExtraParticipantPrice : 0, descending, isThenBy),
+            "extraparticipantprice" => ApplyOrder(query, b => b.ExtraParticipantPrice ?? (b.Quest != null ? b.Quest.ExtraParticipantPrice : 0), descending, isThenBy),
             "extraservicesprice" => ApplyOrder(query, b => b.ExtraServices.Sum(service => (int?)service.Price) ?? 0, descending, isThenBy),
             "aggregator" => ApplyOrder(query, b => b.Aggregator ?? string.Empty, descending, isThenBy),
             "promocode" => ApplyOrder(query, b => b.PromoCode ?? string.Empty, descending, isThenBy),
@@ -1155,11 +1182,14 @@ public class BookingService : IBookingService
 
         var extraParticipantsCount = Math.Max(0, booking.ParticipantsCount - standardPriceParticipantsMax);
         var pricingQuest = quest.ParentQuest ?? quest;
-        var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, pricingQuest.ExtraParticipantPrice);
+        var extraParticipantPrice = booking.ExtraParticipantPrice ?? Math.Max(0, pricingQuest.ExtraParticipantPrice);
+        var extraParticipantsTotal = extraParticipantsCount * Math.Max(0, extraParticipantPrice);
         var extrasTotal = extraServices.Sum(service => service.Price);
-        var basePrice = schedule?.Price ?? pricingQuest.Price;
+        var basePrice = booking.QuestPrice ?? schedule?.Price ?? pricingQuest.Price;
 
         booking.ExtraParticipantsCount = extraParticipantsCount;
+        booking.QuestPrice = basePrice;
+        booking.ExtraParticipantPrice = extraParticipantPrice;
         var totalPrice = booking.PaymentType == "certificate"
             ? extrasTotal
             : basePrice + extraParticipantsTotal + extrasTotal;

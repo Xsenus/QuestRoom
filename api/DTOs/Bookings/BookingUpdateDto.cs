@@ -4,6 +4,8 @@ public class BookingUpdateDto
 {
     public Guid? QuestId { get; set; }
     public Guid? QuestScheduleId { get; set; }
+    public int? QuestPrice { get; set; }
+    public int? ExtraParticipantPrice { get; set; }
     public string? Status { get; set; }
     public string? Notes { get; set; }
     public string? Aggregator { get; set; }
