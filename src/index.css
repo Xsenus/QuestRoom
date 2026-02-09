@@ -42,19 +42,7 @@
   background-size: 260px 90px;
 }
 
-.blacklisted-booking-row .blacklisted-booking-watermark {
-  background-color: transparent;
-}
-
 .blacklisted-booking-card {
   position: relative;
   overflow: hidden;
-}
-
-.blacklisted-booking-card .bg-white\/40 {
-  background-color: rgba(255, 255, 255, 0.55);
-}
-
-.blacklisted-booking-card .border-gray-200 {
-  border-color: rgba(220, 38, 38, 0.2);
 }

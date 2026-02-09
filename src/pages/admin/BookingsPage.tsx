@@ -1560,26 +1560,13 @@ export default function BookingsPage() {
 
   const getRowStyle = (booking: Booking) => {
     const color = getStatusColorValue(booking.status);
-    if (booking.isBlacklisted) {
-      return {
-        backgroundColor: '#fff1f2',
-        boxShadow: 'inset 6px 0 0 #dc2626',
-      };
-    }
     return {
       backgroundColor: hexToRgba(color, 0.18),
       boxShadow: `inset 4px 0 0 ${hexToRgba(color, 0.7)}`,
     };
   };
 
-  const getCardStyle = (booking: Booking) => {
-    if (booking.isBlacklisted) {
-      return {
-        backgroundColor: '#fff1f2',
-        borderColor: '#fca5a5',
-      };
-    }
-    const status = booking.status;
+  const getCardStyle = (status: Booking['status']) => {
     const color = getStatusColorValue(status);
     return {
       backgroundColor: hexToRgba(color, 0.08),
@@ -3141,7 +3128,7 @@ export default function BookingsPage() {
                 <div
                   key={booking.id}
                   className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'} ${booking.isBlacklisted ? 'blacklisted-booking-card blacklisted-booking-watermark' : ''}`}
-                  style={getCardStyle(booking)}
+                  style={getCardStyle(booking.status)}
                 >
                   <div className={`flex items-start justify-between ${isCompactCardsView ? 'mb-2' : 'mb-3'}`}>
                     <div className="flex-1">
