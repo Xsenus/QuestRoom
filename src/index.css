@@ -36,47 +36,25 @@
   scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.12);
 }
 
-.blacklisted-booking-row a,
-.blacklisted-booking-row p,
-.blacklisted-booking-row span,
-.blacklisted-booking-row li {
-  color: #ffffff;
+.blacklisted-booking-watermark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='90' viewBox='0 0 260 90'%3E%3Ctext x='12' y='62' font-family='Arial,sans-serif' font-size='46' font-weight='700' fill='%23dc2626' fill-opacity='0.12' transform='rotate(-18 120 45)'%3ESTOP%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 260px 90px;
 }
 
-.blacklisted-booking-row .text-gray-500,
-.blacklisted-booking-row .text-gray-600,
-.blacklisted-booking-row .text-gray-700,
-.blacklisted-booking-row .text-gray-900 {
-  color: #ffffff !important;
+.blacklisted-booking-row .blacklisted-booking-watermark {
+  background-color: transparent;
 }
 
-.blacklisted-booking-row .hover\:text-red-600:hover {
-  color: #fecaca;
-}
-
-.blacklisted-booking-card,
-.blacklisted-booking-card p,
-.blacklisted-booking-card span,
-.blacklisted-booking-card a,
-.blacklisted-booking-card li {
-  color: #ffffff;
-}
-
-.blacklisted-booking-card .text-gray-500,
-.blacklisted-booking-card .text-gray-600,
-.blacklisted-booking-card .text-gray-700,
-.blacklisted-booking-card .text-gray-900 {
-  color: #ffffff !important;
+.blacklisted-booking-card {
+  position: relative;
+  overflow: hidden;
 }
 
 .blacklisted-booking-card .bg-white\/40 {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.55);
 }
 
 .blacklisted-booking-card .border-gray-200 {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.blacklisted-booking-card .hover\:text-red-600:hover {
-  color: #fecaca;
+  border-color: rgba(220, 38, 38, 0.2);
 }

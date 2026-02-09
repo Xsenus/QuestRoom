@@ -1562,7 +1562,7 @@ export default function BookingsPage() {
     const color = getStatusColorValue(booking.status);
     if (booking.isBlacklisted) {
       return {
-        backgroundColor: '#0b0b0b',
+        backgroundColor: '#fff1f2',
         boxShadow: 'inset 6px 0 0 #dc2626',
       };
     }
@@ -1575,8 +1575,8 @@ export default function BookingsPage() {
   const getCardStyle = (booking: Booking) => {
     if (booking.isBlacklisted) {
       return {
-        backgroundColor: '#0b0b0b',
-        borderColor: '#dc2626',
+        backgroundColor: '#fff1f2',
+        borderColor: '#fca5a5',
       };
     }
     const status = booking.status;
@@ -2645,7 +2645,7 @@ export default function BookingsPage() {
       case 'customer':
         return (
           <div className={isCompact ? 'max-w-44' : undefined}>
-            <div className={`font-semibold truncate ${booking.isBlacklisted ? 'text-white' : 'text-gray-900'}`}>
+            <div className="font-semibold text-gray-900 truncate">
               {highlightText(booking.customerName, highlightTerms)}
             </div>
             {booking.isBlacklisted && (
@@ -3124,7 +3124,7 @@ export default function BookingsPage() {
                       {visibleTableColumns.map((column) => (
                         <td
                           key={column.key}
-                          className={`${isCompactTableView ? 'px-2 py-2.5 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : booking.isBlacklisted ? 'text-white' : 'text-gray-700'}`}
+                          className={`${isCompactTableView ? 'px-2 py-2.5 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : 'text-gray-700'} ${booking.isBlacklisted ? 'blacklisted-booking-watermark' : ''}`}
                           style={{ width: getRenderedColumnWidth(column) }}
                         >
                           {renderTableCell(booking, column.key, isCompactTableView)}
@@ -3140,7 +3140,7 @@ export default function BookingsPage() {
               {paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'} ${booking.isBlacklisted ? 'blacklisted-booking-card' : ''}`}
+                  className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'} ${booking.isBlacklisted ? 'blacklisted-booking-card blacklisted-booking-watermark' : ''}`}
                   style={getCardStyle(booking)}
                 >
                   <div className={`flex items-start justify-between ${isCompactCardsView ? 'mb-2' : 'mb-3'}`}>
