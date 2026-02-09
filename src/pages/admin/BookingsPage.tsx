@@ -176,6 +176,7 @@ export default function BookingsPage() {
   const [listDateFromInput, setListDateFromInput] = useState<string>('');
   const [listDateToInput, setListDateToInput] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState<string>('');
   const [columnFilters, setColumnFilters] = useState<BookingTableFilter[]>([]);
   const [tableSorts, setTableSorts] = useState<BookingTableSort[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -258,6 +259,14 @@ export default function BookingsPage() {
   } | null>(null);
   const preferencesSaveTimeout = useRef<number | null>(null);
   const hasUserEditedPreferences = useRef(false);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setAppliedSearchQuery(searchQuery);
+    }, 450);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const formatDate = (value: Date) => value.toISOString().split('T')[0];
   const normalizeDateParam = (value: string) => (value ? value : undefined);
@@ -606,6 +615,7 @@ export default function BookingsPage() {
       setTableColumns(mergeTablePreferences(preferences));
       if (!hasUserEditedPreferences.current) {
         setSearchQuery(preferences?.searchQuery ?? '');
+        setAppliedSearchQuery(preferences?.searchQuery ?? '');
         setColumnFilters(normalizeColumnFilters(preferences?.columnFilters));
         setTableSorts(normalizeSorts(preferences?.sorts));
         const preferredPageSize = preferences?.pageSize;
@@ -692,7 +702,7 @@ export default function BookingsPage() {
     promoCodeFilter,
     listDateFrom,
     listDateTo,
-    searchQuery,
+    appliedSearchQuery,
     activeColumnFilters,
     tableSorts,
     viewMode,
@@ -2292,7 +2302,10 @@ export default function BookingsPage() {
     [sortableColumnKeys]
   );
 
-  const parsedSearch = useMemo(() => parseSearchQuery(searchQuery), [parseSearchQuery, searchQuery]);
+  const parsedSearch = useMemo(
+    () => parseSearchQuery(appliedSearchQuery),
+    [parseSearchQuery, appliedSearchQuery]
+  );
   const highlightTerms = useMemo(() => {
     const values = new Set<string>();
     parsedSearch.freeTerms.forEach((term) => values.add(term));
