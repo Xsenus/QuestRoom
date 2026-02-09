@@ -24,6 +24,7 @@ public class BookingsController : PermissionAwareControllerBase
         [FromQuery] Guid? questId = null,
         [FromQuery] string? aggregator = null,
         [FromQuery] string? promoCode = null,
+        [FromQuery] string? searchQuery = null,
         [FromQuery] DateOnly? dateFrom = null,
         [FromQuery] DateOnly? dateTo = null,
         [FromQuery] string? sort = null)
@@ -38,6 +39,7 @@ public class BookingsController : PermissionAwareControllerBase
             questId,
             aggregator,
             promoCode,
+            searchQuery,
             dateFrom,
             dateTo,
             sort);

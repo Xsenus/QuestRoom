@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import { api } from '../../lib/api';
 import {
   Booking,
@@ -103,6 +103,17 @@ type ParsedSearchQuery = {
   operators: Record<SearchOperatorKey, string[]>;
 };
 
+type BookingSearchIndex = {
+  booking: Booking;
+  searchableFields: string[];
+  phoneDigits: string;
+  bookingDateText: string;
+  createdAtText: string;
+  statusLabel: string;
+  questTitle: string;
+  aggregatorValue: string;
+};
+
 type BookingTableColumnConfig = {
   key: BookingTableColumnKey;
   label: string;
@@ -177,6 +188,7 @@ export default function BookingsPage() {
   const [listDateToInput, setListDateToInput] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState<string>('');
+  const deferredSearchQuery = useDeferredValue(appliedSearchQuery);
   const [columnFilters, setColumnFilters] = useState<BookingTableFilter[]>([]);
   const [tableSorts, setTableSorts] = useState<BookingTableSort[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -259,6 +271,7 @@ export default function BookingsPage() {
   } | null>(null);
   const preferencesSaveTimeout = useRef<number | null>(null);
   const hasUserEditedPreferences = useRef(false);
+  const latestLoadRequestIdRef = useRef(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -813,9 +826,18 @@ export default function BookingsPage() {
       questId: questFilter !== 'all' ? questFilter : undefined,
       aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
       promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+      searchQuery: appliedSearchQuery.trim() || undefined,
       sort: sortParam || undefined,
     }),
-    [countFilterParams, statusFilter, questFilter, aggregatorFilter, promoCodeFilter, sortParam]
+    [
+      countFilterParams,
+      statusFilter,
+      questFilter,
+      aggregatorFilter,
+      promoCodeFilter,
+      appliedSearchQuery,
+      sortParam,
+    ]
   );
 
   const loadBookings = useCallback(
@@ -825,6 +847,10 @@ export default function BookingsPage() {
         setCountBookings([]);
         return;
       }
+
+      const requestId = latestLoadRequestIdRef.current + 1;
+      latestLoadRequestIdRef.current = requestId;
+
       if (showLoading) {
         setLoading(true);
       }
@@ -833,12 +859,17 @@ export default function BookingsPage() {
           api.getBookings(listFilterParams),
           api.getBookings(countFilterParams),
         ]);
+        if (requestId !== latestLoadRequestIdRef.current) {
+          return;
+        }
         setBookings(listData || []);
         setCountBookings(countData || []);
       } catch (error) {
-        console.error('Error loading bookings:', error);
+        if (requestId === latestLoadRequestIdRef.current) {
+          console.error('Error loading bookings:', error);
+        }
       }
-      if (showLoading) {
+      if (showLoading && requestId === latestLoadRequestIdRef.current) {
         setLoading(false);
       }
     },
@@ -1888,41 +1919,7 @@ export default function BookingsPage() {
     return { freeTerms, operators };
   }, []);
 
-  const fuzzyMatch = (term: string, text: string) => {
-    const normalizedTerm = term.toLowerCase();
-    const normalizedText = text.toLowerCase();
-    if (!normalizedTerm || !normalizedText) {
-      return false;
-    }
-    if (normalizedText.includes(normalizedTerm)) {
-      return true;
-    }
-    const maxDistance =
-      normalizedTerm.length <= 4 ? 1 : normalizedTerm.length <= 7 ? 2 : 3;
-    const computeDistance = (a: string, b: string) => {
-      const aLen = a.length;
-      const bLen = b.length;
-      const dp = Array.from({ length: aLen + 1 }, () => new Array(bLen + 1).fill(0));
-      for (let i = 0; i <= aLen; i += 1) dp[i][0] = i;
-      for (let j = 0; j <= bLen; j += 1) dp[0][j] = j;
-      for (let i = 1; i <= aLen; i += 1) {
-        for (let j = 1; j <= bLen; j += 1) {
-          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,
-            dp[i][j - 1] + 1,
-            dp[i - 1][j - 1] + cost
-          );
-        }
-      }
-      return dp[aLen][bLen];
-    };
-    if (normalizedText.length <= 40) {
-      return computeDistance(normalizedTerm, normalizedText) <= maxDistance;
-    }
-    const words = normalizedText.split(/\s+/);
-    return words.some((word) => computeDistance(normalizedTerm, word) <= maxDistance);
-  };
+
 
   const highlightText = (value: string, terms: string[]) => {
     if (!value || !terms.length) {
@@ -2303,8 +2300,8 @@ export default function BookingsPage() {
   );
 
   const parsedSearch = useMemo(
-    () => parseSearchQuery(appliedSearchQuery),
-    [parseSearchQuery, appliedSearchQuery]
+    () => parseSearchQuery(deferredSearchQuery),
+    [parseSearchQuery, deferredSearchQuery]
   );
   const highlightTerms = useMemo(() => {
     const values = new Set<string>();
@@ -2314,63 +2311,15 @@ export default function BookingsPage() {
     });
     return Array.from(values).filter(Boolean);
   }, [parsedSearch]);
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((booking) => {
-      const questTitle = getQuestTitle(booking);
-      const statusLabel = getStatusText(booking.status);
-      const aggregatorValue = booking.aggregator || 'site';
 
-      const getOperatorText = (key: SearchOperatorKey) => {
-        switch (key) {
-          case 'status':
-            return [booking.status, statusLabel];
-          case 'quest':
-            return [booking.questId ?? '', questTitle];
-          case 'aggregator':
-            return [aggregatorValue];
-          case 'promo':
-            return [booking.promoCode || 'none'];
-          case 'phone':
-            return [booking.customerPhone];
-          case 'email':
-            return [booking.customerEmail || ''];
-          case 'name':
-            return [booking.customerName];
-          case 'id':
-            return [booking.id];
-          case 'date':
-            return [formatBookingDateTime(booking)];
-          case 'created':
-            return [formatDateTime(booking.createdAt)];
-          case 'total':
-            return [String(booking.totalPrice ?? '')];
-          case 'notes':
-            return [booking.notes || ''];
-          default:
-            return [''];
-        }
-      };
-
-      const checkOperator = (key: SearchOperatorKey, values: string[]) => {
-        if (!values.length) {
-          return true;
-        }
-        const candidates = getOperatorText(key)
-          .filter(Boolean)
-          .map((text) => text.toLowerCase());
-        return values.every((value) =>
-          candidates.some((candidate) => candidate.includes(value.toLowerCase()))
-        );
-      };
-
-      const operatorMatches = (Object.keys(parsedSearch.operators) as SearchOperatorKey[]).every(
-        (key) => checkOperator(key, parsedSearch.operators[key])
-      );
-      if (!operatorMatches) {
-        return false;
-      }
-
-      if (parsedSearch.freeTerms.length) {
+  const bookingSearchIndex = useMemo<BookingSearchIndex[]>(
+    () =>
+      bookings.map((booking) => {
+        const questTitle = getQuestTitle(booking);
+        const statusLabel = getStatusText(booking.status);
+        const aggregatorValue = booking.aggregator || 'site';
+        const bookingDateText = formatBookingDateTime(booking);
+        const createdAtText = formatDateTime(booking.createdAt);
         const searchableFields = [
           booking.id,
           booking.customerName,
@@ -2381,106 +2330,166 @@ export default function BookingsPage() {
           booking.notes,
           questTitle,
           statusLabel,
-          formatBookingDateTime(booking),
-          formatDateTime(booking.createdAt),
+          bookingDateText,
+          createdAtText,
           String(booking.totalPrice ?? ''),
-        ].filter(Boolean) as string[];
+        ]
+          .filter((field): field is string => typeof field === 'string' && field.length > 0)
+          .map((field) => field.toLowerCase());
 
-        const matchesTerm = (term: string) => {
-          const normalizedTerm = term.toLowerCase();
-          return searchableFields.some((field) => field.toLowerCase().includes(normalizedTerm));
+        return {
+          booking,
+          searchableFields,
+          phoneDigits: normalizePhone(booking.customerPhone),
+          bookingDateText,
+          createdAtText,
+          statusLabel,
+          questTitle,
+          aggregatorValue,
+        };
+      }),
+    [bookings, formatBookingDateTime, formatDateTime, getQuestTitle, getStatusText]
+  );
+
+  const filteredBookings = useMemo(() => {
+    return bookingSearchIndex
+      .filter((entry) => {
+        const { booking } = entry;
+
+        const getOperatorText = (key: SearchOperatorKey) => {
+          switch (key) {
+            case 'status':
+              return [booking.status, entry.statusLabel];
+            case 'quest':
+              return [booking.questId ?? '', entry.questTitle];
+            case 'aggregator':
+              return [entry.aggregatorValue];
+            case 'promo':
+              return [booking.promoCode || 'none'];
+            case 'phone':
+              return [booking.customerPhone, entry.phoneDigits];
+            case 'email':
+              return [booking.customerEmail || ''];
+            case 'name':
+              return [booking.customerName];
+            case 'id':
+              return [booking.id];
+            case 'date':
+              return [entry.bookingDateText];
+            case 'created':
+              return [entry.createdAtText];
+            case 'total':
+              return [String(booking.totalPrice ?? '')];
+            case 'notes':
+              return [booking.notes || ''];
+            default:
+              return [''];
+          }
         };
 
-        const matchesFuzzy = (term: string) =>
-          fuzzyMatch(term, booking.customerName) || fuzzyMatch(term, booking.customerPhone);
+        const checkOperator = (key: SearchOperatorKey, values: string[]) => {
+          if (!values.length) {
+            return true;
+          }
+          const candidates = getOperatorText(key)
+            .filter(Boolean)
+            .map((text) => text.toLowerCase());
+          return values.every((value) =>
+            candidates.some((candidate) => candidate.includes(value.toLowerCase()))
+          );
+        };
 
-        const matchesAllTerms = parsedSearch.freeTerms.every(
-          (term) => matchesTerm(term) || matchesFuzzy(term)
+        const operatorMatches = (Object.keys(parsedSearch.operators) as SearchOperatorKey[]).every(
+          (key) => checkOperator(key, parsedSearch.operators[key])
         );
-        if (!matchesAllTerms) {
+        if (!operatorMatches) {
           return false;
         }
-      }
 
-      for (const filter of activeColumnFilters) {
-        const definition = columnFilterDefinitionMap.get(filter.key as BookingColumnFilterKey);
-        if (!definition) {
-          continue;
-        }
-        if (definition.kind === 'multi') {
-          const selectedValues = filter.values ?? [];
-          if (!selectedValues.length) {
-            continue;
-          }
-          let bookingValue = '';
-          switch (filter.key) {
-            case 'status':
-              bookingValue = booking.status;
-              break;
-            case 'quest':
-              bookingValue = booking.questId ?? '';
-              break;
-            case 'aggregator':
-              bookingValue = booking.aggregator || 'site';
-              break;
-            case 'promoCode':
-              bookingValue = booking.promoCode || 'none';
-              break;
-            default:
-              bookingValue = '';
-          }
-          if (!selectedValues.includes(bookingValue)) {
+        if (parsedSearch.freeTerms.length) {
+          const matchesAllTerms = parsedSearch.freeTerms.every((term) => {
+            const normalizedTerm = term.toLowerCase();
+            const termDigits = normalizePhone(term);
+            if (termDigits && entry.phoneDigits.includes(termDigits)) {
+              return true;
+            }
+            return entry.searchableFields.some((field) => field.includes(normalizedTerm));
+          });
+          if (!matchesAllTerms) {
             return false;
           }
-          continue;
         }
-        const rawValue = filter.value?.trim().toLowerCase() ?? '';
-        if (!rawValue) {
-          continue;
+
+        for (const filter of activeColumnFilters) {
+          const definition = columnFilterDefinitionMap.get(filter.key as BookingColumnFilterKey);
+          if (!definition) {
+            continue;
+          }
+          if (definition.kind === 'multi') {
+            const selectedValues = filter.values ?? [];
+            if (!selectedValues.length) {
+              continue;
+            }
+            let bookingValue = '';
+            switch (filter.key) {
+              case 'status':
+                bookingValue = booking.status;
+                break;
+              case 'quest':
+                bookingValue = booking.questId ?? '';
+                break;
+              case 'aggregator':
+                bookingValue = booking.aggregator || 'site';
+                break;
+              case 'promoCode':
+                bookingValue = booking.promoCode || 'none';
+                break;
+              default:
+                bookingValue = '';
+            }
+            if (!selectedValues.includes(bookingValue)) {
+              return false;
+            }
+            continue;
+          }
+          const rawValue = filter.value?.trim().toLowerCase() ?? '';
+          if (!rawValue) {
+            continue;
+          }
+          let bookingText = '';
+          switch (filter.key) {
+            case 'customerName':
+              bookingText = booking.customerName;
+              break;
+            case 'customerPhone':
+              bookingText = booking.customerPhone;
+              break;
+            case 'customerEmail':
+              bookingText = booking.customerEmail || '';
+              break;
+            case 'bookingDate':
+              bookingText = entry.bookingDateText;
+              break;
+            case 'createdAt':
+              bookingText = entry.createdAtText;
+              break;
+            case 'totalPrice':
+              bookingText = String(booking.totalPrice ?? '');
+              break;
+            case 'notes':
+              bookingText = booking.notes || '';
+              break;
+            default:
+              bookingText = '';
+          }
+          if (!bookingText.toLowerCase().includes(rawValue)) {
+            return false;
+          }
         }
-        let bookingText = '';
-        switch (filter.key) {
-          case 'customerName':
-            bookingText = booking.customerName;
-            break;
-          case 'customerPhone':
-            bookingText = booking.customerPhone;
-            break;
-          case 'customerEmail':
-            bookingText = booking.customerEmail || '';
-            break;
-          case 'bookingDate':
-            bookingText = formatBookingDateTime(booking);
-            break;
-          case 'createdAt':
-            bookingText = formatDateTime(booking.createdAt);
-            break;
-          case 'totalPrice':
-            bookingText = String(booking.totalPrice ?? '');
-            break;
-          case 'notes':
-            bookingText = booking.notes || '';
-            break;
-          default:
-            bookingText = '';
-        }
-        if (!bookingText.toLowerCase().includes(rawValue)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [
-    bookings,
-    parsedSearch,
-    activeColumnFilters,
-    columnFilterDefinitionMap,
-    formatBookingDateTime,
-    formatDateTime,
-    getQuestTitle,
-    getStatusText,
-    fuzzyMatch,
-  ]);
+        return true;
+      })
+      .map((entry) => entry.booking);
+  }, [bookingSearchIndex, parsedSearch, activeColumnFilters, columnFilterDefinitionMap]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / listItemsPerPage));
   const safePage = Math.min(currentPage, totalPages);

@@ -529,6 +529,7 @@ class ApiClient {
     questId?: string;
     aggregator?: string;
     promoCode?: string;
+    searchQuery?: string;
     dateFrom?: string;
     dateTo?: string;
     sort?: string;
@@ -538,6 +539,7 @@ class ApiClient {
     if (params?.questId) searchParams.set('questId', params.questId);
     if (params?.aggregator) searchParams.set('aggregator', params.aggregator);
     if (params?.promoCode) searchParams.set('promoCode', params.promoCode);
+    if (params?.searchQuery) searchParams.set('searchQuery', params.searchQuery);
     if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
     if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
     if (params?.sort) searchParams.set('sort', params.sort);

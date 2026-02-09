@@ -15,6 +15,7 @@ public interface IBookingService
         Guid? questId = null,
         string? aggregator = null,
         string? promoCode = null,
+        string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
         string? sort = null);
@@ -49,6 +50,7 @@ public class BookingService : IBookingService
         Guid? questId = null,
         string? aggregator = null,
         string? promoCode = null,
+        string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
         string? sort = null)
@@ -101,6 +103,23 @@ public class BookingService : IBookingService
         if (dateTo.HasValue)
         {
             query = query.Where(b => b.BookingDate <= dateTo.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var normalizedSearch = searchQuery.Trim().ToLowerInvariant();
+            var searchDigits = new string(searchQuery.Where(char.IsDigit).ToArray());
+            query = query.Where(b =>
+                EF.Functions.ILike(b.CustomerName, $"%{normalizedSearch}%")
+                || EF.Functions.ILike(b.CustomerPhone, $"%{normalizedSearch}%")
+                || (searchDigits.Length > 0 && EF.Functions.ILike(b.CustomerPhone, $"%{searchDigits}%"))
+                || (b.CustomerEmail != null && EF.Functions.ILike(b.CustomerEmail, $"%{normalizedSearch}%"))
+                || (b.PromoCode != null && EF.Functions.ILike(b.PromoCode, $"%{normalizedSearch}%"))
+                || (b.Aggregator != null && EF.Functions.ILike(b.Aggregator, $"%{normalizedSearch}%"))
+                || (b.Notes != null && EF.Functions.ILike(b.Notes, $"%{normalizedSearch}%"))
+                || (b.AggregatorUniqueId != null && EF.Functions.ILike(b.AggregatorUniqueId, $"%{normalizedSearch}%"))
+                || EF.Functions.ILike(b.Status, $"%{normalizedSearch}%")
+                || (b.Quest != null && EF.Functions.ILike(b.Quest.Title, $"%{normalizedSearch}%")));
         }
 
         var orderedQuery = ApplySorting(query, sort);
