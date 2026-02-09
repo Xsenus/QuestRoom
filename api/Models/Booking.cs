@@ -16,6 +16,12 @@ public class Booking
     [Column("quest_schedule_id")]
     public Guid? QuestScheduleId { get; set; }
 
+    [Column("quest_price")]
+    public int? QuestPrice { get; set; }
+
+    [Column("extra_participant_price")]
+    public int? ExtraParticipantPrice { get; set; }
+
     [Required]
     [Column("customer_name")]
     public string CustomerName { get; set; } = string.Empty;
