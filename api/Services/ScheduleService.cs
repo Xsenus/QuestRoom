@@ -55,11 +55,33 @@ public class ScheduleService : IScheduleService
             query = query.Where(s => s.Date <= toDate.Value);
         }
 
-        return await query
+        var slots = await query
             .OrderBy(s => s.Date)
             .ThenBy(s => s.TimeSlot)
             .Select(s => ToDto(s))
             .ToListAsync();
+
+        if (!slots.Any())
+        {
+            return slots;
+        }
+
+        var slotIds = slots.Select(slot => slot.Id).ToList();
+        var occupiedSlotIds = await _context.Bookings
+            .Where(booking => booking.QuestScheduleId.HasValue)
+            .Where(booking => booking.Status != "cancelled")
+            .Where(booking => booking.QuestScheduleId != null && slotIds.Contains(booking.QuestScheduleId.Value))
+            .Select(booking => booking.QuestScheduleId!.Value)
+            .Distinct()
+            .ToListAsync();
+        var occupiedSet = occupiedSlotIds.ToHashSet();
+
+        foreach (var slot in slots)
+        {
+            slot.IsBooked = slot.IsBooked || occupiedSet.Contains(slot.Id);
+        }
+
+        return slots;
     }
 
     public async Task<QuestScheduleDto> CreateSlotAsync(QuestScheduleUpsertDto dto)

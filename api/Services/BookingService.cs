@@ -461,7 +461,7 @@ public class BookingService : IBookingService
             return false;
         }
 
-        var wasCancelled = booking.Status == "cancelled";
+        var previousScheduleId = booking.QuestScheduleId;
         var nextStatus = string.IsNullOrWhiteSpace(dto.Status) ? booking.Status : dto.Status;
         var shouldRecalculate = false;
 
@@ -606,17 +606,17 @@ public class BookingService : IBookingService
             booking.TotalPrice = dto.TotalPrice.Value;
         }
 
-        if (nextStatus == "cancelled" && !wasCancelled && booking.QuestScheduleId.HasValue)
+        await _context.SaveChangesAsync();
+
+        if (previousScheduleId.HasValue)
         {
-            var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
-            if (schedule != null)
-            {
-                schedule.IsBooked = false;
-                schedule.UpdatedAt = DateTime.UtcNow;
-            }
+            await SyncScheduleBookedStateAsync(previousScheduleId.Value);
+        }
+        if (booking.QuestScheduleId.HasValue && booking.QuestScheduleId != previousScheduleId)
+        {
+            await SyncScheduleBookedStateAsync(booking.QuestScheduleId.Value);
         }
 
-        await _context.SaveChangesAsync();
         return true;
     }
 
@@ -632,18 +632,15 @@ public class BookingService : IBookingService
                 return false;
             }
 
-            if (booking.QuestScheduleId.HasValue)
-            {
-                var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
-                if (schedule != null)
-                {
-                    schedule.IsBooked = false;
-                    schedule.UpdatedAt = DateTime.UtcNow;
-                }
-            }
+            var removedScheduleId = booking.QuestScheduleId;
 
             _context.Bookings.Remove(booking);
             await _context.SaveChangesAsync();
+
+            if (removedScheduleId.HasValue)
+            {
+                await SyncScheduleBookedStateAsync(removedScheduleId.Value);
+            }
             await transaction.CommitAsync();
             return true;
         }
@@ -651,6 +648,25 @@ public class BookingService : IBookingService
         {
             await transaction.RollbackAsync();
             throw;
+        }
+    }
+
+    private async Task SyncScheduleBookedStateAsync(Guid scheduleId)
+    {
+        var schedule = await _context.QuestSchedules.FindAsync(scheduleId);
+        if (schedule == null)
+        {
+            return;
+        }
+
+        var hasActiveBooking = await _context.Bookings
+            .AnyAsync(booking => booking.QuestScheduleId == scheduleId && booking.Status != "cancelled");
+
+        if (schedule.IsBooked != hasActiveBooking)
+        {
+            schedule.IsBooked = hasActiveBooking;
+            schedule.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
         }
     }
 
@@ -908,7 +924,7 @@ public class BookingService : IBookingService
         }
 
         var scheduleAlreadyBooked = schedule != null
-            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id);
+            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id && b.Status != "cancelled");
         if (scheduleAlreadyBooked)
         {
             result.Skipped++;
