@@ -14,9 +14,13 @@ export default function QuestDetailPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<QuestSchedule | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [highlightedSlotIds, setHighlightedSlotIds] = useState<Set<string>>(new Set());
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isImageOpen, setIsImageOpen] = useState(false);
   const thumbnailsRef = useRef<HTMLDivElement | null>(null);
+  const latestScheduleRequestIdRef = useRef(0);
+  const scheduleSnapshotRef = useRef<Map<string, boolean>>(new Map());
+  const highlightTimeoutRef = useRef<number | null>(null);
   const formatAgeRating = (value?: string | null) => {
     const trimmed = value?.trim() ?? '';
     const match = trimmed.match(/^(\d+)\s*\+$/);
@@ -38,6 +42,25 @@ export default function QuestDetailPage() {
       loadSchedule(quest.id);
     }
   }, [quest?.id, settings?.bookingDaysAhead]);
+
+
+  useEffect(() => {
+    if (!quest?.id) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadSchedule(quest.id);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [quest?.id, settings?.bookingDaysAhead]);
+
+  useEffect(() => () => {
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+  }, []);
 
   const loadQuest = async () => {
     setLoading(true);
@@ -72,11 +95,14 @@ export default function QuestDetailPage() {
     return `${year}-${month}-${day}`;
   };
 
-  const loadSchedule = async (questId: string) => {
+  async function loadSchedule(questId: string) {
     const today = new Date();
     const twoWeeksLater = new Date();
     const daysAhead = settings?.bookingDaysAhead ?? 10;
     twoWeeksLater.setDate(today.getDate() + Math.max(0, daysAhead - 1));
+
+    const requestId = latestScheduleRequestIdRef.current + 1;
+    latestScheduleRequestIdRef.current = requestId;
 
     try {
       const data = await api.getQuestSchedule(
@@ -84,12 +110,44 @@ export default function QuestDetailPage() {
         formatDateForApi(today),
         formatDateForApi(twoWeeksLater)
       );
-      setSchedule(data || []);
+      if (requestId !== latestScheduleRequestIdRef.current) {
+        return;
+      }
+
+      const nextSchedule = data || [];
+      const previousSnapshot = scheduleSnapshotRef.current;
+      const nextSnapshot = new Map<string, boolean>();
+      const changedSlotIds: string[] = [];
+
+      nextSchedule.forEach((slot) => {
+        nextSnapshot.set(slot.id, slot.isBooked);
+        if (previousSnapshot.has(slot.id) && previousSnapshot.get(slot.id) !== slot.isBooked) {
+          changedSlotIds.push(slot.id);
+        }
+      });
+
+      scheduleSnapshotRef.current = nextSnapshot;
+      setSchedule(nextSchedule);
+
+      if (changedSlotIds.length) {
+        setHighlightedSlotIds((prev) => {
+          const next = new Set(prev);
+          changedSlotIds.forEach((id) => next.add(id));
+          return next;
+        });
+        if (highlightTimeoutRef.current) {
+          window.clearTimeout(highlightTimeoutRef.current);
+        }
+        highlightTimeoutRef.current = window.setTimeout(() => {
+          setHighlightedSlotIds(new Set());
+          highlightTimeoutRef.current = null;
+        }, 1800);
+      }
     } catch (error) {
       console.error('Error loading schedule:', error);
     }
     setLoading(false);
-  };
+  }
 
   useEffect(() => {
     if (quest) {
@@ -426,11 +484,11 @@ export default function QuestDetailPage() {
                             }}
                             aria-disabled={isDisabled}
                             type="button"
-                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors flex flex-col items-center ${
+                            className={`w-[68px] shrink-0 px-2 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-[0.08em] transition-all duration-500 flex flex-col items-center ${
                               slot.isBooked || slotIsClosed
                                 ? 'bg-amber-500 text-slate-900 cursor-not-allowed'
                                 : 'bg-green-600 text-white hover:bg-green-500'
-                            }`}
+                            } ${highlightedSlotIds.has(slot.id) ? 'ring-2 ring-white/90 shadow-[0_0_0_2px_rgba(255,255,255,0.35)] animate-pulse' : ''}`}
                           >
                             <span
                               className={`block w-full text-center ${
