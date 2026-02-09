@@ -51,7 +51,7 @@ export default function QuestDetailPage() {
 
     const intervalId = window.setInterval(() => {
       void loadSchedule(quest.id);
-    }, 5000);
+    }, 15000);
 
     return () => window.clearInterval(intervalId);
   }, [quest?.id, settings?.bookingDaysAhead]);
