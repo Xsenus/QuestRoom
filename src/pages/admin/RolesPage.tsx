@@ -47,10 +47,6 @@ export default function RolesPage() {
     }
   }, [activeGroupId, permissionGroups]);
 
-  if (!isAdmin()) {
-    return <AccessDenied />;
-  }
-
   const selectedRole = useMemo(
     () => roles.find((role) => role.id === selectedId) || null,
     [roles, selectedId]
@@ -216,6 +212,10 @@ export default function RolesPage() {
       : [...editor.permissions, permissionId];
     setEditor({ ...editor, permissions: ensureAlwaysEnabledPermissions(nextPermissions) });
   };
+
+  if (!isAdmin()) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="space-y-6">

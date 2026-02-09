@@ -88,7 +88,7 @@ export default function PromotionsAdminPage() {
   const handleToggleActive = async (promo: Promotion) => {
     if (!canEdit) return;
     try {
-      const { id, createdAt, updatedAt, ...payload } = promo;
+      const { id, ...payload } = promo;
       await api.updatePromotion(id, { ...payload, isActive: !promo.isActive });
       loadPromotions();
     } catch (error) {

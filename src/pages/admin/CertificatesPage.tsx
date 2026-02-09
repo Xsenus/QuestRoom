@@ -88,7 +88,7 @@ export default function CertificatesPage() {
   const handleToggleVisibility = async (cert: Certificate) => {
     if (!canEdit) return;
     try {
-      const { id, createdAt, updatedAt, ...payload } = cert;
+      const { id, ...payload } = cert;
       await api.updateCertificate(id, { ...payload, isVisible: !cert.isVisible });
       loadCertificates();
     } catch (error) {

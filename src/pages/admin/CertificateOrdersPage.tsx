@@ -143,7 +143,7 @@ export default function CertificateOrdersAdminPage() {
     if (!editingOrder) return;
     setIsSaving(true);
     try {
-      const { id, certificateTitle, ...payload } = editingOrder;
+      const { id, ...payload } = editingOrder;
       await api.updateCertificateOrder(id, payload);
       setOrders((prev) =>
         prev.map((order) =>

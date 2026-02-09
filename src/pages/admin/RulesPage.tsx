@@ -88,7 +88,7 @@ export default function RulesPage() {
   const handleToggleVisibility = async (rule: Rule) => {
     if (!canEdit) return;
     try {
-      const { id, createdAt, updatedAt, ...payload } = rule;
+      const { id, ...payload } = rule;
       await api.updateRule(id, { ...payload, isVisible: !rule.isVisible });
       loadRules();
     } catch (error) {
