@@ -103,7 +103,7 @@ export default function ReviewsAdminPage() {
   const handleToggleVisibility = async (review: Review) => {
     if (!canEdit) return;
     try {
-      const { id, createdAt, updatedAt, ...payload } = review;
+      const { id, ...payload } = review;
       await api.updateReview(id, { ...payload, isVisible: !review.isVisible });
       loadReviews();
     } catch (error) {
@@ -114,7 +114,7 @@ export default function ReviewsAdminPage() {
   const handleToggleFeatured = async (review: Review) => {
     if (!canEdit) return;
     try {
-      const { id, createdAt, updatedAt, ...payload } = review;
+      const { id, ...payload } = review;
       await api.updateReview(id, { ...payload, isFeatured: !review.isFeatured });
       loadReviews();
     } catch (error) {

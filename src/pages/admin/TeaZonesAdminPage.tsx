@@ -81,7 +81,7 @@ export default function TeaZonesAdminPage() {
   const handleToggleActive = async (zone: TeaZone) => {
     if (!canEdit) return;
     try {
-      const { id, createdAt, updatedAt, ...payload } = zone;
+      const { id, ...payload } = zone;
       await api.updateTeaZone(id, { ...payload, isActive: !zone.isActive });
       loadTeaZones();
     } catch (error) {

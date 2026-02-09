@@ -94,7 +94,7 @@ export default function StandardExtraServicesPage() {
   const handleToggleActive = async (service: StandardExtraService) => {
     if (!canEdit) return;
     try {
-      const { id, createdAt, updatedAt, ...payload } = service;
+      const { id, ...payload } = service;
       await api.updateStandardExtraService(id, { ...payload, isActive: !service.isActive });
       loadServices();
     } catch (error) {
