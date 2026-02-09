@@ -18,7 +18,20 @@ public interface IBookingService
         string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
-        string? sort = null);
+        string? sort = null,
+        int? limit = null,
+        int? offset = null);
+    Task<int> GetBookingsCountAsync(
+        string? status = null,
+        Guid? questId = null,
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null);
+    Task<BookingFiltersMetaDto> GetBookingsFiltersMetaAsync(
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null);
     Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
     Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto);
     Task<bool> DeleteBookingAsync(Guid id);
@@ -53,7 +66,9 @@ public class BookingService : IBookingService
         string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
-        string? sort = null)
+        string? sort = null,
+        int? limit = null,
+        int? offset = null)
     {
         var query = _context.Bookings
             .Include(b => b.ExtraServices)
@@ -61,6 +76,122 @@ public class BookingService : IBookingService
             .Include(b => b.Quest)
             .AsQueryable();
 
+        query = ApplyListFilters(query, status, questId, aggregator, promoCode, searchQuery, dateFrom, dateTo);
+
+        var pagedQuery = (IQueryable<Booking>)ApplySorting(query, sort);
+        if (offset.HasValue && offset.Value > 0)
+        {
+            pagedQuery = pagedQuery.Skip(offset.Value);
+        }
+        if (limit.HasValue && limit.Value > 0)
+        {
+            pagedQuery = pagedQuery.Take(limit.Value);
+        }
+
+        var items = await pagedQuery.ToListAsync();
+        var dtos = items.Select(ToDto).ToList();
+        await EnrichWithBlacklistAsync(dtos);
+        return dtos;
+    }
+
+
+    public async Task<int> GetBookingsCountAsync(
+        string? status = null,
+        Guid? questId = null,
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null)
+    {
+        var query = _context.Bookings
+            .Include(b => b.Quest)
+            .AsQueryable();
+
+        query = ApplyListFilters(query, status, questId, aggregator, promoCode, searchQuery, dateFrom, dateTo);
+        return await query.CountAsync();
+    }
+
+    public async Task<BookingFiltersMetaDto> GetBookingsFiltersMetaAsync(
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null)
+    {
+        var query = _context.Bookings.AsQueryable();
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(b => b.BookingDate >= dateFrom.Value);
+        }
+
+        if (dateTo.HasValue)
+        {
+            query = query.Where(b => b.BookingDate <= dateTo.Value);
+        }
+
+        var rows = await query
+            .Select(b => new { b.Status, b.QuestId, b.Aggregator, b.PromoCode })
+            .ToListAsync();
+
+        var statusCountsByQuest = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+        var questCountsByStatus = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+
+        void Increment(Dictionary<string, Dictionary<string, int>> map, string firstKey, string secondKey)
+        {
+            if (!map.TryGetValue(firstKey, out var inner))
+            {
+                inner = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                map[firstKey] = inner;
+            }
+            inner[secondKey] = inner.GetValueOrDefault(secondKey) + 1;
+        }
+
+        foreach (var row in rows)
+        {
+            var questKey = row.QuestId?.ToString() ?? string.Empty;
+            var statusKey = row.Status ?? string.Empty;
+            Increment(statusCountsByQuest, "all", statusKey);
+            if (!string.IsNullOrWhiteSpace(questKey))
+            {
+                Increment(statusCountsByQuest, questKey, statusKey);
+            }
+
+            Increment(questCountsByStatus, "all", questKey);
+            Increment(questCountsByStatus, statusKey, questKey);
+        }
+
+        var aggregators = rows
+            .Select(r => r.Aggregator)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList()!;
+
+        var promoCodes = rows
+            .Select(r => r.PromoCode)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList()!;
+
+        return new BookingFiltersMetaDto
+        {
+            StatusCountsByQuest = statusCountsByQuest,
+            QuestCountsByStatus = questCountsByStatus,
+            AggregatorOptions = aggregators,
+            PromoCodeOptions = promoCodes
+        };
+    }
+
+    private static IQueryable<Booking> ApplyListFilters(
+        IQueryable<Booking> query,
+        string? status,
+        Guid? questId,
+        string? aggregator,
+        string? promoCode,
+        string? searchQuery,
+        DateOnly? dateFrom,
+        DateOnly? dateTo)
+    {
         if (!string.IsNullOrWhiteSpace(status))
         {
             query = query.Where(b => b.Status == status);
@@ -122,12 +253,7 @@ public class BookingService : IBookingService
                 || (b.Quest != null && EF.Functions.ILike(b.Quest.Title, $"%{normalizedSearch}%")));
         }
 
-        var orderedQuery = ApplySorting(query, sort);
-
-        var items = await orderedQuery.ToListAsync();
-        var dtos = items.Select(ToDto).ToList();
-        await EnrichWithBlacklistAsync(dtos);
-        return dtos;
+        return query;
     }
 
     public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto)

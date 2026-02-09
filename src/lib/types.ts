@@ -315,6 +315,13 @@ export type BookingTablePreferences = {
   pageSize?: number;
 };
 
+export type BookingFiltersMeta = {
+  statusCountsByQuest: Record<string, Record<string, number>>;
+  questCountsByStatus: Record<string, Record<string, number>>;
+  aggregatorOptions: string[];
+  promoCodeOptions: string[];
+};
+
 export type Rule = {
   id: string;
   title: string;

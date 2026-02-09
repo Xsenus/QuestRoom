@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } f
 import { api } from '../../lib/api';
 import {
   Booking,
+  BookingFiltersMeta,
   BlacklistMatch,
   BookingTableColumnPreference,
   BookingTableFilter,
@@ -154,7 +155,8 @@ export default function BookingsPage() {
   const canEditBlacklist = hasPermission('blacklist.edit');
   const canViewPromoCodes = hasPermission('promo-codes.view');
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [countBookings, setCountBookings] = useState<Booking[]>([]);
+  const [totalBookingsCount, setTotalBookingsCount] = useState(0);
+  const [bookingsFiltersMeta, setBookingsFiltersMeta] = useState<BookingFiltersMeta | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [standardExtraServices, setStandardExtraServices] = useState<StandardExtraService[]>([]);
@@ -828,6 +830,8 @@ export default function BookingsPage() {
       promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
       searchQuery: appliedSearchQuery.trim() || undefined,
       sort: sortParam || undefined,
+      limit: listItemsPerPage,
+      offset: Math.max(0, (currentPage - 1) * listItemsPerPage),
     }),
     [
       countFilterParams,
@@ -837,6 +841,8 @@ export default function BookingsPage() {
       promoCodeFilter,
       appliedSearchQuery,
       sortParam,
+      listItemsPerPage,
+      currentPage,
     ]
   );
 
@@ -844,7 +850,7 @@ export default function BookingsPage() {
     async (showLoading = true) => {
       if (!canView) {
         setBookings([]);
-        setCountBookings([]);
+        setTotalBookingsCount(0);
         return;
       }
 
@@ -855,15 +861,22 @@ export default function BookingsPage() {
         setLoading(true);
       }
       try {
-        const [listData, countData] = await Promise.all([
+        const [listData, totalCount] = await Promise.all([
           api.getBookings(listFilterParams),
-          api.getBookings(countFilterParams),
+          api.getBookingsCount({
+            ...countFilterParams,
+            status: statusFilter !== 'all' ? statusFilter : undefined,
+            questId: questFilter !== 'all' ? questFilter : undefined,
+            aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
+            promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+            searchQuery: appliedSearchQuery.trim() || undefined,
+          }),
         ]);
         if (requestId !== latestLoadRequestIdRef.current) {
           return;
         }
         setBookings(listData || []);
-        setCountBookings(countData || []);
+        setTotalBookingsCount(totalCount || 0);
       } catch (error) {
         if (requestId === latestLoadRequestIdRef.current) {
           console.error('Error loading bookings:', error);
@@ -873,7 +886,16 @@ export default function BookingsPage() {
         setLoading(false);
       }
     },
-    [canView, listFilterParams, countFilterParams]
+    [
+      canView,
+      listFilterParams,
+      countFilterParams,
+      statusFilter,
+      questFilter,
+      aggregatorFilter,
+      promoCodeFilter,
+      appliedSearchQuery,
+    ]
   );
 
   useEffect(() => {
@@ -886,6 +908,21 @@ export default function BookingsPage() {
     }
     loadBookings();
   }, [canView, loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
+
+  useEffect(() => {
+    if (!canView) {
+      return;
+    }
+    const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
+    if (!canLoad) {
+      return;
+    }
+
+    api
+      .getBookingsFiltersMeta(countFilterParams)
+      .then((meta) => setBookingsFiltersMeta(meta))
+      .catch((error) => console.error('Error loading bookings filters meta:', error));
+  }, [canView, dateFiltersEnabled, listDateFrom, listDateTo, countFilterParams]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -1639,62 +1676,58 @@ export default function BookingsPage() {
   };
 
   const statusCounts = useMemo(() => {
-    const source =
-      questFilter === 'all'
-        ? countBookings
-        : countBookings.filter((booking) => booking.questId === questFilter);
-    return source.reduce(
-      (acc, booking) => {
-        acc.all += 1;
-        acc[booking.status] += 1;
-        return acc;
-      },
-      {
-        all: 0,
-        pending: 0,
-        confirmed: 0,
-        cancelled: 0,
-        completed: 0,
-        planned: 0,
-        created: 0,
-        not_confirmed: 0,
-      }
-    );
-  }, [countBookings, questFilter]);
+    const key = questFilter === 'all' ? 'all' : questFilter;
+    const source = bookingsFiltersMeta?.statusCountsByQuest?.[key] ?? {};
+    const base = {
+      all: 0,
+      pending: 0,
+      confirmed: 0,
+      cancelled: 0,
+      completed: 0,
+      planned: 0,
+      created: 0,
+      not_confirmed: 0,
+    };
+    const statuses: Array<keyof typeof base> = [
+      'pending',
+      'confirmed',
+      'cancelled',
+      'completed',
+      'planned',
+      'created',
+      'not_confirmed',
+    ];
+    statuses.forEach((status) => {
+      const value = source[status] ?? 0;
+      base[status] = value;
+      base.all += value;
+    });
+    return base;
+  }, [bookingsFiltersMeta, questFilter]);
 
   const questCounts = useMemo(() => {
-    const source =
-      statusFilter === 'all'
-        ? countBookings
-        : countBookings.filter((booking) => booking.status === statusFilter);
-    const counts: Record<string, number> = { all: source.length };
-    source.forEach((booking) => {
-      if (booking.questId) {
-        counts[booking.questId] = (counts[booking.questId] || 0) + 1;
+    const key = statusFilter === 'all' ? 'all' : statusFilter;
+    const source = bookingsFiltersMeta?.questCountsByStatus?.[key] ?? {};
+    const counts: Record<string, number> = {
+      all: Object.values(source).reduce((acc, value) => acc + (value ?? 0), 0),
+    };
+    Object.entries(source).forEach(([questId, value]) => {
+      if (questId) {
+        counts[questId] = value;
       }
     });
     return counts;
-  }, [countBookings, statusFilter]);
+  }, [bookingsFiltersMeta, statusFilter]);
 
-  const aggregatorOptions = useMemo(() => {
-    const values = new Set<string>();
-    countBookings.forEach((booking) => {
-      if (booking.aggregator) {
-        values.add(booking.aggregator);
-      }
-    });
-    return Array.from(values);
-  }, [countBookings]);
+  const aggregatorOptions = useMemo(
+    () => bookingsFiltersMeta?.aggregatorOptions ?? [],
+    [bookingsFiltersMeta]
+  );
 
-  const promoCodeOptions = useMemo(() => {
-    const values = new Set<string>();
-    countBookings.forEach((booking) => {
-      if (booking.promoCode) {
-        values.add(booking.promoCode);
-      }
-    });
-    return Array.from(values);
-  }, [countBookings]);
+  const promoCodeOptions = useMemo(
+    () => bookingsFiltersMeta?.promoCodeOptions ?? [],
+    [bookingsFiltersMeta]
+  );
 
   const columnFilterDefinitions = useMemo<BookingColumnFilterDefinition[]>(() => {
     return [
@@ -2491,12 +2524,9 @@ export default function BookingsPage() {
       .map((entry) => entry.booking);
   }, [bookingSearchIndex, parsedSearch, activeColumnFilters, columnFilterDefinitionMap]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredBookings.length / listItemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(totalBookingsCount / listItemsPerPage));
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedBookings = filteredBookings.slice(
-    (safePage - 1) * listItemsPerPage,
-    safePage * listItemsPerPage
-  );
+  const paginatedBookings = filteredBookings;
   const paginationItems = useMemo<(number | 'ellipsis')[]>(() => {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -2908,7 +2938,7 @@ export default function BookingsPage() {
             </div>
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-500">
-                Показано: <span className="font-semibold">{filteredBookings.length}</span>
+                Показано: <span className="font-semibold">{totalBookingsCount}</span>
               </div>
               <button
                 onClick={() => {

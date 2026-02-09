@@ -8,6 +8,7 @@ import type {
   BlacklistMatch,
   Booking,
   BookingCreate,
+  BookingFiltersMeta,
   BookingImportResult,
   BookingTablePreferences,
   BookingUpdate,
@@ -533,6 +534,8 @@ class ApiClient {
     dateFrom?: string;
     dateTo?: string;
     sort?: string;
+    limit?: number;
+    offset?: number;
   }): Promise<Booking[]> {
     const searchParams = new URLSearchParams();
     if (params?.status) searchParams.set('status', params.status);
@@ -543,8 +546,43 @@ class ApiClient {
     if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
     if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
     if (params?.sort) searchParams.set('sort', params.sort);
+    if (params?.limit !== undefined) searchParams.set('limit', String(params.limit));
+    if (params?.offset !== undefined) searchParams.set('offset', String(params.offset));
     const query = searchParams.toString();
     return this.request(`/bookings${query ? `?${query}` : ''}`);
+  }
+
+
+  async getBookingsCount(params?: {
+    status?: string;
+    questId?: string;
+    aggregator?: string;
+    promoCode?: string;
+    searchQuery?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<number> {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.questId) searchParams.set('questId', params.questId);
+    if (params?.aggregator) searchParams.set('aggregator', params.aggregator);
+    if (params?.promoCode) searchParams.set('promoCode', params.promoCode);
+    if (params?.searchQuery) searchParams.set('searchQuery', params.searchQuery);
+    if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+    const query = searchParams.toString();
+    return this.request(`/bookings/count${query ? `?${query}` : ''}`);
+  }
+
+  async getBookingsFiltersMeta(params?: {
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<BookingFiltersMeta> {
+    const searchParams = new URLSearchParams();
+    if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+    const query = searchParams.toString();
+    return this.request(`/bookings/filters-meta${query ? `?${query}` : ''}`);
   }
 
   async getBookingsTablePreferences(): Promise<BookingTablePreferences> {
