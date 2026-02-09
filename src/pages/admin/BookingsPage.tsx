@@ -1562,7 +1562,7 @@ export default function BookingsPage() {
     const color = getStatusColorValue(booking.status);
     if (booking.isBlacklisted) {
       return {
-        backgroundColor: '#fff1f2',
+        backgroundColor: '#0b0b0b',
         boxShadow: 'inset 6px 0 0 #dc2626',
       };
     }
@@ -1572,7 +1572,14 @@ export default function BookingsPage() {
     };
   };
 
-  const getCardStyle = (status: Booking['status']) => {
+  const getCardStyle = (booking: Booking) => {
+    if (booking.isBlacklisted) {
+      return {
+        backgroundColor: '#0b0b0b',
+        borderColor: '#dc2626',
+      };
+    }
+    const status = booking.status;
     const color = getStatusColorValue(status);
     return {
       backgroundColor: hexToRgba(color, 0.08),
@@ -2638,7 +2645,7 @@ export default function BookingsPage() {
       case 'customer':
         return (
           <div className={isCompact ? 'max-w-44' : undefined}>
-            <div className="font-semibold text-gray-900 truncate">
+            <div className={`font-semibold truncate ${booking.isBlacklisted ? 'text-white' : 'text-gray-900'}`}>
               {highlightText(booking.customerName, highlightTerms)}
             </div>
             {booking.isBlacklisted && (
@@ -3109,11 +3116,15 @@ export default function BookingsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {paginatedBookings.map((booking) => (
-                    <tr key={booking.id} style={getRowStyle(booking)}>
+                    <tr
+                      key={booking.id}
+                      style={getRowStyle(booking)}
+                      className={booking.isBlacklisted ? 'blacklisted-booking-row' : undefined}
+                    >
                       {visibleTableColumns.map((column) => (
                         <td
                           key={column.key}
-                          className={`${isCompactTableView ? 'px-2 py-2.5 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : 'text-gray-700'}`}
+                          className={`${isCompactTableView ? 'px-2 py-2.5 align-top' : 'px-4 py-3'} ${column.key === 'actions' ? 'text-right' : booking.isBlacklisted ? 'text-white' : 'text-gray-700'}`}
                           style={{ width: getRenderedColumnWidth(column) }}
                         >
                           {renderTableCell(booking, column.key, isCompactTableView)}
@@ -3129,8 +3140,8 @@ export default function BookingsPage() {
               {paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'}`}
-                  style={getCardStyle(booking.status)}
+                  className={`rounded-lg shadow border border-transparent ${isCompactCardsView ? 'p-3' : 'p-4'} ${booking.isBlacklisted ? 'blacklisted-booking-card' : ''}`}
+                  style={getCardStyle(booking)}
                 >
                   <div className={`flex items-start justify-between ${isCompactCardsView ? 'mb-2' : 'mb-3'}`}>
                     <div className="flex-1">
