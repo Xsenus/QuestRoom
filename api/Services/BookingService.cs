@@ -30,6 +30,9 @@ public interface IBookingService
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null);
     Task<BookingFiltersMetaDto> GetBookingsFiltersMetaAsync(
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null);
     Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
@@ -113,20 +116,17 @@ public class BookingService : IBookingService
     }
 
     public async Task<BookingFiltersMetaDto> GetBookingsFiltersMetaAsync(
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null)
     {
-        var query = _context.Bookings.AsQueryable();
+        var query = _context.Bookings
+            .Include(b => b.Quest)
+            .AsQueryable();
 
-        if (dateFrom.HasValue)
-        {
-            query = query.Where(b => b.BookingDate >= dateFrom.Value);
-        }
-
-        if (dateTo.HasValue)
-        {
-            query = query.Where(b => b.BookingDate <= dateTo.Value);
-        }
+        query = ApplyListFilters(query, null, null, aggregator, promoCode, searchQuery, dateFrom, dateTo);
 
         var rows = await query
             .Select(b => new { b.Status, b.QuestId, b.Aggregator, b.PromoCode })

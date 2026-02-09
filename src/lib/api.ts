@@ -575,10 +575,16 @@ class ApiClient {
   }
 
   async getBookingsFiltersMeta(params?: {
+    aggregator?: string;
+    promoCode?: string;
+    searchQuery?: string;
     dateFrom?: string;
     dateTo?: string;
   }): Promise<BookingFiltersMeta> {
     const searchParams = new URLSearchParams();
+    if (params?.aggregator) searchParams.set('aggregator', params.aggregator);
+    if (params?.promoCode) searchParams.set('promoCode', params.promoCode);
+    if (params?.searchQuery) searchParams.set('searchQuery', params.searchQuery);
     if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
     if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
     const query = searchParams.toString();

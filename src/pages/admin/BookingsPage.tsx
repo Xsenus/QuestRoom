@@ -919,10 +919,24 @@ export default function BookingsPage() {
     }
 
     api
-      .getBookingsFiltersMeta(countFilterParams)
+            .getBookingsFiltersMeta({
+        ...countFilterParams,
+        aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
+        promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+        searchQuery: appliedSearchQuery.trim() || undefined,
+      })
       .then((meta) => setBookingsFiltersMeta(meta))
       .catch((error) => console.error('Error loading bookings filters meta:', error));
-  }, [canView, dateFiltersEnabled, listDateFrom, listDateTo, countFilterParams]);
+  }, [
+    canView,
+    dateFiltersEnabled,
+    listDateFrom,
+    listDateTo,
+    countFilterParams,
+    aggregatorFilter,
+    promoCodeFilter,
+    appliedSearchQuery,
+  ]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -2938,7 +2952,7 @@ export default function BookingsPage() {
             </div>
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-500">
-                Показано: <span className="font-semibold">{totalBookingsCount}</span>
+                Показано на странице: <span className="font-semibold">{bookings.length}</span> из <span className="font-semibold">{totalBookingsCount}</span>
               </div>
               <button
                 onClick={() => {

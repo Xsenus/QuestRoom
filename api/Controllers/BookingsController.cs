@@ -82,6 +82,9 @@ public class BookingsController : PermissionAwareControllerBase
     [Authorize]
     [HttpGet("filters-meta")]
     public async Task<ActionResult<BookingFiltersMetaDto>> GetBookingsFiltersMeta(
+        [FromQuery] string? aggregator = null,
+        [FromQuery] string? promoCode = null,
+        [FromQuery] string? searchQuery = null,
         [FromQuery] DateOnly? dateFrom = null,
         [FromQuery] DateOnly? dateTo = null)
     {
@@ -91,7 +94,7 @@ public class BookingsController : PermissionAwareControllerBase
             return Forbid();
         }
 
-        var meta = await _bookingService.GetBookingsFiltersMetaAsync(dateFrom, dateTo);
+        var meta = await _bookingService.GetBookingsFiltersMetaAsync(aggregator, promoCode, searchQuery, dateFrom, dateTo);
         return Ok(meta);
     }
 
