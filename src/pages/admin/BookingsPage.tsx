@@ -813,15 +813,14 @@ export default function BookingsPage() {
     selectedQuestExtraServiceIds,
   ]);
 
-  const dateFiltersEnabled = statusFilter !== 'pending';
   const sortParam = useMemo(() => serializeSorts(tableSorts), [serializeSorts, tableSorts]);
 
   const countFilterParams = useMemo(
     () => ({
-      dateFrom: dateFiltersEnabled ? normalizeDateParam(listDateFrom) : undefined,
-      dateTo: dateFiltersEnabled ? normalizeDateParam(listDateTo) : undefined,
+      dateFrom: normalizeDateParam(listDateFrom),
+      dateTo: normalizeDateParam(listDateTo),
     }),
-    [listDateFrom, listDateTo, dateFiltersEnabled]
+    [listDateFrom, listDateTo]
   );
 
   const listFilterParams = useMemo(
@@ -917,19 +916,19 @@ export default function BookingsPage() {
     if (!canView) {
       return;
     }
-    const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
+    const canLoad = Boolean(listDateFrom && listDateTo);
     if (!canLoad) {
       return;
     }
     loadBookings(true, 'filters');
-  }, [canView, loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
+  }, [canView, loadBookings, listDateFrom, listDateTo]);
 
 
   useEffect(() => {
     if (!canView) {
       return;
     }
-    const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
+    const canLoad = Boolean(listDateFrom && listDateTo);
     if (!canLoad) {
       return;
     }
@@ -939,13 +938,13 @@ export default function BookingsPage() {
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [canView, loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
+  }, [canView, loadBookings, listDateFrom, listDateTo]);
 
   useEffect(() => {
     if (!canView) {
       return;
     }
-    const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
+    const canLoad = Boolean(listDateFrom && listDateTo);
     if (!canLoad) {
       return;
     }
@@ -961,7 +960,6 @@ export default function BookingsPage() {
       .catch((error) => console.error('Error loading bookings filters meta:', error));
   }, [
     canView,
-    dateFiltersEnabled,
     listDateFrom,
     listDateTo,
     countFilterParams,
@@ -1034,15 +1032,6 @@ export default function BookingsPage() {
   };
 
   const normalizeListEndDate = (value: string) => {
-    if (!value) {
-      return value;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selected = new Date(value);
-    if (selected < today) {
-      return formatDate(getEndOfNextMonth(today));
-    }
     return value;
   };
 
@@ -2944,7 +2933,6 @@ export default function BookingsPage() {
                       event.currentTarget.blur();
                     }
                   }}
-                  disabled={statusFilter === 'pending'}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
                 />
               </div>
@@ -2962,7 +2950,6 @@ export default function BookingsPage() {
                       event.currentTarget.blur();
                     }
                   }}
-                  disabled={statusFilter === 'pending'}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
                 />
               </div>
@@ -3107,11 +3094,6 @@ export default function BookingsPage() {
                   </div>
                 )}
               </div>
-            )}
-            {statusFilter === 'pending' && (
-              <p className="text-xs text-gray-500 mt-3">
-                Для ожидающих броней период не применяется — показываются все записи.
-              </p>
             )}
           </div>
 
