@@ -166,6 +166,9 @@ export default function BookingsPage() {
   const [createResult, setCreateResult] = useState<string>('');
   const [contactBlacklistMatches, setContactBlacklistMatches] = useState<BlacklistMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [bookingFormMode, setBookingFormMode] = useState<'create' | 'edit' | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
     if (typeof window === 'undefined') {
@@ -847,7 +850,7 @@ export default function BookingsPage() {
   );
 
   const loadBookings = useCallback(
-    async (showLoading = true) => {
+    async (showLoading = true, source: 'manual' | 'auto' | 'filters' = 'filters') => {
       if (!canView) {
         setBookings([]);
         setTotalBookingsCount(0);
@@ -857,8 +860,13 @@ export default function BookingsPage() {
       const requestId = latestLoadRequestIdRef.current + 1;
       latestLoadRequestIdRef.current = requestId;
 
-      if (showLoading) {
+      if (showLoading && loading) {
         setLoading(true);
+      } else {
+        setIsTableLoading(true);
+      }
+      if (source === 'auto') {
+        setIsAutoRefreshing(true);
       }
       try {
         const [listData, totalCount] = await Promise.all([
@@ -877,13 +885,20 @@ export default function BookingsPage() {
         }
         setBookings(listData || []);
         setTotalBookingsCount(totalCount || 0);
+        setLastUpdatedAt(new Date());
       } catch (error) {
         if (requestId === latestLoadRequestIdRef.current) {
           console.error('Error loading bookings:', error);
         }
       }
-      if (showLoading && requestId === latestLoadRequestIdRef.current) {
-        setLoading(false);
+      if (requestId === latestLoadRequestIdRef.current) {
+        if (showLoading && loading) {
+          setLoading(false);
+        }
+        setIsTableLoading(false);
+        if (source === 'auto') {
+          setIsAutoRefreshing(false);
+        }
       }
     },
     [
@@ -906,7 +921,24 @@ export default function BookingsPage() {
     if (!canLoad) {
       return;
     }
-    loadBookings();
+    loadBookings(true, 'filters');
+  }, [canView, loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
+
+
+  useEffect(() => {
+    if (!canView) {
+      return;
+    }
+    const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
+    if (!canLoad) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadBookings(false, 'auto');
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
   }, [canView, loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
 
   useEffect(() => {
@@ -941,7 +973,7 @@ export default function BookingsPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadBookings(false);
+      await loadBookings(false, 'manual');
     } finally {
       setIsRefreshing(false);
     }
@@ -1175,7 +1207,7 @@ export default function BookingsPage() {
       setCreateResult(createdBooking.isBlacklisted ? 'Бронь создана (контакт в черном списке).' : 'Бронь создана.');
       setEditingBooking(null);
       setBookingFormMode(null);
-      await loadBookings(false);
+      await loadBookings(false, 'manual');
     } catch (error) {
       setCreateResult('Ошибка создания брони: ' + (error as Error).message);
     }
@@ -1217,7 +1249,7 @@ export default function BookingsPage() {
       tone: 'danger',
       onConfirm: async () => {
         await api.deleteBooking(booking.id);
-        await loadBookings(false);
+        await loadBookings(false, 'manual');
         setNotification({
           isOpen: true,
           title: 'Бронь удалена',
@@ -1239,7 +1271,7 @@ export default function BookingsPage() {
       confirmLabel: 'Подтвердить',
       onConfirm: async () => {
         await api.updateBooking(booking.id, { status, notes: booking.notes });
-        await loadBookings(false);
+        await loadBookings(false, 'manual');
         setNotification({
           isOpen: true,
           title: 'Статус обновлён',
@@ -1402,7 +1434,7 @@ export default function BookingsPage() {
         })),
       });
       closeBookingForm();
-      await loadBookings(false);
+      await loadBookings(false, 'manual');
       setNotification({
         isOpen: true,
         title: 'Бронь обновлена',
@@ -2560,10 +2592,6 @@ export default function BookingsPage() {
     }
   }, [safePage, currentPage]);
 
-  if (loading) {
-    return <div className="text-center py-12">Загрузка...</div>;
-  }
-
   const renderActionButtons = (booking: Booking) => (
     <>
       <button
@@ -2747,12 +2775,19 @@ export default function BookingsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Управление бронированиями</h2>
         <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-gray-500 mr-1">
+            {isAutoRefreshing
+              ? 'Автообновление…'
+              : lastUpdatedAt
+                ? `Обновлено: ${lastUpdatedAt.toLocaleTimeString('ru-RU')}`
+                : 'Данных пока нет'}
+          </span>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${(isRefreshing || isAutoRefreshing) ? 'animate-spin' : ''}`} />
             Обновить
           </button>
           <button
@@ -2772,32 +2807,32 @@ export default function BookingsPage() {
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>
-              {(
-                [
-                  { key: 'all', label: 'Все', count: statusCounts.all },
-                  { key: 'planned', label: 'Запланировано', count: statusCounts.planned },
-                  { key: 'created', label: 'Создано', count: statusCounts.created },
-                  { key: 'pending', label: 'Ожидают', count: statusCounts.pending },
-                  { key: 'not_confirmed', label: 'Не подтверждено', count: statusCounts.not_confirmed },
-                  { key: 'confirmed', label: 'Подтверждено', count: statusCounts.confirmed },
-                  { key: 'completed', label: 'Завершено', count: statusCounts.completed },
-                  { key: 'cancelled', label: 'Отменено', count: statusCounts.cancelled },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => setStatusFilter(item.key)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                    statusFilter === item.key
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {item.label} ({item.count})
-                </button>
-              ))}
-            </div>
+          <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>
+            {(
+              [
+                { key: 'all', label: 'Все', count: statusCounts.all },
+                { key: 'planned', label: 'Запланировано', count: statusCounts.planned },
+                { key: 'created', label: 'Создано', count: statusCounts.created },
+                { key: 'pending', label: 'Ожидают', count: statusCounts.pending },
+                { key: 'not_confirmed', label: 'Не подтверждено', count: statusCounts.not_confirmed },
+                { key: 'confirmed', label: 'Подтверждено', count: statusCounts.confirmed },
+                { key: 'completed', label: 'Завершено', count: statusCounts.completed },
+                { key: 'cancelled', label: 'Отменено', count: statusCounts.cancelled },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setStatusFilter(item.key)}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                  statusFilter === item.key
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {item.label} ({item.count})
+              </button>
+            ))}
+          </div>
             <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
               <button
                 onClick={() => setViewMode('cards')}
@@ -3080,10 +3115,17 @@ export default function BookingsPage() {
             )}
           </div>
 
-          {viewMode === 'table' ? (
+          {loading ? (
+            <div className="rounded-lg bg-white shadow p-8 text-center text-gray-500">Загрузка бронирований...</div>
+          ) : viewMode === 'table' ? (
             <div
-              className="bg-white rounded-lg shadow w-full max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]"
+              className={`relative bg-white rounded-lg shadow w-full max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch] transition-opacity duration-300 ${isTableLoading ? 'opacity-80' : 'opacity-100'}`}
             >
+              {isTableLoading && (
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 overflow-hidden rounded-t-lg">
+                  <div className="h-full w-1/3 animate-pulse bg-gradient-to-r from-transparent via-red-400 to-transparent" />
+                </div>
+              )}
               <table
                 className={`table-fixed min-w-max ${isCompactTableView ? 'text-[11px]' : 'text-sm'}`}
                 style={{
@@ -3178,7 +3220,7 @@ export default function BookingsPage() {
               </table>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className={`grid gap-4 md:grid-cols-2 xl:grid-cols-3 transition-opacity duration-300 ${isTableLoading ? 'opacity-80' : 'opacity-100'}`}>
               {paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}
