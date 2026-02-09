@@ -116,8 +116,12 @@ Swagger UI: `http://localhost:5000/swagger`
 
 ### Бронирования
 
-- `GET /api/bookings` - Получить все бронирования (требуется авторизация admin).
+- `GET /api/bookings` - Получить бронирования (требуется авторизация admin).
+  - Поддерживает фильтры `status`, `questId`, `aggregator`, `promoCode`, `dateFrom`, `dateTo`, `searchQuery`.
   - Query параметр `sort` принимает список ключей через запятую, например `createdAt:desc,bookingDate:asc`.
+  - Query параметры `limit` и `offset` включают серверную пагинацию.
+- `GET /api/bookings/count` - Получить общее количество бронирований по тем же фильтрам (для пагинации).
+- `GET /api/bookings/filters-meta` - Получить агрегированные данные для фильтров (counts/options) по диапазону дат.
 - `POST /api/bookings` - Создать бронирование (публичный доступ)
 - `PUT /api/bookings/{id}` - Обновить бронирование (требуется авторизация admin)
 - `DELETE /api/bookings/{id}` - Удалить бронирование (требуется авторизация admin)

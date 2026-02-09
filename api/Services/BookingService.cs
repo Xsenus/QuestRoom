@@ -15,9 +15,26 @@ public interface IBookingService
         Guid? questId = null,
         string? aggregator = null,
         string? promoCode = null,
+        string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
-        string? sort = null);
+        string? sort = null,
+        int? limit = null,
+        int? offset = null);
+    Task<int> GetBookingsCountAsync(
+        string? status = null,
+        Guid? questId = null,
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null);
+    Task<BookingFiltersMetaDto> GetBookingsFiltersMetaAsync(
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null);
     Task<BookingDto> CreateBookingAsync(BookingCreateDto dto);
     Task<bool> UpdateBookingAsync(Guid id, BookingUpdateDto dto);
     Task<bool> DeleteBookingAsync(Guid id);
@@ -49,9 +66,12 @@ public class BookingService : IBookingService
         Guid? questId = null,
         string? aggregator = null,
         string? promoCode = null,
+        string? searchQuery = null,
         DateOnly? dateFrom = null,
         DateOnly? dateTo = null,
-        string? sort = null)
+        string? sort = null,
+        int? limit = null,
+        int? offset = null)
     {
         var query = _context.Bookings
             .Include(b => b.ExtraServices)
@@ -60,6 +80,119 @@ public class BookingService : IBookingService
             .ThenInclude(q => q!.ParentQuest)
             .AsQueryable();
 
+        query = ApplyListFilters(query, status, questId, aggregator, promoCode, searchQuery, dateFrom, dateTo);
+
+        var pagedQuery = (IQueryable<Booking>)ApplySorting(query, sort);
+        if (offset.HasValue && offset.Value > 0)
+        {
+            pagedQuery = pagedQuery.Skip(offset.Value);
+        }
+        if (limit.HasValue && limit.Value > 0)
+        {
+            pagedQuery = pagedQuery.Take(limit.Value);
+        }
+
+        var items = await pagedQuery.ToListAsync();
+        var dtos = items.Select(ToDto).ToList();
+        await EnrichWithBlacklistAsync(dtos);
+        return dtos;
+    }
+
+
+    public async Task<int> GetBookingsCountAsync(
+        string? status = null,
+        Guid? questId = null,
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null)
+    {
+        var query = _context.Bookings
+            .Include(b => b.Quest)
+            .AsQueryable();
+
+        query = ApplyListFilters(query, status, questId, aggregator, promoCode, searchQuery, dateFrom, dateTo);
+        return await query.CountAsync();
+    }
+
+    public async Task<BookingFiltersMetaDto> GetBookingsFiltersMetaAsync(
+        string? aggregator = null,
+        string? promoCode = null,
+        string? searchQuery = null,
+        DateOnly? dateFrom = null,
+        DateOnly? dateTo = null)
+    {
+        var query = _context.Bookings
+            .Include(b => b.Quest)
+            .AsQueryable();
+
+        query = ApplyListFilters(query, null, null, aggregator, promoCode, searchQuery, dateFrom, dateTo);
+
+        var rows = await query
+            .Select(b => new { b.Status, b.QuestId, b.Aggregator, b.PromoCode })
+            .ToListAsync();
+
+        var statusCountsByQuest = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+        var questCountsByStatus = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+
+        void Increment(Dictionary<string, Dictionary<string, int>> map, string firstKey, string secondKey)
+        {
+            if (!map.TryGetValue(firstKey, out var inner))
+            {
+                inner = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                map[firstKey] = inner;
+            }
+            inner[secondKey] = inner.GetValueOrDefault(secondKey) + 1;
+        }
+
+        foreach (var row in rows)
+        {
+            var questKey = row.QuestId?.ToString() ?? string.Empty;
+            var statusKey = row.Status ?? string.Empty;
+            Increment(statusCountsByQuest, "all", statusKey);
+            if (!string.IsNullOrWhiteSpace(questKey))
+            {
+                Increment(statusCountsByQuest, questKey, statusKey);
+            }
+
+            Increment(questCountsByStatus, "all", questKey);
+            Increment(questCountsByStatus, statusKey, questKey);
+        }
+
+        var aggregators = rows
+            .Select(r => r.Aggregator)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList()!;
+
+        var promoCodes = rows
+            .Select(r => r.PromoCode)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList()!;
+
+        return new BookingFiltersMetaDto
+        {
+            StatusCountsByQuest = statusCountsByQuest,
+            QuestCountsByStatus = questCountsByStatus,
+            AggregatorOptions = aggregators,
+            PromoCodeOptions = promoCodes
+        };
+    }
+
+    private static IQueryable<Booking> ApplyListFilters(
+        IQueryable<Booking> query,
+        string? status,
+        Guid? questId,
+        string? aggregator,
+        string? promoCode,
+        string? searchQuery,
+        DateOnly? dateFrom,
+        DateOnly? dateTo)
+    {
         if (!string.IsNullOrWhiteSpace(status))
         {
             query = query.Where(b => b.Status == status);
@@ -104,12 +237,24 @@ public class BookingService : IBookingService
             query = query.Where(b => b.BookingDate <= dateTo.Value);
         }
 
-        var orderedQuery = ApplySorting(query, sort);
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var normalizedSearch = searchQuery.Trim().ToLowerInvariant();
+            var searchDigits = new string(searchQuery.Where(char.IsDigit).ToArray());
+            query = query.Where(b =>
+                EF.Functions.ILike(b.CustomerName, $"%{normalizedSearch}%")
+                || EF.Functions.ILike(b.CustomerPhone, $"%{normalizedSearch}%")
+                || (searchDigits.Length > 0 && EF.Functions.ILike(b.CustomerPhone, $"%{searchDigits}%"))
+                || (b.CustomerEmail != null && EF.Functions.ILike(b.CustomerEmail, $"%{normalizedSearch}%"))
+                || (b.PromoCode != null && EF.Functions.ILike(b.PromoCode, $"%{normalizedSearch}%"))
+                || (b.Aggregator != null && EF.Functions.ILike(b.Aggregator, $"%{normalizedSearch}%"))
+                || (b.Notes != null && EF.Functions.ILike(b.Notes, $"%{normalizedSearch}%"))
+                || (b.AggregatorUniqueId != null && EF.Functions.ILike(b.AggregatorUniqueId, $"%{normalizedSearch}%"))
+                || EF.Functions.ILike(b.Status, $"%{normalizedSearch}%")
+                || (b.Quest != null && EF.Functions.ILike(b.Quest.Title, $"%{normalizedSearch}%")));
+        }
 
-        var items = await orderedQuery.ToListAsync();
-        var dtos = items.Select(ToDto).ToList();
-        await EnrichWithBlacklistAsync(dtos);
-        return dtos;
+        return query;
     }
 
     public async Task<BookingDto> CreateBookingAsync(BookingCreateDto dto)
@@ -322,7 +467,7 @@ public class BookingService : IBookingService
             return false;
         }
 
-        var wasCancelled = booking.Status == "cancelled";
+        var previousScheduleId = booking.QuestScheduleId;
         var nextStatus = string.IsNullOrWhiteSpace(dto.Status) ? booking.Status : dto.Status;
         var shouldRecalculate = false;
 
@@ -482,17 +627,17 @@ public class BookingService : IBookingService
             booking.TotalPrice = dto.TotalPrice.Value;
         }
 
-        if (nextStatus == "cancelled" && !wasCancelled && booking.QuestScheduleId.HasValue)
+        await _context.SaveChangesAsync();
+
+        if (previousScheduleId.HasValue)
         {
-            var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
-            if (schedule != null)
-            {
-                schedule.IsBooked = false;
-                schedule.UpdatedAt = DateTime.UtcNow;
-            }
+            await SyncScheduleBookedStateAsync(previousScheduleId.Value);
+        }
+        if (booking.QuestScheduleId.HasValue && booking.QuestScheduleId != previousScheduleId)
+        {
+            await SyncScheduleBookedStateAsync(booking.QuestScheduleId.Value);
         }
 
-        await _context.SaveChangesAsync();
         return true;
     }
 
@@ -508,18 +653,15 @@ public class BookingService : IBookingService
                 return false;
             }
 
-            if (booking.QuestScheduleId.HasValue)
-            {
-                var schedule = await _context.QuestSchedules.FindAsync(booking.QuestScheduleId.Value);
-                if (schedule != null)
-                {
-                    schedule.IsBooked = false;
-                    schedule.UpdatedAt = DateTime.UtcNow;
-                }
-            }
+            var removedScheduleId = booking.QuestScheduleId;
 
             _context.Bookings.Remove(booking);
             await _context.SaveChangesAsync();
+
+            if (removedScheduleId.HasValue)
+            {
+                await SyncScheduleBookedStateAsync(removedScheduleId.Value);
+            }
             await transaction.CommitAsync();
             return true;
         }
@@ -527,6 +669,25 @@ public class BookingService : IBookingService
         {
             await transaction.RollbackAsync();
             throw;
+        }
+    }
+
+    private async Task SyncScheduleBookedStateAsync(Guid scheduleId)
+    {
+        var schedule = await _context.QuestSchedules.FindAsync(scheduleId);
+        if (schedule == null)
+        {
+            return;
+        }
+
+        var hasActiveBooking = await _context.Bookings
+            .AnyAsync(booking => booking.QuestScheduleId == scheduleId && booking.Status != "cancelled");
+
+        if (schedule.IsBooked != hasActiveBooking)
+        {
+            schedule.IsBooked = hasActiveBooking;
+            schedule.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
         }
     }
 
@@ -790,7 +951,7 @@ public class BookingService : IBookingService
         }
 
         var scheduleAlreadyBooked = schedule != null
-            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id);
+            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id && b.Status != "cancelled");
         if (scheduleAlreadyBooked)
         {
             result.Skipped++;

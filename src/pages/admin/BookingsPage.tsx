@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import { api } from '../../lib/api';
 import {
   Booking,
+  BookingFiltersMeta,
   BlacklistMatch,
   BookingTableColumnPreference,
   BookingTableFilter,
@@ -103,6 +104,17 @@ type ParsedSearchQuery = {
   operators: Record<SearchOperatorKey, string[]>;
 };
 
+type BookingSearchIndex = {
+  booking: Booking;
+  searchableFields: string[];
+  phoneDigits: string;
+  bookingDateText: string;
+  createdAtText: string;
+  statusLabel: string;
+  questTitle: string;
+  aggregatorValue: string;
+};
+
 type BookingTableColumnConfig = {
   key: BookingTableColumnKey;
   label: string;
@@ -143,7 +155,8 @@ export default function BookingsPage() {
   const canEditBlacklist = hasPermission('blacklist.edit');
   const canViewPromoCodes = hasPermission('promo-codes.view');
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [countBookings, setCountBookings] = useState<Booking[]>([]);
+  const [totalBookingsCount, setTotalBookingsCount] = useState(0);
+  const [bookingsFiltersMeta, setBookingsFiltersMeta] = useState<BookingFiltersMeta | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [standardExtraServices, setStandardExtraServices] = useState<StandardExtraService[]>([]);
@@ -153,6 +166,9 @@ export default function BookingsPage() {
   const [createResult, setCreateResult] = useState<string>('');
   const [contactBlacklistMatches, setContactBlacklistMatches] = useState<BlacklistMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [bookingFormMode, setBookingFormMode] = useState<'create' | 'edit' | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
     if (typeof window === 'undefined') {
@@ -177,6 +193,7 @@ export default function BookingsPage() {
   const [listDateToInput, setListDateToInput] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState<string>('');
+  const deferredSearchQuery = useDeferredValue(appliedSearchQuery);
   const [columnFilters, setColumnFilters] = useState<BookingTableFilter[]>([]);
   const [tableSorts, setTableSorts] = useState<BookingTableSort[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -259,6 +276,7 @@ export default function BookingsPage() {
   } | null>(null);
   const preferencesSaveTimeout = useRef<number | null>(null);
   const hasUserEditedPreferences = useRef(false);
+  const latestLoadRequestIdRef = useRef(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -795,15 +813,14 @@ export default function BookingsPage() {
     selectedQuestExtraServiceIds,
   ]);
 
-  const dateFiltersEnabled = statusFilter !== 'pending';
   const sortParam = useMemo(() => serializeSorts(tableSorts), [serializeSorts, tableSorts]);
 
   const countFilterParams = useMemo(
     () => ({
-      dateFrom: dateFiltersEnabled ? normalizeDateParam(listDateFrom) : undefined,
-      dateTo: dateFiltersEnabled ? normalizeDateParam(listDateTo) : undefined,
+      dateFrom: normalizeDateParam(listDateFrom),
+      dateTo: normalizeDateParam(listDateTo),
     }),
-    [listDateFrom, listDateTo, dateFiltersEnabled]
+    [listDateFrom, listDateTo]
   );
 
   const listFilterParams = useMemo(
@@ -813,53 +830,148 @@ export default function BookingsPage() {
       questId: questFilter !== 'all' ? questFilter : undefined,
       aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
       promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+      searchQuery: appliedSearchQuery.trim() || undefined,
       sort: sortParam || undefined,
+      limit: listItemsPerPage,
+      offset: Math.max(0, (currentPage - 1) * listItemsPerPage),
     }),
-    [countFilterParams, statusFilter, questFilter, aggregatorFilter, promoCodeFilter, sortParam]
+    [
+      countFilterParams,
+      statusFilter,
+      questFilter,
+      aggregatorFilter,
+      promoCodeFilter,
+      appliedSearchQuery,
+      sortParam,
+      listItemsPerPage,
+      currentPage,
+    ]
   );
 
   const loadBookings = useCallback(
-    async (showLoading = true) => {
+    async (showLoading = true, source: 'manual' | 'auto' | 'filters' = 'filters') => {
       if (!canView) {
         setBookings([]);
-        setCountBookings([]);
+        setTotalBookingsCount(0);
         return;
       }
-      if (showLoading) {
+
+      const requestId = latestLoadRequestIdRef.current + 1;
+      latestLoadRequestIdRef.current = requestId;
+
+      if (showLoading && loading) {
         setLoading(true);
+      } else {
+        setIsTableLoading(true);
+      }
+      if (source === 'auto') {
+        setIsAutoRefreshing(true);
       }
       try {
-        const [listData, countData] = await Promise.all([
+        const [listData, totalCount] = await Promise.all([
           api.getBookings(listFilterParams),
-          api.getBookings(countFilterParams),
+          api.getBookingsCount({
+            ...countFilterParams,
+            status: statusFilter !== 'all' ? statusFilter : undefined,
+            questId: questFilter !== 'all' ? questFilter : undefined,
+            aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
+            promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+            searchQuery: appliedSearchQuery.trim() || undefined,
+          }),
         ]);
+        if (requestId !== latestLoadRequestIdRef.current) {
+          return;
+        }
         setBookings(listData || []);
-        setCountBookings(countData || []);
+        setTotalBookingsCount(totalCount || 0);
+        setLastUpdatedAt(new Date());
       } catch (error) {
-        console.error('Error loading bookings:', error);
+        if (requestId === latestLoadRequestIdRef.current) {
+          console.error('Error loading bookings:', error);
+        }
       }
-      if (showLoading) {
-        setLoading(false);
+      if (requestId === latestLoadRequestIdRef.current) {
+        if (showLoading && loading) {
+          setLoading(false);
+        }
+        setIsTableLoading(false);
+        if (source === 'auto') {
+          setIsAutoRefreshing(false);
+        }
       }
     },
-    [canView, listFilterParams, countFilterParams]
+    [
+      canView,
+      listFilterParams,
+      countFilterParams,
+      statusFilter,
+      questFilter,
+      aggregatorFilter,
+      promoCodeFilter,
+      appliedSearchQuery,
+    ]
   );
 
   useEffect(() => {
     if (!canView) {
       return;
     }
-    const canLoad = !dateFiltersEnabled || (listDateFrom && listDateTo);
+    const canLoad = Boolean(listDateFrom && listDateTo);
     if (!canLoad) {
       return;
     }
-    loadBookings();
-  }, [canView, loadBookings, dateFiltersEnabled, listDateFrom, listDateTo]);
+    loadBookings(true, 'filters');
+  }, [canView, loadBookings, listDateFrom, listDateTo]);
+
+
+  useEffect(() => {
+    if (!canView) {
+      return;
+    }
+    const canLoad = Boolean(listDateFrom && listDateTo);
+    if (!canLoad) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadBookings(false, 'auto');
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [canView, loadBookings, listDateFrom, listDateTo]);
+
+  useEffect(() => {
+    if (!canView) {
+      return;
+    }
+    const canLoad = Boolean(listDateFrom && listDateTo);
+    if (!canLoad) {
+      return;
+    }
+
+    api
+            .getBookingsFiltersMeta({
+        ...countFilterParams,
+        aggregator: aggregatorFilter !== 'all' ? aggregatorFilter : undefined,
+        promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
+        searchQuery: appliedSearchQuery.trim() || undefined,
+      })
+      .then((meta) => setBookingsFiltersMeta(meta))
+      .catch((error) => console.error('Error loading bookings filters meta:', error));
+  }, [
+    canView,
+    listDateFrom,
+    listDateTo,
+    countFilterParams,
+    aggregatorFilter,
+    promoCodeFilter,
+    appliedSearchQuery,
+  ]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadBookings(false);
+      await loadBookings(false, 'manual');
     } finally {
       setIsRefreshing(false);
     }
@@ -920,15 +1032,6 @@ export default function BookingsPage() {
   };
 
   const normalizeListEndDate = (value: string) => {
-    if (!value) {
-      return value;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selected = new Date(value);
-    if (selected < today) {
-      return formatDate(getEndOfNextMonth(today));
-    }
     return value;
   };
 
@@ -1093,7 +1196,7 @@ export default function BookingsPage() {
       setCreateResult(createdBooking.isBlacklisted ? 'Бронь создана (контакт в черном списке).' : 'Бронь создана.');
       setEditingBooking(null);
       setBookingFormMode(null);
-      await loadBookings(false);
+      await loadBookings(false, 'manual');
     } catch (error) {
       setCreateResult('Ошибка создания брони: ' + (error as Error).message);
     }
@@ -1135,7 +1238,7 @@ export default function BookingsPage() {
       tone: 'danger',
       onConfirm: async () => {
         await api.deleteBooking(booking.id);
-        await loadBookings(false);
+        await loadBookings(false, 'manual');
         setNotification({
           isOpen: true,
           title: 'Бронь удалена',
@@ -1157,7 +1260,7 @@ export default function BookingsPage() {
       confirmLabel: 'Подтвердить',
       onConfirm: async () => {
         await api.updateBooking(booking.id, { status, notes: booking.notes });
-        await loadBookings(false);
+        await loadBookings(false, 'manual');
         setNotification({
           isOpen: true,
           title: 'Статус обновлён',
@@ -1320,7 +1423,7 @@ export default function BookingsPage() {
         })),
       });
       closeBookingForm();
-      await loadBookings(false);
+      await loadBookings(false, 'manual');
       setNotification({
         isOpen: true,
         title: 'Бронь обновлена',
@@ -1602,62 +1705,58 @@ export default function BookingsPage() {
   };
 
   const statusCounts = useMemo(() => {
-    const source =
-      questFilter === 'all'
-        ? countBookings
-        : countBookings.filter((booking) => booking.questId === questFilter);
-    return source.reduce(
-      (acc, booking) => {
-        acc.all += 1;
-        acc[booking.status] += 1;
-        return acc;
-      },
-      {
-        all: 0,
-        pending: 0,
-        confirmed: 0,
-        cancelled: 0,
-        completed: 0,
-        planned: 0,
-        created: 0,
-        not_confirmed: 0,
-      }
-    );
-  }, [countBookings, questFilter]);
+    const key = questFilter === 'all' ? 'all' : questFilter;
+    const source = bookingsFiltersMeta?.statusCountsByQuest?.[key] ?? {};
+    const base = {
+      all: 0,
+      pending: 0,
+      confirmed: 0,
+      cancelled: 0,
+      completed: 0,
+      planned: 0,
+      created: 0,
+      not_confirmed: 0,
+    };
+    const statuses: Array<keyof typeof base> = [
+      'pending',
+      'confirmed',
+      'cancelled',
+      'completed',
+      'planned',
+      'created',
+      'not_confirmed',
+    ];
+    statuses.forEach((status) => {
+      const value = source[status] ?? 0;
+      base[status] = value;
+      base.all += value;
+    });
+    return base;
+  }, [bookingsFiltersMeta, questFilter]);
 
   const questCounts = useMemo(() => {
-    const source =
-      statusFilter === 'all'
-        ? countBookings
-        : countBookings.filter((booking) => booking.status === statusFilter);
-    const counts: Record<string, number> = { all: source.length };
-    source.forEach((booking) => {
-      if (booking.questId) {
-        counts[booking.questId] = (counts[booking.questId] || 0) + 1;
+    const key = statusFilter === 'all' ? 'all' : statusFilter;
+    const source = bookingsFiltersMeta?.questCountsByStatus?.[key] ?? {};
+    const counts: Record<string, number> = {
+      all: Object.values(source).reduce((acc, value) => acc + (value ?? 0), 0),
+    };
+    Object.entries(source).forEach(([questId, value]) => {
+      if (questId) {
+        counts[questId] = value;
       }
     });
     return counts;
-  }, [countBookings, statusFilter]);
+  }, [bookingsFiltersMeta, statusFilter]);
 
-  const aggregatorOptions = useMemo(() => {
-    const values = new Set<string>();
-    countBookings.forEach((booking) => {
-      if (booking.aggregator) {
-        values.add(booking.aggregator);
-      }
-    });
-    return Array.from(values);
-  }, [countBookings]);
+  const aggregatorOptions = useMemo(
+    () => bookingsFiltersMeta?.aggregatorOptions ?? [],
+    [bookingsFiltersMeta]
+  );
 
-  const promoCodeOptions = useMemo(() => {
-    const values = new Set<string>();
-    countBookings.forEach((booking) => {
-      if (booking.promoCode) {
-        values.add(booking.promoCode);
-      }
-    });
-    return Array.from(values);
-  }, [countBookings]);
+  const promoCodeOptions = useMemo(
+    () => bookingsFiltersMeta?.promoCodeOptions ?? [],
+    [bookingsFiltersMeta]
+  );
 
   const columnFilterDefinitions = useMemo<BookingColumnFilterDefinition[]>(() => {
     return [
@@ -1882,41 +1981,7 @@ export default function BookingsPage() {
     return { freeTerms, operators };
   }, []);
 
-  const fuzzyMatch = (term: string, text: string) => {
-    const normalizedTerm = term.toLowerCase();
-    const normalizedText = text.toLowerCase();
-    if (!normalizedTerm || !normalizedText) {
-      return false;
-    }
-    if (normalizedText.includes(normalizedTerm)) {
-      return true;
-    }
-    const maxDistance =
-      normalizedTerm.length <= 4 ? 1 : normalizedTerm.length <= 7 ? 2 : 3;
-    const computeDistance = (a: string, b: string) => {
-      const aLen = a.length;
-      const bLen = b.length;
-      const dp = Array.from({ length: aLen + 1 }, () => new Array(bLen + 1).fill(0));
-      for (let i = 0; i <= aLen; i += 1) dp[i][0] = i;
-      for (let j = 0; j <= bLen; j += 1) dp[0][j] = j;
-      for (let i = 1; i <= aLen; i += 1) {
-        for (let j = 1; j <= bLen; j += 1) {
-          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,
-            dp[i][j - 1] + 1,
-            dp[i - 1][j - 1] + cost
-          );
-        }
-      }
-      return dp[aLen][bLen];
-    };
-    if (normalizedText.length <= 40) {
-      return computeDistance(normalizedTerm, normalizedText) <= maxDistance;
-    }
-    const words = normalizedText.split(/\s+/);
-    return words.some((word) => computeDistance(normalizedTerm, word) <= maxDistance);
-  };
+
 
   const highlightText = (value: string, terms: string[]) => {
     if (!value || !terms.length) {
@@ -2297,8 +2362,8 @@ export default function BookingsPage() {
   );
 
   const parsedSearch = useMemo(
-    () => parseSearchQuery(appliedSearchQuery),
-    [parseSearchQuery, appliedSearchQuery]
+    () => parseSearchQuery(deferredSearchQuery),
+    [parseSearchQuery, deferredSearchQuery]
   );
   const highlightTerms = useMemo(() => {
     const values = new Set<string>();
@@ -2308,63 +2373,15 @@ export default function BookingsPage() {
     });
     return Array.from(values).filter(Boolean);
   }, [parsedSearch]);
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((booking) => {
-      const questTitle = getQuestTitle(booking);
-      const statusLabel = getStatusText(booking.status);
-      const aggregatorValue = booking.aggregator || 'site';
 
-      const getOperatorText = (key: SearchOperatorKey) => {
-        switch (key) {
-          case 'status':
-            return [booking.status, statusLabel];
-          case 'quest':
-            return [booking.questId ?? '', questTitle];
-          case 'aggregator':
-            return [aggregatorValue];
-          case 'promo':
-            return [booking.promoCode || 'none'];
-          case 'phone':
-            return [booking.customerPhone];
-          case 'email':
-            return [booking.customerEmail || ''];
-          case 'name':
-            return [booking.customerName];
-          case 'id':
-            return [booking.id];
-          case 'date':
-            return [formatBookingDateTime(booking)];
-          case 'created':
-            return [formatDateTime(booking.createdAt)];
-          case 'total':
-            return [String(booking.totalPrice ?? '')];
-          case 'notes':
-            return [booking.notes || ''];
-          default:
-            return [''];
-        }
-      };
-
-      const checkOperator = (key: SearchOperatorKey, values: string[]) => {
-        if (!values.length) {
-          return true;
-        }
-        const candidates = getOperatorText(key)
-          .filter(Boolean)
-          .map((text) => text.toLowerCase());
-        return values.every((value) =>
-          candidates.some((candidate) => candidate.includes(value.toLowerCase()))
-        );
-      };
-
-      const operatorMatches = (Object.keys(parsedSearch.operators) as SearchOperatorKey[]).every(
-        (key) => checkOperator(key, parsedSearch.operators[key])
-      );
-      if (!operatorMatches) {
-        return false;
-      }
-
-      if (parsedSearch.freeTerms.length) {
+  const bookingSearchIndex = useMemo<BookingSearchIndex[]>(
+    () =>
+      bookings.map((booking) => {
+        const questTitle = getQuestTitle(booking);
+        const statusLabel = getStatusText(booking.status);
+        const aggregatorValue = booking.aggregator || 'site';
+        const bookingDateText = formatBookingDateTime(booking);
+        const createdAtText = formatDateTime(booking.createdAt);
         const searchableFields = [
           booking.id,
           booking.customerName,
@@ -2375,113 +2392,170 @@ export default function BookingsPage() {
           booking.notes,
           questTitle,
           statusLabel,
-          formatBookingDateTime(booking),
-          formatDateTime(booking.createdAt),
+          bookingDateText,
+          createdAtText,
           String(booking.totalPrice ?? ''),
-        ].filter(Boolean) as string[];
+        ]
+          .filter((field): field is string => typeof field === 'string' && field.length > 0)
+          .map((field) => field.toLowerCase());
 
-        const matchesTerm = (term: string) => {
-          const normalizedTerm = term.toLowerCase();
-          return searchableFields.some((field) => field.toLowerCase().includes(normalizedTerm));
+        return {
+          booking,
+          searchableFields,
+          phoneDigits: normalizePhone(booking.customerPhone),
+          bookingDateText,
+          createdAtText,
+          statusLabel,
+          questTitle,
+          aggregatorValue,
+        };
+      }),
+    [bookings, formatBookingDateTime, formatDateTime, getQuestTitle, getStatusText]
+  );
+
+  const filteredBookings = useMemo(() => {
+    return bookingSearchIndex
+      .filter((entry) => {
+        const { booking } = entry;
+
+        const getOperatorText = (key: SearchOperatorKey) => {
+          switch (key) {
+            case 'status':
+              return [booking.status, entry.statusLabel];
+            case 'quest':
+              return [booking.questId ?? '', entry.questTitle];
+            case 'aggregator':
+              return [entry.aggregatorValue];
+            case 'promo':
+              return [booking.promoCode || 'none'];
+            case 'phone':
+              return [booking.customerPhone, entry.phoneDigits];
+            case 'email':
+              return [booking.customerEmail || ''];
+            case 'name':
+              return [booking.customerName];
+            case 'id':
+              return [booking.id];
+            case 'date':
+              return [entry.bookingDateText];
+            case 'created':
+              return [entry.createdAtText];
+            case 'total':
+              return [String(booking.totalPrice ?? '')];
+            case 'notes':
+              return [booking.notes || ''];
+            default:
+              return [''];
+          }
         };
 
-        const matchesFuzzy = (term: string) =>
-          fuzzyMatch(term, booking.customerName) || fuzzyMatch(term, booking.customerPhone);
+        const checkOperator = (key: SearchOperatorKey, values: string[]) => {
+          if (!values.length) {
+            return true;
+          }
+          const candidates = getOperatorText(key)
+            .filter(Boolean)
+            .map((text) => text.toLowerCase());
+          return values.every((value) =>
+            candidates.some((candidate) => candidate.includes(value.toLowerCase()))
+          );
+        };
 
-        const matchesAllTerms = parsedSearch.freeTerms.every(
-          (term) => matchesTerm(term) || matchesFuzzy(term)
+        const operatorMatches = (Object.keys(parsedSearch.operators) as SearchOperatorKey[]).every(
+          (key) => checkOperator(key, parsedSearch.operators[key])
         );
-        if (!matchesAllTerms) {
+        if (!operatorMatches) {
           return false;
         }
-      }
 
-      for (const filter of activeColumnFilters) {
-        const definition = columnFilterDefinitionMap.get(filter.key as BookingColumnFilterKey);
-        if (!definition) {
-          continue;
-        }
-        if (definition.kind === 'multi') {
-          const selectedValues = filter.values ?? [];
-          if (!selectedValues.length) {
-            continue;
-          }
-          let bookingValue = '';
-          switch (filter.key) {
-            case 'status':
-              bookingValue = booking.status;
-              break;
-            case 'quest':
-              bookingValue = booking.questId ?? '';
-              break;
-            case 'aggregator':
-              bookingValue = booking.aggregator || 'site';
-              break;
-            case 'promoCode':
-              bookingValue = booking.promoCode || 'none';
-              break;
-            default:
-              bookingValue = '';
-          }
-          if (!selectedValues.includes(bookingValue)) {
+        if (parsedSearch.freeTerms.length) {
+          const matchesAllTerms = parsedSearch.freeTerms.every((term) => {
+            const normalizedTerm = term.toLowerCase();
+            const termDigits = normalizePhone(term);
+            if (termDigits && entry.phoneDigits.includes(termDigits)) {
+              return true;
+            }
+            return entry.searchableFields.some((field) => field.includes(normalizedTerm));
+          });
+          if (!matchesAllTerms) {
             return false;
           }
-          continue;
         }
-        const rawValue = filter.value?.trim().toLowerCase() ?? '';
-        if (!rawValue) {
-          continue;
-        }
-        let bookingText = '';
-        switch (filter.key) {
-          case 'customerName':
-            bookingText = booking.customerName;
-            break;
-          case 'customerPhone':
-            bookingText = booking.customerPhone;
-            break;
-          case 'customerEmail':
-            bookingText = booking.customerEmail || '';
-            break;
-          case 'bookingDate':
-            bookingText = formatBookingDateTime(booking);
-            break;
-          case 'createdAt':
-            bookingText = formatDateTime(booking.createdAt);
-            break;
-          case 'totalPrice':
-            bookingText = String(booking.totalPrice ?? '');
-            break;
-          case 'notes':
-            bookingText = booking.notes || '';
-            break;
-          default:
-            bookingText = '';
-        }
-        if (!bookingText.toLowerCase().includes(rawValue)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [
-    bookings,
-    parsedSearch,
-    activeColumnFilters,
-    columnFilterDefinitionMap,
-    formatBookingDateTime,
-    formatDateTime,
-    getQuestTitle,
-    getStatusText,
-    fuzzyMatch,
-  ]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredBookings.length / listItemsPerPage));
+        for (const filter of activeColumnFilters) {
+          const definition = columnFilterDefinitionMap.get(filter.key as BookingColumnFilterKey);
+          if (!definition) {
+            continue;
+          }
+          if (definition.kind === 'multi') {
+            const selectedValues = filter.values ?? [];
+            if (!selectedValues.length) {
+              continue;
+            }
+            let bookingValue = '';
+            switch (filter.key) {
+              case 'status':
+                bookingValue = booking.status;
+                break;
+              case 'quest':
+                bookingValue = booking.questId ?? '';
+                break;
+              case 'aggregator':
+                bookingValue = booking.aggregator || 'site';
+                break;
+              case 'promoCode':
+                bookingValue = booking.promoCode || 'none';
+                break;
+              default:
+                bookingValue = '';
+            }
+            if (!selectedValues.includes(bookingValue)) {
+              return false;
+            }
+            continue;
+          }
+          const rawValue = filter.value?.trim().toLowerCase() ?? '';
+          if (!rawValue) {
+            continue;
+          }
+          let bookingText = '';
+          switch (filter.key) {
+            case 'customerName':
+              bookingText = booking.customerName;
+              break;
+            case 'customerPhone':
+              bookingText = booking.customerPhone;
+              break;
+            case 'customerEmail':
+              bookingText = booking.customerEmail || '';
+              break;
+            case 'bookingDate':
+              bookingText = entry.bookingDateText;
+              break;
+            case 'createdAt':
+              bookingText = entry.createdAtText;
+              break;
+            case 'totalPrice':
+              bookingText = String(booking.totalPrice ?? '');
+              break;
+            case 'notes':
+              bookingText = booking.notes || '';
+              break;
+            default:
+              bookingText = '';
+          }
+          if (!bookingText.toLowerCase().includes(rawValue)) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map((entry) => entry.booking);
+  }, [bookingSearchIndex, parsedSearch, activeColumnFilters, columnFilterDefinitionMap]);
+
+  const totalPages = Math.max(1, Math.ceil(totalBookingsCount / listItemsPerPage));
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedBookings = filteredBookings.slice(
-    (safePage - 1) * listItemsPerPage,
-    safePage * listItemsPerPage
-  );
+  const paginatedBookings = filteredBookings;
   const paginationItems = useMemo<(number | 'ellipsis')[]>(() => {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -2500,10 +2574,6 @@ export default function BookingsPage() {
       setCurrentPage(safePage);
     }
   }, [safePage, currentPage]);
-
-  if (loading) {
-    return <div className="text-center py-12">Загрузка...</div>;
-  }
 
   const renderActionButtons = (booking: Booking) => (
     <>
@@ -2688,12 +2758,19 @@ export default function BookingsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Управление бронированиями</h2>
         <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-gray-500 mr-1">
+            {isAutoRefreshing
+              ? 'Автообновление…'
+              : lastUpdatedAt
+                ? `Обновлено: ${lastUpdatedAt.toLocaleTimeString('ru-RU')}`
+                : 'Данных пока нет'}
+          </span>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${(isRefreshing || isAutoRefreshing) ? 'animate-spin' : ''}`} />
             Обновить
           </button>
           <button
@@ -2713,32 +2790,32 @@ export default function BookingsPage() {
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>
-              {(
-                [
-                  { key: 'all', label: 'Все', count: statusCounts.all },
-                  { key: 'planned', label: 'Запланировано', count: statusCounts.planned },
-                  { key: 'created', label: 'Создано', count: statusCounts.created },
-                  { key: 'pending', label: 'Ожидают', count: statusCounts.pending },
-                  { key: 'not_confirmed', label: 'Не подтверждено', count: statusCounts.not_confirmed },
-                  { key: 'confirmed', label: 'Подтверждено', count: statusCounts.confirmed },
-                  { key: 'completed', label: 'Завершено', count: statusCounts.completed },
-                  { key: 'cancelled', label: 'Отменено', count: statusCounts.cancelled },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => setStatusFilter(item.key)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                    statusFilter === item.key
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {item.label} ({item.count})
-                </button>
-              ))}
-            </div>
+          <div className={`flex flex-wrap ${isCompactCardsView ? 'gap-1' : 'gap-2'}`}>
+            {(
+              [
+                { key: 'all', label: 'Все', count: statusCounts.all },
+                { key: 'planned', label: 'Запланировано', count: statusCounts.planned },
+                { key: 'created', label: 'Создано', count: statusCounts.created },
+                { key: 'pending', label: 'Ожидают', count: statusCounts.pending },
+                { key: 'not_confirmed', label: 'Не подтверждено', count: statusCounts.not_confirmed },
+                { key: 'confirmed', label: 'Подтверждено', count: statusCounts.confirmed },
+                { key: 'completed', label: 'Завершено', count: statusCounts.completed },
+                { key: 'cancelled', label: 'Отменено', count: statusCounts.cancelled },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setStatusFilter(item.key)}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                  statusFilter === item.key
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {item.label} ({item.count})
+              </button>
+            ))}
+          </div>
             <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
               <button
                 onClick={() => setViewMode('cards')}
@@ -2850,7 +2927,6 @@ export default function BookingsPage() {
                       event.currentTarget.blur();
                     }
                   }}
-                  disabled={statusFilter === 'pending'}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
                 />
               </div>
@@ -2868,7 +2944,6 @@ export default function BookingsPage() {
                       event.currentTarget.blur();
                     }
                   }}
-                  disabled={statusFilter === 'pending'}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:text-gray-400"
                 />
               </div>
@@ -2893,7 +2968,7 @@ export default function BookingsPage() {
             </div>
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-500">
-                Показано: <span className="font-semibold">{filteredBookings.length}</span>
+                Показано на странице: <span className="font-semibold">{bookings.length}</span> из <span className="font-semibold">{totalBookingsCount}</span>
               </div>
               <button
                 onClick={() => {
@@ -3014,17 +3089,19 @@ export default function BookingsPage() {
                 )}
               </div>
             )}
-            {statusFilter === 'pending' && (
-              <p className="text-xs text-gray-500 mt-3">
-                Для ожидающих броней период не применяется — показываются все записи.
-              </p>
-            )}
           </div>
 
-          {viewMode === 'table' ? (
+          {loading ? (
+            <div className="rounded-lg bg-white shadow p-8 text-center text-gray-500">Загрузка бронирований...</div>
+          ) : viewMode === 'table' ? (
             <div
-              className="bg-white rounded-lg shadow w-full max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]"
+              className={`relative bg-white rounded-lg shadow w-full max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch] transition-opacity duration-300 ${isTableLoading ? 'opacity-80' : 'opacity-100'}`}
             >
+              {isTableLoading && (
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 overflow-hidden rounded-t-lg">
+                  <div className="h-full w-1/3 animate-pulse bg-gradient-to-r from-transparent via-red-400 to-transparent" />
+                </div>
+              )}
               <table
                 className={`table-fixed min-w-max ${isCompactTableView ? 'text-[11px]' : 'text-sm'}`}
                 style={{
@@ -3123,7 +3200,7 @@ export default function BookingsPage() {
               </table>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className={`grid gap-4 md:grid-cols-2 xl:grid-cols-3 transition-opacity duration-300 ${isTableLoading ? 'opacity-80' : 'opacity-100'}`}>
               {paginatedBookings.map((booking) => (
                 <div
                   key={booking.id}

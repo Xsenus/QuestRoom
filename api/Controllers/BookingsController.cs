@@ -24,9 +24,12 @@ public class BookingsController : PermissionAwareControllerBase
         [FromQuery] Guid? questId = null,
         [FromQuery] string? aggregator = null,
         [FromQuery] string? promoCode = null,
+        [FromQuery] string? searchQuery = null,
         [FromQuery] DateOnly? dateFrom = null,
         [FromQuery] DateOnly? dateTo = null,
-        [FromQuery] string? sort = null)
+        [FromQuery] string? sort = null,
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         var user = await GetCurrentUserAsync();
         if (!HasPermission(user, "bookings.view"))
@@ -38,10 +41,61 @@ public class BookingsController : PermissionAwareControllerBase
             questId,
             aggregator,
             promoCode,
+            searchQuery,
             dateFrom,
             dateTo,
-            sort);
+            sort,
+            limit,
+            offset);
         return Ok(bookings);
+    }
+
+
+    [Authorize]
+    [HttpGet("count")]
+    public async Task<ActionResult<int>> GetBookingsCount(
+        [FromQuery] string? status = null,
+        [FromQuery] Guid? questId = null,
+        [FromQuery] string? aggregator = null,
+        [FromQuery] string? promoCode = null,
+        [FromQuery] string? searchQuery = null,
+        [FromQuery] DateOnly? dateFrom = null,
+        [FromQuery] DateOnly? dateTo = null)
+    {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "bookings.view"))
+        {
+            return Forbid();
+        }
+
+        var total = await _bookingService.GetBookingsCountAsync(
+            status,
+            questId,
+            aggregator,
+            promoCode,
+            searchQuery,
+            dateFrom,
+            dateTo);
+        return Ok(total);
+    }
+
+    [Authorize]
+    [HttpGet("filters-meta")]
+    public async Task<ActionResult<BookingFiltersMetaDto>> GetBookingsFiltersMeta(
+        [FromQuery] string? aggregator = null,
+        [FromQuery] string? promoCode = null,
+        [FromQuery] string? searchQuery = null,
+        [FromQuery] DateOnly? dateFrom = null,
+        [FromQuery] DateOnly? dateTo = null)
+    {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "bookings.view"))
+        {
+            return Forbid();
+        }
+
+        var meta = await _bookingService.GetBookingsFiltersMetaAsync(aggregator, promoCode, searchQuery, dateFrom, dateTo);
+        return Ok(meta);
     }
 
     [HttpPost]
