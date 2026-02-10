@@ -70,6 +70,26 @@ public class ScheduleController : PermissionAwareControllerBase
         return updated ? NoContent() : NotFound();
     }
 
+
+    [Authorize]
+    [HttpPost("consistency/check")]
+    public async Task<ActionResult<QuestScheduleConsistencyCheckResultDto>> CheckConsistency(
+        [FromBody] QuestScheduleConsistencyCheckDto request)
+    {
+        var user = await GetCurrentUserAsync();
+        if (!HasPermission(user, "quests.edit"))
+        {
+            return Forbid();
+        }
+
+        var result = await _scheduleService.CheckAndRepairConsistencyAsync(
+            request.QuestId,
+            request.FromDate,
+            request.ToDate);
+
+        return Ok(result);
+    }
+
     [Authorize]
     [HttpGet("weekly/{questId}")]
     public async Task<ActionResult<IEnumerable<QuestWeeklySlotDto>>> GetWeeklySlots(Guid questId)

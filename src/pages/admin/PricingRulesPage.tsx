@@ -102,6 +102,7 @@ export default function PricingRulesPage() {
   const [generateFrom, setGenerateFrom] = useState<string>(getCurrentYearRange().start);
   const [generateTo, setGenerateTo] = useState<string>(getCurrentYearRange().end);
   const [generateResult, setGenerateResult] = useState<string>('');
+  const [consistencyResult, setConsistencyResult] = useState<string>('');
   const [rulesView, setRulesView] = useState<'cards' | 'table'>('cards');
   const [ruleToDeleteId, setRuleToDeleteId] = useState<string | null>(null);
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
@@ -255,6 +256,36 @@ export default function PricingRulesPage() {
       return;
     }
     await executeGenerate();
+  };
+
+  const handleCheckConsistency = async () => {
+    if (!generateFrom || !generateTo) {
+      setConsistencyResult('Заполните диапазон дат.');
+      return;
+    }
+
+    try {
+      const isAllQuests = !generationQuestId;
+      const result = await api.checkScheduleConsistency(
+        isAllQuests
+          ? { fromDate: generateFrom, toDate: generateTo }
+          : { questId: generationQuestId, fromDate: generateFrom, toDate: generateTo }
+      );
+
+      const details = [
+        `Проверено слотов: ${result.checkedSlots}`,
+        `Исправлено слотов: ${result.updatedSlots}`,
+      ];
+      if (result.orphanBookings > 0) {
+        details.push(`Бронирований без слота: ${result.orphanBookings}`);
+      }
+      if (result.messages.length > 0) {
+        details.push(result.messages.join(' '));
+      }
+      setConsistencyResult(details.join(' · '));
+    } catch (error) {
+      setConsistencyResult('Ошибка проверки: ' + (error as Error).message);
+    }
   };
 
   const questOptions = useMemo(
@@ -692,8 +723,19 @@ export default function PricingRulesPage() {
             Сгенерировать
           </button>
         </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleCheckConsistency}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+          >
+            Проверить и исправить занятость
+          </button>
+        </div>
         {generateResult && (
           <p className="text-sm text-gray-600">{generateResult}</p>
+        )}
+        {consistencyResult && (
+          <p className="text-sm text-gray-600">{consistencyResult}</p>
         )}
       </div>
 

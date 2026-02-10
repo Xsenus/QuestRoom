@@ -11,6 +11,7 @@ public interface IScheduleService
     Task<QuestScheduleDto> CreateSlotAsync(QuestScheduleUpsertDto dto);
     Task<bool> UpdateSlotAsync(Guid id, QuestScheduleUpsertDto dto);
     Task<int> GenerateScheduleAsync(Guid? questId, DateOnly fromDate, DateOnly toDate);
+    Task<QuestScheduleConsistencyCheckResultDto> CheckAndRepairConsistencyAsync(Guid? questId, DateOnly fromDate, DateOnly toDate);
     Task<IReadOnlyList<QuestWeeklySlotDto>> GetWeeklySlotsAsync(Guid questId);
     Task<QuestWeeklySlotDto> CreateWeeklySlotAsync(QuestWeeklySlotUpsertDto dto);
     Task<bool> UpdateWeeklySlotAsync(Guid id, QuestWeeklySlotUpsertDto dto);
@@ -69,7 +70,7 @@ public class ScheduleService : IScheduleService
         var slotIds = slots.Select(slot => slot.Id).ToList();
         var occupiedSlotIds = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue)
-            .Where(booking => booking.Status != "cancelled")
+            .Where(booking => IsSlotBlockingStatus(booking.Status))
             .Where(booking => booking.QuestScheduleId != null && slotIds.Contains(booking.QuestScheduleId.Value))
             .Select(booking => booking.QuestScheduleId!.Value)
             .Distinct()
@@ -152,6 +153,83 @@ public class ScheduleService : IScheduleService
         return totalCreated;
     }
 
+
+    public async Task<QuestScheduleConsistencyCheckResultDto> CheckAndRepairConsistencyAsync(
+        Guid? questId,
+        DateOnly fromDate,
+        DateOnly toDate)
+    {
+        var result = new QuestScheduleConsistencyCheckResultDto();
+        if (fromDate > toDate)
+        {
+            result.Messages.Add("Некорректный период: дата начала позже даты окончания.");
+            return result;
+        }
+
+        var scheduleQuery = _context.QuestSchedules
+            .Where(slot => slot.Date >= fromDate && slot.Date <= toDate);
+
+        if (questId.HasValue)
+        {
+            var scheduleQuestId = await ResolveScheduleQuestIdAsync(questId.Value);
+            scheduleQuery = scheduleQuery.Where(slot => slot.QuestId == scheduleQuestId);
+        }
+
+        var slots = await scheduleQuery.ToListAsync();
+        result.CheckedSlots = slots.Count;
+
+        if (!slots.Any())
+        {
+            result.Messages.Add("Слоты расписания за выбранный период не найдены.");
+            return result;
+        }
+
+        var slotIds = slots.Select(slot => slot.Id).ToList();
+        var blockedSlotIds = await _context.Bookings
+            .Where(booking => booking.QuestScheduleId.HasValue && slotIds.Contains(booking.QuestScheduleId.Value))
+            .Where(booking => IsSlotBlockingStatus(booking.Status))
+            .Select(booking => booking.QuestScheduleId!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        var blockedSet = blockedSlotIds.ToHashSet();
+
+        foreach (var slot in slots)
+        {
+            var shouldBeBooked = blockedSet.Contains(slot.Id);
+            if (slot.IsBooked == shouldBeBooked)
+            {
+                continue;
+            }
+
+            slot.IsBooked = shouldBeBooked;
+            slot.UpdatedAt = DateTime.UtcNow;
+            result.UpdatedSlots++;
+        }
+
+        result.OrphanBookings = await _context.Bookings
+            .Where(booking => booking.QuestScheduleId.HasValue)
+            .Where(booking => IsSlotBlockingStatus(booking.Status))
+            .Where(booking => !_context.QuestSchedules.Any(slot => slot.Id == booking.QuestScheduleId))
+            .CountAsync();
+
+        if (result.UpdatedSlots > 0)
+        {
+            await _context.SaveChangesAsync();
+            result.Messages.Add($"Исправлено слотов: {result.UpdatedSlots}.");
+        }
+        else
+        {
+            result.Messages.Add("Расхождений по занятости слотов не найдено.");
+        }
+
+        if (result.OrphanBookings > 0)
+        {
+            result.Messages.Add($"Найдены бронирования без существующего слота расписания: {result.OrphanBookings}.");
+        }
+
+        return result;
+    }
     private async Task<int> GenerateScheduleForQuestAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
     {
         if (await ShouldUseTemplateAsync(questId))
@@ -494,6 +572,18 @@ public class ScheduleService : IScheduleService
         }
 
         return newSlots.Count;
+    }
+
+
+    private static bool IsSlotBlockingStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return true;
+        }
+
+        var normalized = status.Trim().ToLowerInvariant();
+        return normalized != "cancelled" && normalized != "completed";
     }
 
     private static QuestScheduleDto ToDto(QuestSchedule slot)

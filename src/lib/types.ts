@@ -557,6 +557,20 @@ export type QuestPricingRuleUpsert = Omit<
   'id' | 'createdAt' | 'updatedAt'
 >;
 
+
+export type ScheduleConsistencyCheckRequest = {
+  questId?: string | null;
+  fromDate: string;
+  toDate: string;
+};
+
+export type ScheduleConsistencyCheckResult = {
+  checkedSlots: number;
+  updatedSlots: number;
+  orphanBookings: number;
+  messages: string[];
+};
+
 export type ScheduleGenerateRequest = {
   questId?: string | null;
   fromDate: string;
