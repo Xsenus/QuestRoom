@@ -70,7 +70,7 @@ public class ScheduleService : IScheduleService
         var slotIds = slots.Select(slot => slot.Id).ToList();
         var occupiedSlotIds = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue)
-            .Where(booking => booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed"))
+            .Where(booking => booking.Status != "cancelled")
             .Where(booking => booking.QuestScheduleId != null && slotIds.Contains(booking.QuestScheduleId.Value))
             .Select(booking => booking.QuestScheduleId!.Value)
             .Distinct()
@@ -159,7 +159,13 @@ public class ScheduleService : IScheduleService
         DateOnly fromDate,
         DateOnly toDate)
     {
-        var result = new QuestScheduleConsistencyCheckResultDto();
+        var result = new QuestScheduleConsistencyCheckResultDto
+        {
+            FromDate = fromDate,
+            ToDate = toDate,
+            CheckedAtUtc = DateTime.UtcNow
+        };
+
         if (fromDate > toDate)
         {
             result.Messages.Add("Некорректный период: дата начала позже даты окончания.");
@@ -184,10 +190,16 @@ public class ScheduleService : IScheduleService
             return result;
         }
 
+        var questIds = slots.Select(slot => slot.QuestId).Distinct().ToList();
+        var questTitles = await _context.Quests
+            .Where(quest => questIds.Contains(quest.Id))
+            .Select(quest => new { quest.Id, quest.Title })
+            .ToDictionaryAsync(quest => quest.Id, quest => quest.Title);
+
         var slotIds = slots.Select(slot => slot.Id).ToList();
         var blockedSlotIds = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue && slotIds.Contains(booking.QuestScheduleId.Value))
-            .Where(booking => booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed"))
+            .Where(booking => booking.Status != "cancelled")
             .Select(booking => booking.QuestScheduleId!.Value)
             .Distinct()
             .ToListAsync();
@@ -202,21 +214,60 @@ public class ScheduleService : IScheduleService
                 continue;
             }
 
+            var previousState = slot.IsBooked;
             slot.IsBooked = shouldBeBooked;
             slot.UpdatedAt = DateTime.UtcNow;
             result.UpdatedSlots++;
+
+            if (shouldBeBooked)
+            {
+                result.OccupiedSlots++;
+            }
+            else
+            {
+                result.ReleasedSlots++;
+            }
+
+            result.Logs.Add(new QuestScheduleConsistencyLogEntryDto
+            {
+                QuestId = slot.QuestId,
+                QuestTitle = questTitles.TryGetValue(slot.QuestId, out var questTitle) ? questTitle : "Неизвестный квест",
+                Date = slot.Date,
+                TimeSlot = slot.TimeSlot,
+                PreviousIsBooked = previousState,
+                CurrentIsBooked = shouldBeBooked,
+                Issue = previousState
+                    ? "Слот был помечен занятым, но не имел активных бронирований."
+                    : "Слот был свободным, но имел активные бронирования.",
+                Resolution = shouldBeBooked
+                    ? "Слот помечен как занятый."
+                    : "Слот освобожден."
+            });
         }
 
         result.OrphanBookings = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue)
-            .Where(booking => booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed"))
+            .Where(booking => booking.Status != "cancelled")
             .Where(booking => !_context.QuestSchedules.Any(slot => slot.Id == booking.QuestScheduleId))
             .CountAsync();
+
+        if (result.OrphanBookings > 0)
+        {
+            result.Logs.Add(new QuestScheduleConsistencyLogEntryDto
+            {
+                QuestTitle = "Системная проверка",
+                Issue = "Найдены бронирования, ссылающиеся на отсутствующие слоты расписания.",
+                Resolution = $"Количество проблемных бронирований: {result.OrphanBookings}.",
+                Source = "orphan-bookings"
+            });
+        }
 
         if (result.UpdatedSlots > 0)
         {
             await _context.SaveChangesAsync();
             result.Messages.Add($"Исправлено слотов: {result.UpdatedSlots}.");
+            result.Messages.Add($"Освобождено слотов: {result.ReleasedSlots}.");
+            result.Messages.Add($"Помечено занятыми: {result.OccupiedSlots}.");
         }
         else
         {

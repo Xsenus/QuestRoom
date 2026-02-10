@@ -697,7 +697,7 @@ public class BookingService : IBookingService
         }
 
         var hasActiveBooking = await _context.Bookings
-            .AnyAsync(booking => booking.QuestScheduleId == scheduleId && (booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed")));
+            .AnyAsync(booking => booking.QuestScheduleId == scheduleId && booking.Status != "cancelled");
 
         if (schedule.IsBooked != hasActiveBooking)
         {
@@ -978,7 +978,7 @@ public class BookingService : IBookingService
         }
 
         var scheduleAlreadyBooked = schedule != null
-            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id && (b.Status == null || (b.Status != "cancelled" && b.Status != "completed")));
+            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id && b.Status != "cancelled");
         if (scheduleAlreadyBooked)
         {
             result.Skipped++;

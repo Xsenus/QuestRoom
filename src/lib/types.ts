@@ -564,11 +564,29 @@ export type ScheduleConsistencyCheckRequest = {
   toDate: string;
 };
 
+export type ScheduleConsistencyLogEntry = {
+  questId: string | null;
+  questTitle: string;
+  date: string | null;
+  timeSlot: string | null;
+  previousIsBooked: boolean | null;
+  currentIsBooked: boolean | null;
+  issue: string;
+  resolution: string;
+  source: string;
+};
+
 export type ScheduleConsistencyCheckResult = {
+  fromDate: string;
+  toDate: string;
+  checkedAtUtc: string;
   checkedSlots: number;
   updatedSlots: number;
+  releasedSlots: number;
+  occupiedSlots: number;
   orphanBookings: number;
   messages: string[];
+  logs: ScheduleConsistencyLogEntry[];
 };
 
 export type ScheduleGenerateRequest = {
