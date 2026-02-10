@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, CalendarCheck, ClipboardCheck, ShieldCheck } from 'lucide-react';
+import { BookOpenCheck, CalendarCheck, ClipboardCheck, ReceiptText, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Booking, Quest } from '../../lib/types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,7 +12,14 @@ type SummaryStat = {
   hint?: string;
 };
 
-const formatDateParam = (date: Date) => date.toISOString().split('T')[0];
+const formatDateParam = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatAmount = (value: number) => `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
 
 export default function AdminHomePage() {
   const { user, hasPermission } = useAuth();
@@ -57,6 +64,10 @@ export default function AdminHomePage() {
     ['pending', 'not_confirmed'].includes(booking.status)
   ).length;
 
+  const monthlyCompletedTotal = bookings
+    .filter((booking) => booking.status === 'completed')
+    .reduce((sum, booking) => sum + booking.totalPrice, 0);
+
   const stats: SummaryStat[] = [
     {
       id: 'quests',
@@ -80,6 +91,15 @@ export default function AdminHomePage() {
       value: canViewBookings ? String(pendingConfirmCount) : '—',
       icon: <ClipboardCheck className="h-5 w-5 text-red-600" />,
       hint: canViewBookings ? undefined : 'Нет доступа к просмотру бронирований',
+    },
+    {
+      id: 'bookings-completed-total',
+      label: 'ИТОГ (завершено за месяц)',
+      value: canViewBookings ? formatAmount(monthlyCompletedTotal) : '—',
+      icon: <ReceiptText className="h-5 w-5 text-red-600" />,
+      hint: canViewBookings
+        ? 'Сумма totalPrice по бронированиям со статусом completed'
+        : 'Нет доступа к просмотру бронирований',
     },
   ];
 
@@ -111,7 +131,7 @@ export default function AdminHomePage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
