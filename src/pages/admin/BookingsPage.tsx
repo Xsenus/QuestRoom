@@ -145,6 +145,7 @@ const bookingTableDefaultColumns: BookingTableColumnConfig[] = [
 const bookingPageSizeOptions = [5, 10, 25, 50, 100];
 const defaultBookingPageSize = 10;
 const mobileTableMediaQuery = '(max-width: 767px)';
+const formatAmount = (value: number) => `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
 
 export default function BookingsPage() {
   const { user, hasPermission } = useAuth();
@@ -155,6 +156,7 @@ export default function BookingsPage() {
   const canEditBlacklist = hasPermission('blacklist.edit');
   const canViewPromoCodes = hasPermission('promo-codes.view');
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [completedBookingsTotal, setCompletedBookingsTotal] = useState<number>(0);
   const [totalBookingsCount, setTotalBookingsCount] = useState(0);
   const [bookingsFiltersMeta, setBookingsFiltersMeta] = useState<BookingFiltersMeta | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -884,6 +886,7 @@ export default function BookingsPage() {
       if (!canView) {
         setBookings([]);
         setTotalBookingsCount(0);
+        setCompletedBookingsTotal(0);
         return;
       }
 
@@ -899,7 +902,7 @@ export default function BookingsPage() {
         setIsAutoRefreshing(true);
       }
       try {
-        const [listData, totalCount] = await Promise.all([
+        const [listData, totalCount, completedBookings] = await Promise.all([
           api.getBookings(listFilterParams),
           api.getBookingsCount({
             ...countFilterParams,
@@ -909,12 +912,19 @@ export default function BookingsPage() {
             promoCode: promoCodeFilter !== 'all' ? promoCodeFilter : undefined,
             searchQuery: appliedSearchQuery.trim() || undefined,
           }),
+          api.getBookings({
+            ...countFilterParams,
+            status: 'completed',
+          }),
         ]);
         if (requestId !== latestLoadRequestIdRef.current) {
           return;
         }
         setBookings(listData || []);
         setTotalBookingsCount(totalCount || 0);
+        setCompletedBookingsTotal(
+          (completedBookings || []).reduce((sum, booking) => sum + booking.totalPrice, 0)
+        );
         setLastUpdatedAt(new Date());
       } catch (error) {
         if (requestId === latestLoadRequestIdRef.current) {
@@ -2810,7 +2820,12 @@ export default function BookingsPage() {
         onClose={() => setNotification({ ...notification, isOpen: false })}
       />
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h2 className="text-3xl font-bold text-gray-900">Управление бронированиями</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-3xl font-bold text-gray-900">Управление бронированиями</h2>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+            Завершено за период: {loading ? '...' : formatAmount(completedBookingsTotal)}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-gray-500 mr-1">
             {isAutoRefreshing
