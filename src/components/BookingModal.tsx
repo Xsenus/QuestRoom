@@ -34,7 +34,11 @@ export default function BookingModal({
     quest.extraServices || []
   );
   const normalizeServiceTitle = (title?: string | null) =>
-    (title ?? '').trim().toLowerCase();
+    (title ?? '')
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/\s+/g, ' ')
+      .trim();
   const mandatoryChildServices = useMemo(
     () => standardExtraServices.filter((service) => service.mandatoryForChildQuests),
     [standardExtraServices]
