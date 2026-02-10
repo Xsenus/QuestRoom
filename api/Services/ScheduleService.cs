@@ -70,7 +70,7 @@ public class ScheduleService : IScheduleService
         var slotIds = slots.Select(slot => slot.Id).ToList();
         var occupiedSlotIds = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue)
-            .Where(booking => IsSlotBlockingStatus(booking.Status))
+            .Where(booking => booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed"))
             .Where(booking => booking.QuestScheduleId != null && slotIds.Contains(booking.QuestScheduleId.Value))
             .Select(booking => booking.QuestScheduleId!.Value)
             .Distinct()
@@ -187,7 +187,7 @@ public class ScheduleService : IScheduleService
         var slotIds = slots.Select(slot => slot.Id).ToList();
         var blockedSlotIds = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue && slotIds.Contains(booking.QuestScheduleId.Value))
-            .Where(booking => IsSlotBlockingStatus(booking.Status))
+            .Where(booking => booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed"))
             .Select(booking => booking.QuestScheduleId!.Value)
             .Distinct()
             .ToListAsync();
@@ -209,7 +209,7 @@ public class ScheduleService : IScheduleService
 
         result.OrphanBookings = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue)
-            .Where(booking => IsSlotBlockingStatus(booking.Status))
+            .Where(booking => booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed"))
             .Where(booking => !_context.QuestSchedules.Any(slot => slot.Id == booking.QuestScheduleId))
             .CountAsync();
 
@@ -572,18 +572,6 @@ public class ScheduleService : IScheduleService
         }
 
         return newSlots.Count;
-    }
-
-
-    private static bool IsSlotBlockingStatus(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            return true;
-        }
-
-        var normalized = status.Trim().ToLowerInvariant();
-        return normalized != "cancelled" && normalized != "completed";
     }
 
     private static QuestScheduleDto ToDto(QuestSchedule slot)

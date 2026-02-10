@@ -697,7 +697,7 @@ public class BookingService : IBookingService
         }
 
         var hasActiveBooking = await _context.Bookings
-            .AnyAsync(booking => booking.QuestScheduleId == scheduleId && IsSlotBlockingStatus(booking.Status));
+            .AnyAsync(booking => booking.QuestScheduleId == scheduleId && (booking.Status == null || (booking.Status != "cancelled" && booking.Status != "completed")));
 
         if (schedule.IsBooked != hasActiveBooking)
         {
@@ -978,7 +978,7 @@ public class BookingService : IBookingService
         }
 
         var scheduleAlreadyBooked = schedule != null
-            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id && IsSlotBlockingStatus(b.Status));
+            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id && (b.Status == null || (b.Status != "cancelled" && b.Status != "completed")));
         if (scheduleAlreadyBooked)
         {
             result.Skipped++;
@@ -1029,17 +1029,6 @@ public class BookingService : IBookingService
     result.Processed = result.Imported + result.Skipped + result.Duplicates;
     return result;
 }
-
-    private static bool IsSlotBlockingStatus(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            return true;
-        }
-
-        var normalized = status.Trim().ToLowerInvariant();
-        return normalized != "cancelled" && normalized != "completed";
-    }
 
     private static IOrderedQueryable<Booking> ApplySorting(IQueryable<Booking> query, string? sort)
     {
