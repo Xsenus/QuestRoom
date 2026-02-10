@@ -54,6 +54,19 @@ import type {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
 const tokenKeys = ['auth_token', 'token'];
 const permissionsStorageKey = 'user_permissions';
 const tokenExpiryKey = 'auth_expires_at';
@@ -146,17 +159,23 @@ class ApiClient {
       }
 
       if (typeof parsedError === 'string') {
-        throw new Error(parsedError);
+        throw new ApiError(parsedError, response.status);
       }
 
       if (parsedError && typeof parsedError === 'object') {
-        const message = (parsedError as { message?: unknown }).message;
+        const payload = parsedError as { message?: unknown; code?: unknown };
+        const message = payload.message;
+        const code = payload.code;
         if (typeof message === 'string' && message.trim()) {
-          throw new Error(message);
+          throw new ApiError(
+            message,
+            response.status,
+            typeof code === 'string' && code.trim() ? code : undefined,
+          );
         }
       }
 
-      throw new Error(rawText || `HTTP ${response.status}`);
+      throw new ApiError(rawText || `HTTP ${response.status}`, response.status);
     }
 
     if (response.status === 204) {
@@ -935,17 +954,23 @@ class ApiClient {
       }
 
       if (typeof parsedError === 'string') {
-        throw new Error(parsedError);
+        throw new ApiError(parsedError, response.status);
       }
 
       if (parsedError && typeof parsedError === 'object') {
-        const message = (parsedError as { message?: unknown }).message;
+        const payload = parsedError as { message?: unknown; code?: unknown };
+        const message = payload.message;
+        const code = payload.code;
         if (typeof message === 'string' && message.trim()) {
-          throw new Error(message);
+          throw new ApiError(
+            message,
+            response.status,
+            typeof code === 'string' && code.trim() ? code : undefined,
+          );
         }
       }
 
-      throw new Error(rawText || `HTTP ${response.status}`);
+      throw new ApiError(rawText || `HTTP ${response.status}`, response.status);
     }
 
     const blob = await response.blob();

@@ -183,7 +183,7 @@ public class MirKvestovIntegrationService : IMirKvestovIntegrationService
                 Notes = notes,
                 Aggregator = aggregator,
                 AggregatorUniqueId = request.UniqueId
-            });
+            }, isApiBooking: true);
         }
         catch (InvalidOperationException ex)
         {

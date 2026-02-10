@@ -108,7 +108,11 @@ public class BookingsController : PermissionAwareControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new
+            {
+                message = ex.Message,
+                code = ResolveCreateBookingErrorCode(ex.Message)
+            });
         }
     }
 
@@ -161,6 +165,26 @@ public class BookingsController : PermissionAwareControllerBase
         return Ok(result);
     }
 
+
+    private static string ResolveCreateBookingErrorCode(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "BOOKING_VALIDATION_FAILED";
+        }
+
+        if (message.Contains("Бронирование запрещено", StringComparison.OrdinalIgnoreCase))
+        {
+            return "BOOKING_BLACKLISTED";
+        }
+
+        if (message.Contains("уже забронировано", StringComparison.OrdinalIgnoreCase))
+        {
+            return "BOOKING_SLOT_ALREADY_BOOKED";
+        }
+
+        return "BOOKING_VALIDATION_FAILED";
+    }
     private static bool HasEditPayload(BookingUpdateDto booking)
     {
         return booking.QuestId != null

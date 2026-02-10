@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { api } from '../lib/api';
+import { ApiError, api } from '../lib/api';
 import { Quest, QuestExtraService, QuestSchedule, StandardExtraService } from '../lib/types';
 import NotificationModal from './NotificationModal';
 
@@ -286,10 +286,14 @@ export default function BookingModal({
       });
     } catch (error) {
       console.error('Error creating booking:', error);
+      const apiError = error instanceof ApiError ? error : null;
+      const errorCode = apiError?.code ?? null;
       const errorMessage = (error as Error).message || '';
       const lowerMessage = errorMessage.toLowerCase();
-      const isSlotBooked = lowerMessage.includes('уже забронировано');
-      const isBlacklistedBlocked = lowerMessage.includes('бронирование запрещено');
+      const isSlotBooked =
+        errorCode === 'BOOKING_SLOT_ALREADY_BOOKED' || lowerMessage.includes('уже забронировано');
+      const isBlacklistedBlocked =
+        errorCode === 'BOOKING_BLACKLISTED' || lowerMessage.includes('бронирование запрещено');
 
       setNotification({
         isOpen: true,
