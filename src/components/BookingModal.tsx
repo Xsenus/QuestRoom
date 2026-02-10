@@ -117,8 +117,16 @@ export default function BookingModal({
       : slot.price + extraParticipantsTotal + extraServicesTotal;
 
   const extractPhoneDigits = (value: string) => {
-    const digits = value.replace(/\D/g, '');
+    const trimmedValue = value.trim();
+    const digits = trimmedValue.replace(/\D/g, '');
 
+    // Поле контролируемое и всегда рендерится с префиксом +7,
+    // поэтому при обычном наборе убираем эту первую "служебную" 7.
+    if (trimmedValue.startsWith('+7')) {
+      return digits.slice(1, 11);
+    }
+
+    // Поддерживаем вставку из форматов 7XXXXXXXXXX / 8XXXXXXXXXX.
     if (digits.length === 11 && (digits.startsWith('7') || digits.startsWith('8'))) {
       return digits.slice(1, 11);
     }
