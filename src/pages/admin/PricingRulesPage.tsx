@@ -270,42 +270,18 @@ export default function PricingRulesPage() {
       return;
     }
 
-    const header = [
-      `Период: ${consistencyReport.fromDate} — ${consistencyReport.toDate}`,
-      `Проверено слотов: ${consistencyReport.checkedSlots}`,
-      `Исправлено слотов: ${consistencyReport.updatedSlots}`,
-      `Освобождено слотов: ${consistencyReport.releasedSlots}`,
-      `Помечено занятыми: ${consistencyReport.occupiedSlots}`,
-      `Бронирований без слота: ${consistencyReport.orphanBookings}`,
-      `Время проверки (UTC): ${consistencyReport.checkedAtUtc}`,
-      '',
-      'Подробный лог:',
-      'Квест;Дата;Время;Было занято;Стало занято;Проблема;Исправление;Источник',
-    ];
+    const payload = {
+      exportedAtUtc: new Date().toISOString(),
+      report: consistencyReport,
+    };
 
-    const rows = consistencyReport.logs.map((entry) =>
-      [
-        entry.questTitle || '—',
-        entry.date || '—',
-        entry.timeSlot ? entry.timeSlot.slice(0, 5) : '—',
-        entry.previousIsBooked == null ? '—' : entry.previousIsBooked ? 'Да' : 'Нет',
-        entry.currentIsBooked == null ? '—' : entry.currentIsBooked ? 'Да' : 'Нет',
-        entry.issue.replace(/\n/g, ' '),
-        entry.resolution.replace(/\n/g, ' '),
-        entry.source,
-      ]
-        .map((part) => `"${part.replace(/"/g, '""')}"`)
-        .join(';')
-    );
-
-    const content = ['sep=;', ...header, ...rows].join('\r\n');
-    const utf8Bom = '\uFEFF';
-    const blob = new Blob([utf8Bom, content], { type: 'text/csv;charset=utf-8;' });
+    const content = JSON.stringify(payload, null, 2);
+    const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     const fileDate = consistencyReport.checkedAtUtc.replace(/[:.]/g, '-');
-    link.download = `schedule-consistency-${fileDate}.csv`;
+    link.download = `schedule-consistency-${fileDate}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1050,14 +1026,14 @@ export default function PricingRulesPage() {
             <button
               type="button"
               onClick={downloadConsistencyReport}
-              disabled={!consistencyReport?.logs?.length}
+              disabled={!consistencyReport}
               className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-                consistencyReport?.logs?.length
+                consistencyReport
                   ? 'bg-gray-900 text-white hover:bg-gray-800'
                   : 'cursor-not-allowed bg-gray-200 text-gray-400'
               }`}
             >
-              Скачать лог (CSV)
+              Скачать лог (JSON)
             </button>
             <button
               type="button"
