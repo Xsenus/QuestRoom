@@ -298,8 +298,9 @@ export default function PricingRulesPage() {
         .join(';')
     );
 
-    const content = [...header, ...rows].join('\n');
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const content = ['sep=;', ...header, ...rows].join('\r\n');
+    const utf8Bom = '\uFEFF';
+    const blob = new Blob([utf8Bom, content], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
