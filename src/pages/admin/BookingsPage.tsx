@@ -1515,40 +1515,26 @@ export default function BookingsPage() {
       return false;
     }
 
-    const mandatoryCounts = new Map<string, number>();
-    getMandatoryStandardServicesForQuest(questId).forEach((item) => {
-      const title = normalizeServiceTitle(item.title);
-      mandatoryCounts.set(title, (mandatoryCounts.get(title) ?? 0) + 1);
-    });
-
-    if (!mandatoryCounts.size) {
-      return false;
-    }
-
-    const questCounts = new Map<string, number>();
-    (questId ? questLookup.get(questId)?.extraServices ?? [] : []).forEach((item) => {
-      const title = normalizeServiceTitle(item.title);
-      questCounts.set(title, (questCounts.get(title) ?? 0) + 1);
-    });
-
-    const normalizedTitle = normalizeServiceTitle(service.title);
-    const requiredInAdditional = Math.max(
-      0,
-      (mandatoryCounts.get(normalizedTitle) ?? 0) - (questCounts.get(normalizedTitle) ?? 0)
+    const mandatoryTitles = new Set(
+      getMandatoryStandardServicesForQuest(questId).map((item) =>
+        normalizeServiceTitle(item.title)
+      )
     );
 
-    if (requiredInAdditional === 0) {
+    if (!mandatoryTitles.size) {
       return false;
     }
 
-    let titleCountUntilIndex = 0;
-    for (let i = 0; i <= index; i += 1) {
-      if (normalizeServiceTitle(services[i]?.title) === normalizedTitle) {
-        titleCountUntilIndex += 1;
-      }
+    const normalizedTitle = normalizeServiceTitle(service.title);
+    if (!mandatoryTitles.has(normalizedTitle)) {
+      return false;
     }
 
-    return titleCountUntilIndex <= requiredInAdditional;
+    const firstMandatoryIndex = services.findIndex(
+      (item) => normalizeServiceTitle(item.title) === normalizedTitle
+    );
+
+    return firstMandatoryIndex === index;
   };
 
   const updateExtraService = (index: number, field: 'title' | 'price', value: string) => {
