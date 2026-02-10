@@ -98,16 +98,49 @@ export default function UsersPage() {
     }, {});
   }, [roles]);
 
+  const buildFallbackRoles = (usersData: AdminUser[]): RoleDefinition[] => {
+    const now = new Date().toISOString();
+    const map = new Map<string, RoleDefinition>();
+
+    usersData.forEach((user) => {
+      const normalizedRoleId = normalizeRoleId(user.roleId);
+      if (!normalizedRoleId || map.has(normalizedRoleId)) {
+        return;
+      }
+
+      map.set(normalizedRoleId, {
+        id: normalizedRoleId,
+        code: '',
+        name: user.roleName || 'Без роли',
+        description: null,
+        permissions: [],
+        isSystem: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  };
+
   const isProtectedAdmin = (user: { email: string }) =>
     user.email.toLowerCase() === protectedAdminEmail;
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [usersData, rolesData] = await Promise.all([api.getAdminUsers(), api.getRoles()]);
-      setUsers(usersData.map(normalizeUser));
-      setRoles(rolesData);
+      const usersData = await api.getAdminUsers();
+      const normalizedUsers = usersData.map(normalizeUser);
+      setUsers(normalizedUsers);
       setSelectedId(usersData[0]?.id ?? null);
+
+      try {
+        const rolesData = await api.getRoles();
+        setRoles(rolesData);
+      } catch {
+        setRoles(buildFallbackRoles(normalizedUsers));
+      }
+
       setError(null);
     } catch (fetchError) {
       setError((fetchError as Error).message);

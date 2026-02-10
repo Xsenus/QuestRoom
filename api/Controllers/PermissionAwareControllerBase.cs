@@ -32,6 +32,12 @@ public abstract class PermissionAwareControllerBase : ControllerBase
 
     protected static bool HasPermission(User? user, string permission)
     {
-        return user?.Role?.Permissions?.Contains(permission) == true;
+        if (user?.Role == null)
+        {
+            return false;
+        }
+
+        return user.Role.Permissions?.Any(existingPermission =>
+            string.Equals(existingPermission?.Trim(), permission, StringComparison.OrdinalIgnoreCase)) == true;
     }
 }
