@@ -165,6 +165,11 @@ public class AppDbContext : DbContext
             .HasIndex(b => b.LegacyId)
             .IsUnique();
 
+        modelBuilder.Entity<Booking>()
+            .HasIndex(b => b.QuestScheduleId)
+            .HasFilter("quest_schedule_id IS NOT NULL AND status <> 'cancelled'")
+            .IsUnique();
+
         modelBuilder.Entity<BookingExtraService>()
             .HasOne(e => e.Booking)
             .WithMany(b => b.ExtraServices)

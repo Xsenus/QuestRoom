@@ -416,7 +416,14 @@ public class BookingService : IBookingService
             }
 
             _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsBookingSlotConflictException(ex))
+            {
+                throw new InvalidOperationException("Выбранное время уже забронировано.");
+            }
 
             if (schedule != null)
             {
@@ -627,7 +634,14 @@ public class BookingService : IBookingService
             booking.TotalPrice = dto.TotalPrice.Value;
         }
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsBookingSlotConflictException(ex))
+        {
+            throw new InvalidOperationException("Выбранное время уже забронировано.");
+        }
 
         if (previousScheduleId.HasValue)
         {
@@ -741,6 +755,17 @@ public class BookingService : IBookingService
             CreatedAt = booking.CreatedAt,
             UpdatedAt = booking.UpdatedAt
         };
+    }
+
+    private static bool IsBookingSlotConflictException(DbUpdateException exception)
+    {
+        if (exception.InnerException == null)
+        {
+            return false;
+        }
+
+        var message = exception.InnerException.Message;
+        return message.Contains("IX_bookings_quest_schedule_id", StringComparison.OrdinalIgnoreCase);
     }
 
 
