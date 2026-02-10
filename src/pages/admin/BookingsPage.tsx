@@ -249,7 +249,11 @@ export default function BookingsPage() {
 
   const primaryBlacklistMatch = contactBlacklistMatches[0] || null;
   const normalizeServiceTitle = (title?: string | null) =>
-    (title ?? '').trim().toLowerCase();
+    (title ?? '')
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/\s+/g, ' ')
+      .trim();
   const mandatoryChildServiceTitles = useMemo(
     () =>
       new Set(
@@ -1474,17 +1478,57 @@ export default function BookingsPage() {
     );
   };
 
+  const isLockedMandatoryExtraService = (
+    services: { title: string }[],
+    index: number,
+    questId?: string | null
+  ) => {
+    const service = services[index];
+    if (!service) {
+      return false;
+    }
+
+    const mandatoryCounts = new Map<string, number>();
+    getMandatoryStandardServicesForQuest(questId).forEach((item) => {
+      const title = normalizeServiceTitle(item.title);
+      mandatoryCounts.set(title, (mandatoryCounts.get(title) ?? 0) + 1);
+    });
+
+    if (!mandatoryCounts.size) {
+      return false;
+    }
+
+    const questCounts = new Map<string, number>();
+    (questId ? questLookup.get(questId)?.extraServices ?? [] : []).forEach((item) => {
+      const title = normalizeServiceTitle(item.title);
+      questCounts.set(title, (questCounts.get(title) ?? 0) + 1);
+    });
+
+    const normalizedTitle = normalizeServiceTitle(service.title);
+    const requiredInAdditional = Math.max(
+      0,
+      (mandatoryCounts.get(normalizedTitle) ?? 0) - (questCounts.get(normalizedTitle) ?? 0)
+    );
+
+    if (requiredInAdditional === 0) {
+      return false;
+    }
+
+    let titleCountUntilIndex = 0;
+    for (let i = 0; i <= index; i += 1) {
+      if (normalizeServiceTitle(services[i]?.title) === normalizedTitle) {
+        titleCountUntilIndex += 1;
+      }
+    }
+
+    return titleCountUntilIndex <= requiredInAdditional;
+  };
+
   const updateExtraService = (index: number, field: 'title' | 'price', value: string) => {
     if (!editingBooking) {
       return;
     }
-    const service = editingBooking.extraServices[index];
-    const mandatoryTitles = new Set(
-      getMandatoryStandardServicesForQuest(editingBooking.questId).map((item) =>
-        normalizeServiceTitle(item.title)
-      )
-    );
-    if (mandatoryTitles.has(normalizeServiceTitle(service?.title))) {
+    if (isLockedMandatoryExtraService(editingBooking.extraServices, index, editingBooking.questId)) {
       return;
     }
     const nextServices = editingBooking.extraServices.map((service, serviceIndex) =>
@@ -1564,12 +1608,7 @@ export default function BookingsPage() {
       return;
     }
     const service = editingBooking.extraServices[index];
-    const mandatoryTitles = new Set(
-      getMandatoryStandardServicesForQuest(editingBooking.questId).map((item) =>
-        normalizeServiceTitle(item.title)
-      )
-    );
-    if (mandatoryTitles.has(normalizeServiceTitle(service?.title))) {
+    if (isLockedMandatoryExtraService(editingBooking.extraServices, index, editingBooking.questId)) {
       return;
     }
     openActionModal({
@@ -2222,16 +2261,6 @@ export default function BookingsPage() {
     [bookingFormMode, editingBooking?.questId, questLookup, selectedQuestExtraServiceIds]
   );
 
-  const mandatoryBookingExtraServiceTitles = useMemo(
-    () =>
-      new Set(
-        getMandatoryStandardServicesForQuest(editingBooking?.questId).map((service) =>
-          normalizeServiceTitle(service.title)
-        )
-      ),
-    [editingBooking?.questId, getMandatoryStandardServicesForQuest]
-  );
-
   useEffect(() => {
     if (!mandatoryQuestExtraServiceIds.length) {
       return;
@@ -2259,9 +2288,21 @@ export default function BookingsPage() {
       const existingTitles = new Set(
         prev.extraServices.map((service) => normalizeServiceTitle(service.title))
       );
-      const missingMandatoryServices = mandatoryServices.filter(
-        (service) => !existingTitles.has(normalizeServiceTitle(service.title))
+      const mandatoryTitles = new Set(
+        mandatoryServices.map((service) => normalizeServiceTitle(service.title))
       );
+      const questMandatoryTitles = new Set(
+        (prev.questId ? questLookup.get(prev.questId)?.extraServices ?? [] : [])
+          .map((service) => normalizeServiceTitle(service.title))
+          .filter((title) => mandatoryTitles.has(title))
+      );
+      const missingMandatoryServices = mandatoryServices.filter((service) => {
+        const normalizedTitle = normalizeServiceTitle(service.title);
+        return (
+          !existingTitles.has(normalizedTitle)
+          && !questMandatoryTitles.has(normalizedTitle)
+        );
+      });
 
       if (!missingMandatoryServices.length) {
         return prev;
@@ -2279,7 +2320,7 @@ export default function BookingsPage() {
         ],
       };
     });
-  }, [editingBooking?.questId, getMandatoryStandardServicesForQuest]);
+  }, [editingBooking?.questId, getMandatoryStandardServicesForQuest, questLookup]);
 
   const addColumnFilter = () => {
     hasUserEditedPreferences.current = true;
@@ -3941,8 +3982,10 @@ export default function BookingsPage() {
                   </label>
                   <div className="space-y-3">
                     {editingBooking.extraServices.map((service, index) => {
-                      const isMandatoryService = mandatoryBookingExtraServiceTitles.has(
-                        normalizeServiceTitle(service.title)
+                      const isMandatoryService = isLockedMandatoryExtraService(
+                        editingBooking.extraServices,
+                        index,
+                        editingBooking.questId
                       );
 
                       return (
