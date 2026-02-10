@@ -94,11 +94,11 @@ export default function AdminHomePage() {
     },
     {
       id: 'bookings-completed-total',
-      label: 'ИТОГ (завершено за месяц)',
+      label: 'ИТОГ',
       value: canViewBookings ? formatAmount(monthlyCompletedTotal) : '—',
       icon: <ReceiptText className="h-5 w-5 text-red-600" />,
       hint: canViewBookings
-        ? 'Сумма totalPrice по бронированиям со статусом completed'
+        ? 'завершено за месяц'
         : 'Нет доступа к просмотру бронирований',
     },
   ];
