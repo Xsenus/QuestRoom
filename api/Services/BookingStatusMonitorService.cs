@@ -79,7 +79,8 @@ public class BookingStatusMonitorService : BackgroundService
 
         var bookings = await context.Bookings
             .Include(b => b.QuestSchedule)
-            .Where(b => b.Status != "completed" && b.Status != "cancelled")
+            .Where(b => (b.Status ?? string.Empty).ToLower() != "completed"
+                && !BookingStatusHelper.CancelledStatuses.Contains((b.Status ?? string.Empty).ToLower()))
             .Where(b => b.QuestSchedule != null)
             .ToListAsync(cancellationToken);
 

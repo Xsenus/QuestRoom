@@ -477,7 +477,9 @@ public class BookingService : IBookingService
         }
 
         var previousScheduleId = booking.QuestScheduleId;
-        var nextStatus = string.IsNullOrWhiteSpace(dto.Status) ? booking.Status : dto.Status;
+        var originalBookingDate = booking.BookingDate;
+        var nextStatusRaw = string.IsNullOrWhiteSpace(dto.Status) ? booking.Status : dto.Status;
+        var nextStatus = BookingStatusHelper.Normalize(nextStatusRaw);
         var shouldRecalculate = false;
 
         booking.Status = nextStatus;
@@ -531,9 +533,36 @@ public class BookingService : IBookingService
                 ? null
                 : dto.AggregatorUniqueId;
         }
-        if (dto.BookingDate.HasValue)
+        var requestedBookingDate = dto.BookingDate.HasValue
+            ? DateOnly.FromDateTime(dto.BookingDate.Value)
+            : (DateOnly?)null;
+        var isDateChanged = requestedBookingDate.HasValue && requestedBookingDate.Value != originalBookingDate;
+        if (isDateChanged && !dto.QuestScheduleId.HasValue && previousScheduleId.HasValue)
         {
-            booking.BookingDate = DateOnly.FromDateTime(dto.BookingDate.Value);
+            throw new InvalidOperationException("При изменении даты бронирования необходимо выбрать новое время.");
+        }
+
+        if (requestedBookingDate.HasValue)
+        {
+            booking.BookingDate = requestedBookingDate.Value;
+        }
+
+        if (dto.QuestScheduleId.HasValue && requestedBookingDate.HasValue)
+        {
+            var selectedScheduleDate = await _context.QuestSchedules
+                .Where(slot => slot.Id == dto.QuestScheduleId.Value)
+                .Select(slot => (DateOnly?)slot.Date)
+                .FirstOrDefaultAsync();
+
+            if (!selectedScheduleDate.HasValue)
+            {
+                throw new InvalidOperationException("Выбранный слот расписания не найден.");
+            }
+
+            if (selectedScheduleDate.Value != requestedBookingDate.Value)
+            {
+                throw new InvalidOperationException("Выбранное время не относится к указанной дате. Пожалуйста, выберите время заново.");
+            }
         }
         if (dto.ParticipantsCount.HasValue)
         {
@@ -624,6 +653,31 @@ public class BookingService : IBookingService
             shouldRecalculate = true;
         }
 
+        if (booking.QuestScheduleId.HasValue)
+        {
+            var linkedScheduleDate = await _context.QuestSchedules
+                .Where(slot => slot.Id == booking.QuestScheduleId.Value)
+                .Select(slot => (DateOnly?)slot.Date)
+                .FirstOrDefaultAsync();
+
+            if (!linkedScheduleDate.HasValue)
+            {
+                booking.QuestScheduleId = null;
+                shouldRecalculate = true;
+            }
+            else if (requestedBookingDate.HasValue
+                     && !dto.QuestScheduleId.HasValue
+                     && linkedScheduleDate.Value != requestedBookingDate.Value)
+            {
+                booking.QuestScheduleId = null;
+                shouldRecalculate = true;
+            }
+            else
+            {
+                booking.BookingDate = linkedScheduleDate.Value;
+            }
+        }
+
         booking.UpdatedAt = DateTime.UtcNow;
 
         if (shouldRecalculate)
@@ -697,7 +751,8 @@ public class BookingService : IBookingService
         }
 
         var hasActiveBooking = await _context.Bookings
-            .AnyAsync(booking => booking.QuestScheduleId == scheduleId && booking.Status != "cancelled");
+            .AnyAsync(booking => booking.QuestScheduleId == scheduleId
+                && !BookingStatusHelper.CancelledStatuses.Contains((booking.Status ?? string.Empty).ToLower()));
 
         if (schedule.IsBooked != hasActiveBooking)
         {
@@ -978,7 +1033,8 @@ public class BookingService : IBookingService
         }
 
         var scheduleAlreadyBooked = schedule != null
-            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id && b.Status != "cancelled");
+            && await _context.Bookings.AnyAsync(b => b.QuestScheduleId == schedule.Id
+                && !BookingStatusHelper.CancelledStatuses.Contains((b.Status ?? string.Empty).ToLower()));
         if (scheduleAlreadyBooked)
         {
             result.Skipped++;
