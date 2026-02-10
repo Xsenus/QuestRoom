@@ -64,6 +64,9 @@ public class DatabaseInitializer : IDatabaseInitializer
             await _context.Database.EnsureCreatedAsync();
         }
 
+
+        await NormalizeBookingStatusesAsync();
+
         var seedMode = GetSeedMode();
         if (seedMode == SeedMode.None)
         {
@@ -74,6 +77,33 @@ public class DatabaseInitializer : IDatabaseInitializer
         await SeedAsync(seedMode);
     }
 
+
+
+    private async Task NormalizeBookingStatusesAsync()
+    {
+        var cancelledAliases = new[] { "canceled", "отменено" };
+
+        var bookingsWithNonCanonicalCancelledStatus = await _context.Bookings
+            .Where(b => b.Status != null)
+            .Where(b => cancelledAliases.Contains(b.Status!.Trim().ToLower()))
+            .ToListAsync();
+
+        if (!bookingsWithNonCanonicalCancelledStatus.Any())
+        {
+            return;
+        }
+
+        foreach (var booking in bookingsWithNonCanonicalCancelledStatus)
+        {
+            booking.Status = BookingStatusHelper.Normalize(booking.Status);
+            booking.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation(
+            "Normalized non-canonical cancelled booking statuses to canonical 'cancelled': {Count}",
+            bookingsWithNonCanonicalCancelledStatus.Count);
+    }
 
     private SeedMode GetSeedMode()
     {

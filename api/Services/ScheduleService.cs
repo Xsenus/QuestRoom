@@ -70,7 +70,7 @@ public class ScheduleService : IScheduleService
         var slotIds = slots.Select(slot => slot.Id).ToList();
         var occupiedSlotIds = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue)
-            .Where(booking => booking.Status != "cancelled")
+            .Where(booking => !BookingStatusHelper.CancelledStatuses.Contains((booking.Status ?? string.Empty).ToLower()))
             .Where(booking => booking.QuestScheduleId != null && slotIds.Contains(booking.QuestScheduleId.Value))
             .Select(booking => booking.QuestScheduleId!.Value)
             .Distinct()
@@ -199,7 +199,7 @@ public class ScheduleService : IScheduleService
         var slotIds = slots.Select(slot => slot.Id).ToList();
         var blockedSlotIds = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue && slotIds.Contains(booking.QuestScheduleId.Value))
-            .Where(booking => booking.Status != "cancelled")
+            .Where(booking => !BookingStatusHelper.CancelledStatuses.Contains((booking.Status ?? string.Empty).ToLower()))
             .Select(booking => booking.QuestScheduleId!.Value)
             .Distinct()
             .ToListAsync();
@@ -247,7 +247,7 @@ public class ScheduleService : IScheduleService
 
         result.OrphanBookings = await _context.Bookings
             .Where(booking => booking.QuestScheduleId.HasValue)
-            .Where(booking => booking.Status != "cancelled")
+            .Where(booking => !BookingStatusHelper.CancelledStatuses.Contains((booking.Status ?? string.Empty).ToLower()))
             .Where(booking => !_context.QuestSchedules.Any(slot => slot.Id == booking.QuestScheduleId))
             .CountAsync();
 
