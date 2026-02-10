@@ -116,18 +116,25 @@ public class BookingsController : PermissionAwareControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateBooking(Guid id, [FromBody] BookingUpdateDto booking)
     {
-        var user = await GetCurrentUserAsync();
-        var requiresEdit = HasEditPayload(booking);
-        if (requiresEdit && !HasPermission(user, "bookings.edit"))
+        try
         {
-            return Forbid();
+            var user = await GetCurrentUserAsync();
+            var requiresEdit = HasEditPayload(booking);
+            if (requiresEdit && !HasPermission(user, "bookings.edit"))
+            {
+                return Forbid();
+            }
+            if (!requiresEdit && !HasPermission(user, "bookings.confirm"))
+            {
+                return Forbid();
+            }
+            var updated = await _bookingService.UpdateBookingAsync(id, booking);
+            return updated ? NoContent() : NotFound();
         }
-        if (!requiresEdit && !HasPermission(user, "bookings.confirm"))
+        catch (InvalidOperationException ex)
         {
-            return Forbid();
+            return BadRequest(new { message = ex.Message });
         }
-        var updated = await _bookingService.UpdateBookingAsync(id, booking);
-        return updated ? NoContent() : NotFound();
     }
 
     [Authorize]
