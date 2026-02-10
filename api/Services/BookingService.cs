@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuestRoomApi.Data;
@@ -262,7 +263,9 @@ public class BookingService : IBookingService
         var effectiveIsApiBooking = isApiBooking
             ?? (!string.IsNullOrWhiteSpace(dto.Aggregator) || !string.IsNullOrWhiteSpace(dto.AggregatorUniqueId));
 
-        if (await _blacklistService.IsBookingBlockedAsync(dto.CustomerPhone, dto.CustomerEmail, effectiveIsApiBooking))
+        var normalizedCustomerPhone = NormalizeCustomerPhoneOrThrow(dto.CustomerPhone);
+
+        if (await _blacklistService.IsBookingBlockedAsync(normalizedCustomerPhone, dto.CustomerEmail, effectiveIsApiBooking))
         {
             throw new InvalidOperationException("Бронирование запрещено для этого контакта.");
         }
@@ -367,7 +370,7 @@ public class BookingService : IBookingService
                 QuestId = questId,
                 QuestScheduleId = dto.QuestScheduleId,
                 CustomerName = dto.CustomerName,
-                CustomerPhone = dto.CustomerPhone,
+                CustomerPhone = normalizedCustomerPhone,
                 CustomerEmail = dto.CustomerEmail,
                 BookingDate = schedule?.Date ?? dto.BookingDate,
                 ParticipantsCount = dto.ParticipantsCount,
@@ -513,7 +516,7 @@ public class BookingService : IBookingService
         }
         if (dto.CustomerPhone != null)
         {
-            booking.CustomerPhone = dto.CustomerPhone;
+            booking.CustomerPhone = NormalizeCustomerPhoneOrThrow(dto.CustomerPhone);
         }
         if (dto.CustomerEmail != null)
         {
@@ -812,6 +815,23 @@ public class BookingService : IBookingService
             CreatedAt = booking.CreatedAt,
             UpdatedAt = booking.UpdatedAt
         };
+    }
+
+    private static string NormalizeCustomerPhoneOrThrow(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException("Укажите телефон полностью в формате +7-(XXX)-XXX-XX-XX.");
+        }
+
+        var digits = Regex.Replace(value, "\\D", string.Empty);
+        if (digits.Length == 11 && (digits.StartsWith("7") || digits.StartsWith("8")))
+        {
+            var localDigits = digits.Substring(1);
+            return $"+7-({localDigits[..3]})-{localDigits.Substring(3, 3)}-{localDigits.Substring(6, 2)}-{localDigits.Substring(8, 2)}";
+        }
+
+        throw new InvalidOperationException("Укажите телефон полностью в формате +7-(XXX)-XXX-XX-XX.");
     }
 
     private static bool IsBookingSlotConflictException(DbUpdateException exception)

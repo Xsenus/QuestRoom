@@ -247,6 +247,10 @@ export default function BookingsPage() {
   } | null>(null);
   const listRangeStorageKey = 'admin_bookings_list_range';
   const normalizePhone = (value: string) => value.replace(/\D+/g, '');
+  const isPhoneComplete = (value: string) => {
+    const digits = normalizePhone(value);
+    return digits.length === 11 && (digits.startsWith('7') || digits.startsWith('8'));
+  };
   const formatPhoneNumber = (value: string) => {
     const digits = normalizePhone(value);
     const normalizedDigits = digits.startsWith('7') || digits.startsWith('8')
@@ -1214,6 +1218,11 @@ export default function BookingsPage() {
       return;
     }
 
+    if (!isPhoneComplete(editingBooking.customerPhone)) {
+      setCreateResult('Укажите телефон полностью в формате +7-(XXX)-XXX-XX-XX.');
+      return;
+    }
+
     try {
       const createdBooking = await api.createBooking({
         questId: editingBooking.questId,
@@ -1429,6 +1438,15 @@ export default function BookingsPage() {
 
     if (!editingBooking.customerName || !editingBooking.customerPhone) {
       showAdminNotification({ title: 'Уведомление', message: String('Укажите имя и телефон клиента.'), tone: 'info' });
+      return;
+    }
+
+    if (!isPhoneComplete(editingBooking.customerPhone)) {
+      showAdminNotification({
+        title: 'Уведомление',
+        message: String('Укажите телефон полностью в формате +7-(XXX)-XXX-XX-XX.'),
+        tone: 'info',
+      });
       return;
     }
 
