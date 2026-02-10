@@ -245,6 +245,33 @@ export default function BookingsPage() {
   } | null>(null);
   const listRangeStorageKey = 'admin_bookings_list_range';
   const normalizePhone = (value: string) => value.replace(/\D+/g, '');
+  const formatPhoneNumber = (value: string) => {
+    const digits = normalizePhone(value);
+    const normalizedDigits = digits.startsWith('7') || digits.startsWith('8')
+      ? digits.slice(1)
+      : digits;
+    const limitedDigits = normalizedDigits.slice(0, 10);
+
+    let formatted = '+7';
+
+    if (limitedDigits.length > 0) {
+      formatted += '-(' + limitedDigits.slice(0, 3);
+    }
+    if (limitedDigits.length >= 3) {
+      formatted += ')';
+    }
+    if (limitedDigits.length > 3) {
+      formatted += '-' + limitedDigits.slice(3, 6);
+    }
+    if (limitedDigits.length > 6) {
+      formatted += '-' + limitedDigits.slice(6, 8);
+    }
+    if (limitedDigits.length > 8) {
+      formatted += '-' + limitedDigits.slice(8, 10);
+    }
+
+    return formatted;
+  };
   const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
   const primaryBlacklistMatch = contactBlacklistMatches[0] || null;
@@ -3684,7 +3711,7 @@ export default function BookingsPage() {
                         type="text"
                         value={editingBooking.customerPhone}
                         onChange={(e) => {
-                          const nextPhone = e.target.value;
+                          const nextPhone = formatPhoneNumber(e.target.value);
                           setEditingBooking({ ...editingBooking, customerPhone: nextPhone });
                           void checkEditingContactBlacklist(nextPhone, editingBooking.customerEmail);
                         }}
