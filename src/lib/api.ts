@@ -37,6 +37,8 @@ import type {
   QuestScheduleSettingsUpsert,
   QuestWeeklySlot,
   QuestWeeklySlotUpsert,
+  ScheduleConsistencyCheckRequest,
+  ScheduleConsistencyCheckResult,
   ScheduleGenerateRequest,
   QuestUpsert,
   Review,
@@ -403,6 +405,16 @@ class ApiClient {
 
   async generateSchedule(request: ScheduleGenerateRequest): Promise<{ createdCount: number }> {
     return this.request('/schedule/generate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+
+  async checkScheduleConsistency(
+    request: ScheduleConsistencyCheckRequest
+  ): Promise<ScheduleConsistencyCheckResult> {
+    return this.request('/schedule/consistency/check', {
       method: 'POST',
       body: JSON.stringify(request),
     });

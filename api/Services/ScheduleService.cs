@@ -11,6 +11,7 @@ public interface IScheduleService
     Task<QuestScheduleDto> CreateSlotAsync(QuestScheduleUpsertDto dto);
     Task<bool> UpdateSlotAsync(Guid id, QuestScheduleUpsertDto dto);
     Task<int> GenerateScheduleAsync(Guid? questId, DateOnly fromDate, DateOnly toDate);
+    Task<QuestScheduleConsistencyCheckResultDto> CheckAndRepairConsistencyAsync(Guid? questId, DateOnly fromDate, DateOnly toDate);
     Task<IReadOnlyList<QuestWeeklySlotDto>> GetWeeklySlotsAsync(Guid questId);
     Task<QuestWeeklySlotDto> CreateWeeklySlotAsync(QuestWeeklySlotUpsertDto dto);
     Task<bool> UpdateWeeklySlotAsync(Guid id, QuestWeeklySlotUpsertDto dto);
@@ -152,6 +153,134 @@ public class ScheduleService : IScheduleService
         return totalCreated;
     }
 
+
+    public async Task<QuestScheduleConsistencyCheckResultDto> CheckAndRepairConsistencyAsync(
+        Guid? questId,
+        DateOnly fromDate,
+        DateOnly toDate)
+    {
+        var result = new QuestScheduleConsistencyCheckResultDto
+        {
+            FromDate = fromDate,
+            ToDate = toDate,
+            CheckedAtUtc = DateTime.UtcNow
+        };
+
+        if (fromDate > toDate)
+        {
+            result.Messages.Add("Некорректный период: дата начала позже даты окончания.");
+            return result;
+        }
+
+        var scheduleQuery = _context.QuestSchedules
+            .Where(slot => slot.Date >= fromDate && slot.Date <= toDate);
+
+        if (questId.HasValue)
+        {
+            var scheduleQuestId = await ResolveScheduleQuestIdAsync(questId.Value);
+            scheduleQuery = scheduleQuery.Where(slot => slot.QuestId == scheduleQuestId);
+        }
+
+        var slots = await scheduleQuery.ToListAsync();
+        result.CheckedSlots = slots.Count;
+
+        if (!slots.Any())
+        {
+            result.Messages.Add("Слоты расписания за выбранный период не найдены.");
+            return result;
+        }
+
+        var questIds = slots.Select(slot => slot.QuestId).Distinct().ToList();
+        var questTitles = await _context.Quests
+            .Where(quest => questIds.Contains(quest.Id))
+            .Select(quest => new { quest.Id, quest.Title })
+            .ToDictionaryAsync(quest => quest.Id, quest => quest.Title);
+
+        var slotIds = slots.Select(slot => slot.Id).ToList();
+        var blockedSlotIds = await _context.Bookings
+            .Where(booking => booking.QuestScheduleId.HasValue && slotIds.Contains(booking.QuestScheduleId.Value))
+            .Where(booking => booking.Status != "cancelled")
+            .Select(booking => booking.QuestScheduleId!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        var blockedSet = blockedSlotIds.ToHashSet();
+
+        foreach (var slot in slots)
+        {
+            var shouldBeBooked = blockedSet.Contains(slot.Id);
+            if (slot.IsBooked == shouldBeBooked)
+            {
+                continue;
+            }
+
+            var previousState = slot.IsBooked;
+            slot.IsBooked = shouldBeBooked;
+            slot.UpdatedAt = DateTime.UtcNow;
+            result.UpdatedSlots++;
+
+            if (shouldBeBooked)
+            {
+                result.OccupiedSlots++;
+            }
+            else
+            {
+                result.ReleasedSlots++;
+            }
+
+            result.Logs.Add(new QuestScheduleConsistencyLogEntryDto
+            {
+                QuestId = slot.QuestId,
+                QuestTitle = questTitles.TryGetValue(slot.QuestId, out var questTitle) ? questTitle : "Неизвестный квест",
+                Date = slot.Date,
+                TimeSlot = slot.TimeSlot,
+                PreviousIsBooked = previousState,
+                CurrentIsBooked = shouldBeBooked,
+                Issue = previousState
+                    ? "Слот был помечен занятым, но не имел активных бронирований."
+                    : "Слот был свободным, но имел активные бронирования.",
+                Resolution = shouldBeBooked
+                    ? "Слот помечен как занятый."
+                    : "Слот освобожден."
+            });
+        }
+
+        result.OrphanBookings = await _context.Bookings
+            .Where(booking => booking.QuestScheduleId.HasValue)
+            .Where(booking => booking.Status != "cancelled")
+            .Where(booking => !_context.QuestSchedules.Any(slot => slot.Id == booking.QuestScheduleId))
+            .CountAsync();
+
+        if (result.OrphanBookings > 0)
+        {
+            result.Logs.Add(new QuestScheduleConsistencyLogEntryDto
+            {
+                QuestTitle = "Системная проверка",
+                Issue = "Найдены бронирования, ссылающиеся на отсутствующие слоты расписания.",
+                Resolution = $"Количество проблемных бронирований: {result.OrphanBookings}.",
+                Source = "orphan-bookings"
+            });
+        }
+
+        if (result.UpdatedSlots > 0)
+        {
+            await _context.SaveChangesAsync();
+            result.Messages.Add($"Исправлено слотов: {result.UpdatedSlots}.");
+            result.Messages.Add($"Освобождено слотов: {result.ReleasedSlots}.");
+            result.Messages.Add($"Помечено занятыми: {result.OccupiedSlots}.");
+        }
+        else
+        {
+            result.Messages.Add("Расхождений по занятости слотов не найдено.");
+        }
+
+        if (result.OrphanBookings > 0)
+        {
+            result.Messages.Add($"Найдены бронирования без существующего слота расписания: {result.OrphanBookings}.");
+        }
+
+        return result;
+    }
     private async Task<int> GenerateScheduleForQuestAsync(Guid questId, DateOnly fromDate, DateOnly toDate)
     {
         if (await ShouldUseTemplateAsync(questId))

@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
-import { Quest, QuestPricingRule, QuestPricingRuleUpsert } from '../../lib/types';
+import {
+  Quest,
+  QuestPricingRule,
+  QuestPricingRuleUpsert,
+  ScheduleConsistencyCheckResult,
+} from '../../lib/types';
 import { Plus, Save, X, Trash2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccessDenied from '../../components/admin/AccessDenied';
@@ -102,6 +107,9 @@ export default function PricingRulesPage() {
   const [generateFrom, setGenerateFrom] = useState<string>(getCurrentYearRange().start);
   const [generateTo, setGenerateTo] = useState<string>(getCurrentYearRange().end);
   const [generateResult, setGenerateResult] = useState<string>('');
+  const [consistencyResult, setConsistencyResult] = useState<string>('');
+  const [consistencyReport, setConsistencyReport] = useState<ScheduleConsistencyCheckResult | null>(null);
+  const [isConsistencyModalOpen, setIsConsistencyModalOpen] = useState(false);
   const [rulesView, setRulesView] = useState<'cards' | 'table'>('cards');
   const [ruleToDeleteId, setRuleToDeleteId] = useState<string | null>(null);
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
@@ -255,6 +263,60 @@ export default function PricingRulesPage() {
       return;
     }
     await executeGenerate();
+  };
+
+  const downloadConsistencyReport = () => {
+    if (!consistencyReport) {
+      return;
+    }
+
+    const payload = {
+      exportedAtUtc: new Date().toISOString(),
+      report: consistencyReport,
+    };
+
+    const content = JSON.stringify(payload, null, 2);
+    const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const fileDate = consistencyReport.checkedAtUtc.replace(/[:.]/g, '-');
+    link.download = `schedule-consistency-${fileDate}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCheckConsistency = async () => {
+    if (!generateFrom || !generateTo) {
+      setConsistencyResult('Заполните диапазон дат.');
+      return;
+    }
+
+    try {
+      const isAllQuests = !generationQuestId;
+      const result = await api.checkScheduleConsistency(
+        isAllQuests
+          ? { fromDate: generateFrom, toDate: generateTo }
+          : { questId: generationQuestId, fromDate: generateFrom, toDate: generateTo }
+      );
+
+      const details = [
+        `Проверено слотов: ${result.checkedSlots}`,
+        `Исправлено слотов: ${result.updatedSlots}`,
+        `Освобождено: ${result.releasedSlots}`,
+        `Занято после исправления: ${result.occupiedSlots}`,
+      ];
+      if (result.orphanBookings > 0) {
+        details.push(`Бронирований без слота: ${result.orphanBookings}`);
+      }
+      setConsistencyResult(details.join(' · '));
+      setConsistencyReport(result);
+      setIsConsistencyModalOpen(true);
+    } catch (error) {
+      setConsistencyResult('Ошибка проверки: ' + (error as Error).message);
+    }
   };
 
   const questOptions = useMemo(
@@ -692,8 +754,19 @@ export default function PricingRulesPage() {
             Сгенерировать
           </button>
         </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleCheckConsistency}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+          >
+            Проверить и исправить занятость
+          </button>
+        </div>
         {generateResult && (
           <p className="text-sm text-gray-600">{generateResult}</p>
+        )}
+        {consistencyResult && (
+          <p className="text-sm text-gray-600">{consistencyResult}</p>
         )}
       </div>
 
@@ -899,6 +972,80 @@ export default function PricingRulesPage() {
         onClose={() => setRuleToDeleteId(null)}
       />
 
+
+      <NotificationModal
+        isOpen={isConsistencyModalOpen}
+        title="Результат проверки расписания"
+        tone="info"
+        showToneLabel={false}
+        message={(
+          <div className="space-y-4">
+            <div className="rounded-lg bg-gray-50 p-3 text-sm">
+              <div><strong>Период:</strong> {consistencyReport?.fromDate} — {consistencyReport?.toDate}</div>
+              <div><strong>Проверено слотов:</strong> {consistencyReport?.checkedSlots ?? 0}</div>
+              <div><strong>Исправлено:</strong> {consistencyReport?.updatedSlots ?? 0}</div>
+              <div><strong>Освобождено:</strong> {consistencyReport?.releasedSlots ?? 0}</div>
+              <div><strong>Помечено занятыми:</strong> {consistencyReport?.occupiedSlots ?? 0}</div>
+              <div><strong>Бронирований без слота:</strong> {consistencyReport?.orphanBookings ?? 0}</div>
+            </div>
+            {consistencyReport?.messages?.length ? (
+              <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+                {consistencyReport.messages.map((message, idx) => (
+                  <li key={`${message}-${idx}`}>{message}</li>
+                ))}
+              </ul>
+            ) : null}
+            {consistencyReport?.logs?.length ? (
+              <div className="max-h-56 overflow-auto rounded-lg border border-gray-200">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50 text-gray-500">
+                    <tr>
+                      <th className="px-2 py-2 text-left">Квест</th>
+                      <th className="px-2 py-2 text-left">Дата</th>
+                      <th className="px-2 py-2 text-left">Время</th>
+                      <th className="px-2 py-2 text-left">Действие</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {consistencyReport.logs.slice(0, 50).map((entry, idx) => (
+                      <tr key={`${entry.questId ?? 'none'}-${entry.date ?? 'none'}-${idx}`} className="border-t border-gray-100">
+                        <td className="px-2 py-1.5">{entry.questTitle || '—'}</td>
+                        <td className="px-2 py-1.5">{entry.date || '—'}</td>
+                        <td className="px-2 py-1.5">{entry.timeSlot ? entry.timeSlot.slice(0, 5) : '—'}</td>
+                        <td className="px-2 py-1.5">{entry.resolution}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
+        )}
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={downloadConsistencyReport}
+              disabled={!consistencyReport}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                consistencyReport
+                  ? 'bg-gray-900 text-white hover:bg-gray-800'
+                  : 'cursor-not-allowed bg-gray-200 text-gray-400'
+              }`}
+            >
+              Скачать лог (JSON)
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsConsistencyModalOpen(false)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Закрыть
+            </button>
+          </>
+        )}
+        onClose={() => setIsConsistencyModalOpen(false)}
+      />
       <NotificationModal
         isOpen={isGenerateConfirmOpen}
         title="Генерация расписания"
