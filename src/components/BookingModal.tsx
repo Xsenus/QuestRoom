@@ -118,9 +118,22 @@ export default function BookingModal({
 
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
-    const normalizedDigits = digits.startsWith('7') || digits.startsWith('8')
-      ? digits.slice(1)
-      : digits;
+
+    let normalizedDigits = digits;
+
+    // Поддерживаем "грязный" ввод: +7..., 8..., вставку номера в разных форматах.
+    // Убираем код страны/префикс только когда цифр больше 10,
+    // чтобы не съедать реальные цифры локального номера.
+    if (normalizedDigits.length > 10 && (normalizedDigits.startsWith('7') || normalizedDigits.startsWith('8'))) {
+      normalizedDigits = normalizedDigits.slice(1);
+    }
+
+    // Частый кейс: поле уже содержит +7, а пользователь вручную вводит ещё одну 7.
+    // Не считаем эту дублирующую 7 началом локального номера.
+    if (value.trim().startsWith('+7') && normalizedDigits === '77') {
+      normalizedDigits = '';
+    }
+
     const limitedDigits = normalizedDigits.slice(0, 10);
 
     let formatted = '+7';
