@@ -21,12 +21,12 @@ export default function BookingModal({
 }: BookingModalProps) {
   const [formData, setFormData] = useState({
     name: '',
-    phone: '',
     email: '',
     comments: '',
     paymentType: 'cash',
     promoCode: '',
   });
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [standardExtraServices, setStandardExtraServices] = useState<StandardExtraService[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(quest.participantsMin);
@@ -116,22 +116,18 @@ export default function BookingModal({
       ? extraServicesTotal
       : slot.price + extraParticipantsTotal + extraServicesTotal;
 
-  const formatPhoneNumber = (value: string) => {
-    const trimmedValue = value.trim();
+  const extractPhoneDigits = (value: string) => {
+    const digits = value.replace(/\D/g, '');
 
-    // Маска всегда фиксирует префикс +7, поэтому цифры локальной части
-    // извлекаем только из хвоста после него. Это предотвращает кейс,
-    // когда пользователь вручную вводит "+7" и лишняя 7 попадает в номер.
-    let normalizedDigits = trimmedValue.startsWith('+7')
-      ? trimmedValue.slice(2).replace(/\D/g, '')
-      : trimmedValue.replace(/\D/g, '');
-
-    // Поддерживаем вставку 11-значных номеров в форматах 7XXXXXXXXXX / 8XXXXXXXXXX.
-    if (normalizedDigits.length === 11 && (normalizedDigits.startsWith('7') || normalizedDigits.startsWith('8'))) {
-      normalizedDigits = normalizedDigits.slice(1);
+    if (digits.length === 11 && (digits.startsWith('7') || digits.startsWith('8'))) {
+      return digits.slice(1, 11);
     }
 
-    const limitedDigits = normalizedDigits.slice(0, 10);
+    return digits.slice(0, 10);
+  };
+
+  const formatPhoneNumber = (digits: string) => {
+    const limitedDigits = digits.slice(0, 10);
 
     let formatted = '+7';
 
@@ -156,10 +152,7 @@ export default function BookingModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.target.name === 'phone') {
-      setFormData({
-        ...formData,
-        phone: formatPhoneNumber(e.target.value),
-      });
+      setPhoneDigits(extractPhoneDigits(e.target.value));
       return;
     }
 
@@ -167,6 +160,19 @@ export default function BookingModal({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Backspace') return;
+
+    const input = e.currentTarget;
+    const cursorAtEnd = input.selectionStart === input.value.length
+      && input.selectionEnd === input.value.length;
+
+    if (!cursorAtEnd || phoneDigits.length === 0) return;
+
+    e.preventDefault();
+    setPhoneDigits((prev) => prev.slice(0, -1));
   };
 
   const toggleExtraService = (serviceId: string) => {
@@ -223,7 +229,7 @@ export default function BookingModal({
         questId: quest.id,
         questScheduleId: slot.id,
         customerName: formData.name,
-        customerPhone: formData.phone,
+        customerPhone: `+7${phoneDigits}`,
         customerEmail: formData.email || null,
         bookingDate: slot.date,
         participantsCount,
@@ -363,11 +369,13 @@ export default function BookingModal({
               <input
                 type="tel"
                 name="phone"
-                value={formData.phone}
+                value={formatPhoneNumber(phoneDigits)}
                 onChange={handleChange}
                 required
                 placeholder="+7-(___)-___-__-__"
-                inputMode="numeric"
+                inputMode="tel"
+                autoComplete="tel"
+                onKeyDown={handlePhoneKeyDown}
                 pattern="\+7-\(\d{3}\)-\d{3}-\d{2}-\d{2}"
                 className="w-full px-3 py-2 text-sm bg-transparent border-b-2 border-white text-white placeholder-white/70 focus:outline-none focus:border-white/50"
               />
