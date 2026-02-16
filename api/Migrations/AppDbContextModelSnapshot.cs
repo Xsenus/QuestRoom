@@ -1003,16 +1003,6 @@ namespace QuestRoomApi.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("holiday_price");
 
-                    b.Property<string>("HolidayPricingMode")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("holiday_pricing_mode")
-                        .HasDefaultValue("fixed_price");
-
-                    b.Property<int?>("HolidayTemplateDayOfWeek")
-                        .HasColumnType("integer")
-                        .HasColumnName("holiday_template_day_of_week");
-
                     b.Property<Guid>("QuestId")
                         .HasColumnType("uuid")
                         .HasColumnName("quest_id");
