@@ -16,6 +16,12 @@ public class QuestScheduleSettings
     [Column("holiday_price")]
     public int? HolidayPrice { get; set; }
 
+    [Column("holiday_pricing_mode")]
+    public string HolidayPricingMode { get; set; } = "fixed_price";
+
+    [Column("holiday_template_day_of_week")]
+    public int? HolidayTemplateDayOfWeek { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 

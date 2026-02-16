@@ -44,6 +44,8 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
   const [weeklySlots, setWeeklySlots] = useState<QuestWeeklySlot[]>([]);
   const [overrides, setOverrides] = useState<QuestScheduleOverride[]>([]);
   const [holidayPriceInput, setHolidayPriceInput] = useState('');
+  const [holidayPricingMode, setHolidayPricingMode] = useState<'fixed_price' | 'use_day_template'>('fixed_price');
+  const [holidayTemplateDayOfWeek, setHolidayTemplateDayOfWeek] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [newSlotTime, setNewSlotTime] = useState('10:00');
@@ -90,6 +92,8 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
           ? ''
           : String(data.holidayPrice)
       );
+      setHolidayPricingMode(data?.holidayPricingMode ?? 'fixed_price');
+      setHolidayTemplateDayOfWeek(data?.holidayTemplateDayOfWeek ?? 0);
     } catch (error) {
       console.error('Ошибка загрузки настроек расписания:', error);
     }
@@ -181,6 +185,8 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
     const payload: QuestScheduleSettingsUpsert = {
       questId,
       holidayPrice: holidayPriceInput === '' ? null : Number(holidayPriceInput) || 0,
+      holidayPricingMode,
+      holidayTemplateDayOfWeek: holidayPricingMode === 'use_day_template' ? holidayTemplateDayOfWeek : null,
     };
 
     try {
@@ -190,6 +196,13 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
           ? ''
           : String(updated.holidayPrice)
       );
+      setHolidayPricingMode(updated.holidayPricingMode ?? 'fixed_price');
+      setHolidayTemplateDayOfWeek(updated.holidayTemplateDayOfWeek ?? 0);
+      showAdminNotification({
+        title: 'Настройки сохранены',
+        message: 'Режим праздничных дней успешно обновлен.',
+        tone: 'success',
+      });
     } catch (error) {
       showAdminNotification({ title: 'Уведомление', message: String('Ошибка сохранения настроек: ' + (error as Error).message), tone: 'info' });
     }
@@ -301,8 +314,8 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
         <ul className="mt-3 space-y-2 text-gray-600">
           <li>1. В разделе «Недельное расписание» задайте слоты и цены по дням недели.</li>
           <li>
-            2. Поле «Цена в праздники» применяется для выходных и дат из производственного
-            календаря (праздники/выходные).
+            2. Для праздников можно выбрать: фиксированную цену или использование шаблона
+            любого дня недели (например, воскресенья).
           </li>
           <li>
             3. В «Переопределениях» можно задать отдельные дни с индивидуальными слотами или
@@ -315,24 +328,64 @@ export default function QuestScheduleEditor({ questId, canEdit }: Props) {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 space-y-6">
-        <div className="grid md:grid-cols-[1fr_auto] gap-4 items-end">
+        <div className="grid md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Цена в праздники (общая)
+              Режим праздничных дней
             </label>
-            <input
-              type="number"
-              value={holidayPriceInput}
-              onChange={(e) => setHolidayPriceInput(e.target.value)}
+            <select
+              value={holidayPricingMode}
+              onChange={(e) => setHolidayPricingMode(e.target.value as 'fixed_price' | 'use_day_template')}
               disabled={!canEdit}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-              placeholder="Например, 5000"
-              min="0"
-            />
+            >
+              <option value="fixed_price">Единая цена в праздники</option>
+              <option value="use_day_template">Использовать расписание и цены дня недели</option>
+            </select>
             <p className="mt-2 text-xs text-gray-500">
-              Используется для всех праздничных и выходных дат. Если не задано, берется базовая цена слота.
+              Выберите, как система должна формировать расписание на праздничные даты.
             </p>
           </div>
+
+          {holidayPricingMode === 'fixed_price' ? (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Цена в праздники (общая)
+              </label>
+              <input
+                type="number"
+                value={holidayPriceInput}
+                onChange={(e) => setHolidayPriceInput(e.target.value)}
+                disabled={!canEdit}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                placeholder="Например, 5000"
+                min="0"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Если не задано, берется базовая цена слота из расписания соответствующего дня.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                День недели для праздничного шаблона
+              </label>
+              <select
+                value={holidayTemplateDayOfWeek}
+                onChange={(e) => setHolidayTemplateDayOfWeek(Number(e.target.value))}
+                disabled={!canEdit}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+              >
+                {dayOptions.map((day) => (
+                  <option key={day.value} value={day.value}>{day.label}</option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-gray-500">
+                В праздники будут использоваться слоты и цены выбранного дня недели.
+              </p>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleSaveSettings}

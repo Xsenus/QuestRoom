@@ -525,6 +525,8 @@ export type QuestScheduleSettings = {
   id: string;
   questId: string;
   holidayPrice: number | null;
+  holidayPricingMode: 'fixed_price' | 'use_day_template';
+  holidayTemplateDayOfWeek: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -532,6 +534,8 @@ export type QuestScheduleSettings = {
 export type QuestScheduleSettingsUpsert = {
   questId: string;
   holidayPrice: number | null;
+  holidayPricingMode: 'fixed_price' | 'use_day_template';
+  holidayTemplateDayOfWeek: number | null;
 };
 
 export type QuestPricingRule = {
