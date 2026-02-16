@@ -115,6 +115,10 @@ public class AppDbContext : DbContext
             .HasIndex(e => e.QuestId)
             .IsUnique();
 
+        modelBuilder.Entity<QuestScheduleSettings>()
+            .Property(e => e.HolidayPricingMode)
+            .HasDefaultValue("fixed_price");
+
         modelBuilder.Entity<User>()
             .HasIndex(e => e.Email)
             .IsUnique();

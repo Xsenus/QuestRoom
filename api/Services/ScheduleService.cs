@@ -26,6 +26,9 @@ public interface IScheduleService
 
 public class ScheduleService : IScheduleService
 {
+    private const string HolidayPricingModeFixedPrice = "fixed_price";
+    private const string HolidayPricingModeUseDayTemplate = "use_day_template";
+
     private readonly AppDbContext _context;
 
     public ScheduleService(AppDbContext context)
@@ -548,12 +551,18 @@ public class ScheduleService : IScheduleService
                 continue;
             }
 
-            if (!weeklyByDay.TryGetValue((int)date.DayOfWeek, out var slotsForDay))
+            var isHoliday = holidaySet.Contains(date);
+            var holidayPricingMode = NormalizeHolidayPricingMode(settings?.HolidayPricingMode);
+            var sourceDayOfWeek = isHoliday
+                && holidayPricingMode == HolidayPricingModeUseDayTemplate
+                && settings?.HolidayTemplateDayOfWeek.HasValue == true
+                ? settings.HolidayTemplateDayOfWeek.Value
+                : (int)date.DayOfWeek;
+
+            if (!weeklyByDay.TryGetValue(sourceDayOfWeek, out var slotsForDay))
             {
                 continue;
             }
-
-            var isHoliday = holidaySet.Contains(date);
 
             foreach (var slot in slotsForDay)
             {
@@ -563,7 +572,9 @@ public class ScheduleService : IScheduleService
                     continue;
                 }
 
-                var price = isHoliday ? settings?.HolidayPrice ?? slot.Price : slot.Price;
+                var price = isHoliday && holidayPricingMode == HolidayPricingModeFixedPrice
+                    ? settings?.HolidayPrice ?? slot.Price
+                    : slot.Price;
                 selectedSlots[key] = price;
             }
         }
@@ -840,6 +851,8 @@ public class ScheduleService : IScheduleService
                 Id = Guid.Empty,
                 QuestId = scheduleQuestId,
                 HolidayPrice = null,
+                HolidayPricingMode = HolidayPricingModeFixedPrice,
+                HolidayTemplateDayOfWeek = null,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -850,6 +863,8 @@ public class ScheduleService : IScheduleService
             Id = settings.Id,
             QuestId = settings.QuestId,
             HolidayPrice = settings.HolidayPrice,
+            HolidayPricingMode = NormalizeHolidayPricingMode(settings.HolidayPricingMode),
+            HolidayTemplateDayOfWeek = settings.HolidayTemplateDayOfWeek,
             CreatedAt = settings.CreatedAt,
             UpdatedAt = settings.UpdatedAt
         };
@@ -858,6 +873,16 @@ public class ScheduleService : IScheduleService
     public async Task<QuestScheduleSettingsDto> UpsertSettingsAsync(QuestScheduleSettingsUpsertDto dto)
     {
         var scheduleQuestId = await ResolveScheduleQuestIdAsync(dto.QuestId);
+        var holidayPricingMode = NormalizeHolidayPricingMode(dto.HolidayPricingMode);
+        var holidayTemplateDayOfWeek = holidayPricingMode == HolidayPricingModeUseDayTemplate
+            ? dto.HolidayTemplateDayOfWeek
+            : null;
+
+        if (holidayTemplateDayOfWeek.HasValue && (holidayTemplateDayOfWeek < 0 || holidayTemplateDayOfWeek > 6))
+        {
+            throw new InvalidOperationException("День недели для праздничного шаблона должен быть в диапазоне от 0 до 6.");
+        }
+
         var settings = await _context.QuestScheduleSettings
             .FirstOrDefaultAsync(entry => entry.QuestId == scheduleQuestId);
 
@@ -868,6 +893,8 @@ public class ScheduleService : IScheduleService
                 Id = Guid.NewGuid(),
                 QuestId = scheduleQuestId,
                 HolidayPrice = dto.HolidayPrice,
+                HolidayPricingMode = holidayPricingMode,
+                HolidayTemplateDayOfWeek = holidayTemplateDayOfWeek,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -876,6 +903,8 @@ public class ScheduleService : IScheduleService
         else
         {
             settings.HolidayPrice = dto.HolidayPrice;
+            settings.HolidayPricingMode = holidayPricingMode;
+            settings.HolidayTemplateDayOfWeek = holidayTemplateDayOfWeek;
             settings.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -886,9 +915,18 @@ public class ScheduleService : IScheduleService
             Id = settings.Id,
             QuestId = settings.QuestId,
             HolidayPrice = settings.HolidayPrice,
+            HolidayPricingMode = NormalizeHolidayPricingMode(settings.HolidayPricingMode),
+            HolidayTemplateDayOfWeek = settings.HolidayTemplateDayOfWeek,
             CreatedAt = settings.CreatedAt,
             UpdatedAt = settings.UpdatedAt
         };
+    }
+
+    private static string NormalizeHolidayPricingMode(string? mode)
+    {
+        return mode == HolidayPricingModeUseDayTemplate
+            ? HolidayPricingModeUseDayTemplate
+            : HolidayPricingModeFixedPrice;
     }
 
     private static QuestScheduleOverrideDto ToOverrideDto(QuestScheduleOverride overrideDay)
