@@ -226,6 +226,9 @@ public class Settings
     [Column("block_blacklisted_api_bookings")]
     public bool BlockBlacklistedApiBookings { get; set; }
 
+    [Column("metrics_json")]
+    public string? MetricsJson { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 }

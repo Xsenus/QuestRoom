@@ -47,6 +47,13 @@ export type DurationBadge = {
   sizeBytes: number;
 };
 
+export type MetricSnippet = {
+  id: string;
+  name: string;
+  code: string;
+  isEnabled: boolean;
+};
+
 export type Settings = {
   id: string;
   vkUrl: string | null;
@@ -119,6 +126,7 @@ export type Settings = {
   mirKvestovApiLoggingEnabled: boolean;
   blockBlacklistedSiteBookings: boolean;
   blockBlacklistedApiBookings: boolean;
+  metrics: MetricSnippet[];
   updatedAt: string;
 };
 

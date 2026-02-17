@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using QuestRoomApi.Data;
 using QuestRoomApi.DTOs.Content;
@@ -531,6 +532,7 @@ public class ContentService : IContentService
                 MirKvestovApiLoggingEnabled = dto.MirKvestovApiLoggingEnabled ?? false,
                 BlockBlacklistedSiteBookings = dto.BlockBlacklistedSiteBookings ?? false,
                 BlockBlacklistedApiBookings = dto.BlockBlacklistedApiBookings ?? false,
+                MetricsJson = SerializeMetrics(dto.Metrics),
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -663,6 +665,10 @@ public class ContentService : IContentService
             if (dto.BlockBlacklistedApiBookings.HasValue)
             {
                 existing.BlockBlacklistedApiBookings = dto.BlockBlacklistedApiBookings.Value;
+            }
+            if (dto.Metrics != null)
+            {
+                existing.MetricsJson = SerializeMetrics(dto.Metrics);
             }
             existing.UpdatedAt = DateTime.UtcNow;
         }
@@ -848,8 +854,58 @@ public class ContentService : IContentService
             MirKvestovApiLoggingEnabled = settings.MirKvestovApiLoggingEnabled,
             BlockBlacklistedSiteBookings = settings.BlockBlacklistedSiteBookings,
             BlockBlacklistedApiBookings = settings.BlockBlacklistedApiBookings,
+            Metrics = ParseMetrics(settings.MetricsJson),
             UpdatedAt = settings.UpdatedAt
         };
+    }
+
+
+    private static List<MetricSnippetDto> ParseMetrics(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<MetricSnippetDto>();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<List<MetricSnippetDto>>(json);
+            return parsed?
+                .Where(metric => !string.IsNullOrWhiteSpace(metric.Code))
+                .Select(metric => new MetricSnippetDto
+                {
+                    Id = string.IsNullOrWhiteSpace(metric.Id) ? Guid.NewGuid().ToString("N") : metric.Id,
+                    Name = metric.Name?.Trim() ?? string.Empty,
+                    Code = metric.Code,
+                    IsEnabled = metric.IsEnabled
+                })
+                .ToList() ?? new List<MetricSnippetDto>();
+        }
+        catch
+        {
+            return new List<MetricSnippetDto>();
+        }
+    }
+
+    private static string SerializeMetrics(IEnumerable<MetricSnippetDto>? metrics)
+    {
+        if (metrics == null)
+        {
+            return "[]";
+        }
+
+        var normalized = metrics
+            .Where(metric => !string.IsNullOrWhiteSpace(metric.Code))
+            .Select(metric => new MetricSnippetDto
+            {
+                Id = string.IsNullOrWhiteSpace(metric.Id) ? Guid.NewGuid().ToString("N") : metric.Id,
+                Name = metric.Name?.Trim() ?? string.Empty,
+                Code = metric.Code.Trim(),
+                IsEnabled = metric.IsEnabled
+            })
+            .ToList();
+
+        return JsonSerializer.Serialize(normalized);
     }
 
     private static string? NormalizeMirKvestovScheduleFields(IEnumerable<string>? fields)

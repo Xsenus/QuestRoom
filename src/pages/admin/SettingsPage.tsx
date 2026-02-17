@@ -17,6 +17,7 @@ const tabs = [
   { id: 'reviews', label: 'Отзывы' },
   { id: 'booking', label: 'Бронирование' },
   { id: 'promotions', label: 'Акции' },
+  { id: 'metrics', label: 'Метрики' },
   { id: 'api', label: 'API' },
 ];
 
@@ -406,6 +407,7 @@ export default function SettingsPage() {
         mirKvestovApiLoggingEnabled: data.mirKvestovApiLoggingEnabled ?? false,
         blockBlacklistedSiteBookings: data.blockBlacklistedSiteBookings ?? false,
         blockBlacklistedApiBookings: data.blockBlacklistedApiBookings ?? false,
+        metrics: data.metrics ?? [],
       });
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -481,6 +483,7 @@ export default function SettingsPage() {
         mirKvestovApiLoggingEnabled: false,
         blockBlacklistedSiteBookings: false,
         blockBlacklistedApiBookings: false,
+        metrics: [],
         updatedAt: new Date().toISOString(),
       });
     }
@@ -563,6 +566,7 @@ export default function SettingsPage() {
       mirKvestovApiLoggingEnabled: settings.mirKvestovApiLoggingEnabled,
       blockBlacklistedSiteBookings: settings.blockBlacklistedSiteBookings,
       blockBlacklistedApiBookings: settings.blockBlacklistedApiBookings,
+      metrics: settings.metrics,
     };
 
     try {
@@ -1729,6 +1733,106 @@ export default function SettingsPage() {
                 Настройка влияет на отображение зон для чаепития на публичной странице.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'metrics' && (
+        <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Метрики</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Добавляйте HTML/JS код аналитики (Яндекс.Метрика, пиксели и другие счётчики).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setSettings({
+                  ...settings,
+                  metrics: [
+                    ...settings.metrics,
+                    {
+                      id: crypto.randomUUID(),
+                      name: `Метрика ${settings.metrics.length + 1}`,
+                      code: '',
+                      isEnabled: true,
+                    },
+                  ],
+                })
+              }
+              className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Добавить метрику
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {settings.metrics.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-500">
+                Метрик пока нет. Нажмите «Добавить метрику» и вставьте код счётчика.
+              </div>
+            ) : (
+              settings.metrics.map((metric, index) => (
+                <div key={metric.id} className="rounded-lg border border-gray-200 p-4 space-y-3">
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+                    <input
+                      type="text"
+                      value={metric.name}
+                      onChange={(e) => {
+                        const next = settings.metrics.map((item) =>
+                          item.id === metric.id ? { ...item, name: e.target.value } : item,
+                        );
+                        setSettings({ ...settings, metrics: next });
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                      placeholder={`Метрика ${index + 1}`}
+                    />
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-red-600"
+                        checked={metric.isEnabled}
+                        onChange={(e) => {
+                          const next = settings.metrics.map((item) =>
+                            item.id === metric.id
+                              ? { ...item, isEnabled: e.target.checked }
+                              : item,
+                          );
+                          setSettings({ ...settings, metrics: next });
+                        }}
+                      />
+                      Активна
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSettings({
+                          ...settings,
+                          metrics: settings.metrics.filter((item) => item.id !== metric.id),
+                        })
+                      }
+                      className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                  <textarea
+                    value={metric.code}
+                    onChange={(e) => {
+                      const next = settings.metrics.map((item) =>
+                        item.id === metric.id ? { ...item, code: e.target.value } : item,
+                      );
+                      setSettings({ ...settings, metrics: next });
+                    }}
+                    rows={8}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    placeholder="Вставьте код метрики целиком: &lt;script&gt;...&lt;/script&gt;&lt;noscript&gt;...&lt;/noscript&gt;"
+                  />
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
