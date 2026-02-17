@@ -55,6 +55,49 @@ function App() {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    const inserted: HTMLElement[] = [];
+    const activeMetrics = publicSettings?.metrics?.filter((metric) => metric.isEnabled) ?? [];
+
+    activeMetrics.forEach((metric) => {
+      if (!metric.code?.trim()) {
+        return;
+      }
+
+      const template = document.createElement('template');
+      template.innerHTML = metric.code;
+
+      template.content.childNodes.forEach((node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return;
+        }
+
+        const element = node as HTMLElement;
+        if (element.tagName.toLowerCase() === 'script') {
+          const source = element as HTMLScriptElement;
+          const script = document.createElement('script');
+          for (const { name, value } of Array.from(source.attributes)) {
+            script.setAttribute(name, value);
+          }
+          script.text = source.text;
+          script.dataset.metricId = metric.id;
+          document.head.appendChild(script);
+          inserted.push(script);
+          return;
+        }
+
+        const clone = element.cloneNode(true) as HTMLElement;
+        clone.setAttribute('data-metric-id', metric.id);
+        document.body.appendChild(clone);
+        inserted.push(clone);
+      });
+    });
+
+    return () => {
+      inserted.forEach((element) => element.remove());
+    };
+  }, [publicSettings?.metrics]);
+
   const handlePageChange = (page: string) => {
     setCurrentPage(page);
     navigate('/');

@@ -75,5 +75,6 @@ public class SettingsDto
     public bool MirKvestovApiLoggingEnabled { get; set; }
     public bool BlockBlacklistedSiteBookings { get; set; }
     public bool BlockBlacklistedApiBookings { get; set; }
+    public List<MetricSnippetDto> Metrics { get; set; } = new();
     public DateTime UpdatedAt { get; set; }
 }
