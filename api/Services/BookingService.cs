@@ -1474,8 +1474,8 @@ public class BookingService : IBookingService
                 booking.PromoDiscountAmount = discountAmount;
             }
 
-            discountAmount = Math.Min(discountAmount.Value, totalPrice);
-            totalPrice = Math.Max(0, totalPrice - discountAmount);
+            var normalizedDiscountAmount = Math.Min(discountAmount.Value, totalPrice);
+            totalPrice = Math.Max(0, totalPrice - normalizedDiscountAmount);
         }
         booking.TotalPrice = totalPrice;
     }
