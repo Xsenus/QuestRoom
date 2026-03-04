@@ -357,9 +357,12 @@ public class BookingService : IBookingService
                         && (p.ValidUntil == null || p.ValidUntil >= DateOnly.FromDateTime(DateTime.UtcNow)));
                 if (promoCode != null)
                 {
+                    var promoDiscountBase = paymentType == "certificate"
+                        ? 0
+                        : Math.Max(0, basePrice);
                     promoDiscountAmount = promoCode.DiscountType == "amount"
-                        ? Math.Min(promoCode.DiscountValue, totalPrice)
-                        : (int)Math.Round(totalPrice * (promoCode.DiscountValue / 100.0));
+                        ? Math.Min(promoCode.DiscountValue, promoDiscountBase)
+                        : (int)Math.Round(promoDiscountBase * (promoCode.DiscountValue / 100.0));
                     totalPrice = Math.Max(0, totalPrice - promoDiscountAmount.Value);
                 }
             }
@@ -1459,10 +1462,19 @@ public class BookingService : IBookingService
             : basePrice + extraParticipantsTotal + extrasTotal;
         if (!string.IsNullOrWhiteSpace(booking.PromoDiscountType) && booking.PromoDiscountValue.HasValue)
         {
-            var discountAmount = booking.PromoDiscountType == "amount"
-                ? Math.Min(booking.PromoDiscountValue.Value, totalPrice)
-                : (int)Math.Round(totalPrice * (booking.PromoDiscountValue.Value / 100.0));
-            booking.PromoDiscountAmount = discountAmount;
+            var discountAmount = booking.PromoDiscountAmount;
+            if (!discountAmount.HasValue)
+            {
+                var promoDiscountBase = booking.PaymentType == "certificate"
+                    ? 0
+                    : Math.Max(0, basePrice);
+                discountAmount = booking.PromoDiscountType == "amount"
+                    ? Math.Min(booking.PromoDiscountValue.Value, promoDiscountBase)
+                    : (int)Math.Round(promoDiscountBase * (booking.PromoDiscountValue.Value / 100.0));
+                booking.PromoDiscountAmount = discountAmount;
+            }
+
+            discountAmount = Math.Min(discountAmount.Value, totalPrice);
             totalPrice = Math.Max(0, totalPrice - discountAmount);
         }
         booking.TotalPrice = totalPrice;

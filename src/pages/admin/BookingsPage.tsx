@@ -824,6 +824,9 @@ export default function BookingsPage() {
   }, [editingBooking, isTotalPriceManual, selectedQuestExtraServiceIds]);
 
   useEffect(() => {
+    if (bookingFormMode !== 'create') {
+      return;
+    }
     if (!editingBooking?.promoCode) {
       return;
     }
@@ -833,21 +836,18 @@ export default function BookingsPage() {
     const nextAmount = calculateDiscountAmount(
       editingBooking,
       editingBooking.promoDiscountType,
-      editingBooking.promoDiscountValue,
-      getSelectedQuestExtrasTotal()
+      editingBooking.promoDiscountValue
     );
     if (editingBooking.promoDiscountAmount !== nextAmount) {
       setEditingBooking({ ...editingBooking, promoDiscountAmount: nextAmount });
     }
   }, [
+    bookingFormMode,
     editingBooking?.promoCode,
     editingBooking?.promoDiscountType,
     editingBooking?.promoDiscountValue,
     editingBooking?.questPrice,
-    editingBooking?.extraParticipantPrice,
-    editingBooking?.extraParticipantsCount,
-    editingBooking?.extraServices,
-    selectedQuestExtraServiceIds,
+    editingBooking?.paymentType,
   ]);
 
   const sortParam = useMemo(() => serializeSorts(tableSorts), [serializeSorts, tableSorts]);
@@ -1623,8 +1623,7 @@ export default function BookingsPage() {
     const discountAmount = calculateDiscountAmount(
       editingBooking,
       normalizedType,
-      promo.discountValue,
-      getSelectedQuestExtrasTotal()
+      promo.discountValue
     );
     const isPercent = normalizedType === 'percent';
     setEditingBooking({
@@ -2087,28 +2086,26 @@ export default function BookingsPage() {
   const calculateDiscountAmount = (
     booking: {
       questPrice: number;
-      extraParticipantPrice: number;
-      extraParticipantsCount: number;
-      extraServices: Booking['extraServices'];
+      paymentType?: string;
     },
     discountType: string,
-    discountValue: number,
-    extraServicesTotal = 0
+    discountValue: number
   ) => {
     if (!discountValue || discountValue <= 0) {
       return 0;
     }
-    const extrasTotal =
-      (booking.extraServices?.reduce((sum, service) => sum + service.price, 0) ?? 0) +
-      extraServicesTotal;
-    const participantsTotal = booking.extraParticipantPrice * (booking.extraParticipantsCount ?? 0);
-    const baseTotal = (booking.questPrice ?? 0) + participantsTotal + extrasTotal;
+    const promoDiscountBase =
+      booking.paymentType === 'certificate' ? 0 : Math.max(0, booking.questPrice ?? 0);
     const normalizedType = discountType.toLowerCase();
     const isPercent =
       normalizedType === 'percent' ||
       normalizedType.includes('percent') ||
       normalizedType.includes('%');
-    return Math.round(isPercent ? (baseTotal * discountValue) / 100 : discountValue);
+    return Math.round(
+      isPercent
+        ? (promoDiscountBase * discountValue) / 100
+        : Math.min(discountValue, promoDiscountBase)
+    );
   };
 
   const calculateTotalPrice = (booking: {
@@ -2128,13 +2125,8 @@ export default function BookingsPage() {
     const discountAmount =
       booking.promoDiscountAmount && booking.promoDiscountAmount > 0
         ? booking.promoDiscountAmount
-        : calculateDiscountAmount(
-            booking,
-            booking.promoDiscountType,
-            booking.promoDiscountValue,
-            extraServicesTotal
-          );
-    return Math.max(0, Math.round(baseTotal - discountAmount));
+        : calculateDiscountAmount(booking, booking.promoDiscountType, booking.promoDiscountValue);
+    return Math.max(0, Math.round(baseTotal - Math.min(discountAmount, baseTotal)));
   };
 
   const getSelectedQuestExtrasTotal = () => {
