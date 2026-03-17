@@ -72,10 +72,8 @@ export default function ReviewsPage() {
     );
   };
 
-  const phoneNumber = settings?.phone?.trim();
-  const phoneLink = phoneNumber
-    ? `tel:${phoneNumber.replace(/[^\d+]/g, '')}`
-    : null;
+  const email = settings?.email?.trim();
+  const emailLink = email ? `mailto:${email}` : null;
 
   if (loading) {
     return (
@@ -159,12 +157,12 @@ export default function ReviewsPage() {
           <p className="text-sm md:text-base text-white/80 mb-4 md:mb-6">
             Мы будем рады узнать ваше мнение о прохождении наших квестов
           </p>
-          {phoneLink && (
+          {emailLink && (
             <a
-              href={phoneLink}
+              href={emailLink}
               className="inline-block bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-lg transition-all hover:scale-105 shadow-lg text-sm md:text-base"
             >
-              Позвонить нам
+              Написать нам
             </a>
           )}
         </div>
