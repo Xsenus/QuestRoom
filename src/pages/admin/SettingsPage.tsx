@@ -23,24 +23,45 @@ const tabs = [
 
 type SettingsTab = (typeof tabs)[number]['id'];
 
-const socialIconGallery = {
+type SocialPlatformKey = 'vk' | 'youtube' | 'instagram' | 'telegram';
+
+const socialIconGallery: Record<SocialPlatformKey, { label: string; url: string }[]> = {
   vk: [
-    { label: 'VK (тёмная)', url: '/images/social/vk-light.svg' },
-    { label: 'VK (светлая)', url: '/images/social/vk-dark.svg' },
+    { label: 'VK (тёмная)', url: '/images/social/vk-dark.svg' },
+    { label: 'VK (светлая)', url: '/images/social/vk-light.svg' },
+    { label: 'VK (Simple Icons)', url: 'https://cdn.simpleicons.org/vk/ffffff' },
+    { label: 'VK (Simple Icons, dark)', url: 'https://cdn.simpleicons.org/vk/1E293B' },
   ],
   youtube: [
-    { label: 'YouTube (тёмная)', url: '/images/social/youtube-light.svg' },
-    { label: 'YouTube (светлая)', url: '/images/social/youtube-dark.svg' },
+    { label: 'YouTube (тёмная)', url: '/images/social/youtube-dark.svg' },
+    { label: 'YouTube (светлая)', url: '/images/social/youtube-light.svg' },
+    { label: 'YouTube (Simple Icons)', url: 'https://cdn.simpleicons.org/youtube/ffffff' },
+    { label: 'YouTube (Simple Icons, red)', url: 'https://cdn.simpleicons.org/youtube/FF0000' },
   ],
   instagram: [
-    { label: 'Instagram (тёмная)', url: '/images/social/instagram-light.svg' },
-    { label: 'Instagram (светлая)', url: '/images/social/instagram-dark.svg' },
+    { label: 'Instagram (тёмная)', url: '/images/social/instagram-dark.svg' },
+    { label: 'Instagram (светлая)', url: '/images/social/instagram-light.svg' },
+    { label: 'Instagram (Simple Icons)', url: 'https://cdn.simpleicons.org/instagram/ffffff' },
+    { label: 'Instagram (Simple Icons, pink)', url: 'https://cdn.simpleicons.org/instagram/E4405F' },
   ],
   telegram: [
-    { label: 'Telegram (тёмная)', url: '/images/social/telegram-light.svg' },
-    { label: 'Telegram (светлая)', url: '/images/social/telegram-dark.svg' },
+    { label: 'Telegram (тёмная)', url: '/images/social/telegram-dark.svg' },
+    { label: 'Telegram (светлая)', url: '/images/social/telegram-light.svg' },
+    { label: 'Telegram (Simple Icons)', url: 'https://cdn.simpleicons.org/telegram/ffffff' },
+    { label: 'Telegram (Simple Icons, blue)', url: 'https://cdn.simpleicons.org/telegram/26A5E4' },
   ],
 };
+
+const universalSocialIcons = [
+  { label: 'WhatsApp', url: 'https://cdn.simpleicons.org/whatsapp/ffffff' },
+  { label: 'TikTok', url: 'https://cdn.simpleicons.org/tiktok/ffffff' },
+  { label: 'Facebook', url: 'https://cdn.simpleicons.org/facebook/ffffff' },
+  { label: 'X (Twitter)', url: 'https://cdn.simpleicons.org/x/ffffff' },
+  { label: 'Odnoklassniki', url: 'https://cdn.simpleicons.org/odnoklassniki/ffffff' },
+  { label: 'Rutube', url: 'https://cdn.simpleicons.org/rutube/ffffff' },
+  { label: 'Discord', url: 'https://cdn.simpleicons.org/discord/ffffff' },
+  { label: 'Twitch', url: 'https://cdn.simpleicons.org/twitch/ffffff' },
+] as const;
 
 const isValidHexColor = (value?: string | null) =>
   Boolean(value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value));
@@ -999,7 +1020,7 @@ export default function SettingsPage() {
                 settings[iconBackgroundKey] as string | null,
                 '#c51f2e',
               );
-              const galleryItems = socialIconGallery[item.key];
+              const galleryItems = [...socialIconGallery[item.key], ...universalSocialIcons];
               return (
               <div key={item.key} className="rounded-lg border border-gray-200 p-4 space-y-3">
                 <div className="text-sm font-semibold text-gray-700">{item.label}</div>
@@ -1017,6 +1038,7 @@ export default function SettingsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                       placeholder="Ссылка на иконку"
                     />
+                    <div className="text-xs text-gray-500">Можно вставить свою ссылку, в том числе внешний SVG (например, с CDN).</div>
                     <div className="flex flex-wrap gap-2">
                       {galleryItems.map((option) => (
                         <button
