@@ -29,39 +29,36 @@ const socialIconGallery: Record<SocialPlatformKey, { label: string; url: string 
   vk: [
     { label: 'VK (тёмная)', url: '/images/social/vk-dark.svg' },
     { label: 'VK (светлая)', url: '/images/social/vk-light.svg' },
-    { label: 'VK (Simple Icons)', url: 'https://cdn.simpleicons.org/vk/ffffff' },
+    { label: 'VK (Simple Icons, white)', url: 'https://cdn.simpleicons.org/vk/ffffff' },
     { label: 'VK (Simple Icons, dark)', url: 'https://cdn.simpleicons.org/vk/1E293B' },
+    { label: 'VK (Simple Icons, brand)', url: 'https://cdn.simpleicons.org/vk/0077FF' },
+    { label: 'VK (Simple Icons, black)', url: 'https://cdn.simpleicons.org/vk/111111' },
   ],
   youtube: [
     { label: 'YouTube (тёмная)', url: '/images/social/youtube-dark.svg' },
     { label: 'YouTube (светлая)', url: '/images/social/youtube-light.svg' },
-    { label: 'YouTube (Simple Icons)', url: 'https://cdn.simpleicons.org/youtube/ffffff' },
+    { label: 'YouTube (Simple Icons, white)', url: 'https://cdn.simpleicons.org/youtube/ffffff' },
     { label: 'YouTube (Simple Icons, red)', url: 'https://cdn.simpleicons.org/youtube/FF0000' },
+    { label: 'YouTube (Simple Icons, dark)', url: 'https://cdn.simpleicons.org/youtube/111827' },
+    { label: 'YouTube (Simple Icons, soft red)', url: 'https://cdn.simpleicons.org/youtube/E53935' },
   ],
   instagram: [
     { label: 'Instagram (тёмная)', url: '/images/social/instagram-dark.svg' },
     { label: 'Instagram (светлая)', url: '/images/social/instagram-light.svg' },
-    { label: 'Instagram (Simple Icons)', url: 'https://cdn.simpleicons.org/instagram/ffffff' },
+    { label: 'Instagram (Simple Icons, white)', url: 'https://cdn.simpleicons.org/instagram/ffffff' },
     { label: 'Instagram (Simple Icons, pink)', url: 'https://cdn.simpleicons.org/instagram/E4405F' },
+    { label: 'Instagram (Simple Icons, purple)', url: 'https://cdn.simpleicons.org/instagram/C13584' },
+    { label: 'Instagram (Simple Icons, dark)', url: 'https://cdn.simpleicons.org/instagram/1E293B' },
   ],
   telegram: [
     { label: 'Telegram (тёмная)', url: '/images/social/telegram-dark.svg' },
     { label: 'Telegram (светлая)', url: '/images/social/telegram-light.svg' },
-    { label: 'Telegram (Simple Icons)', url: 'https://cdn.simpleicons.org/telegram/ffffff' },
+    { label: 'Telegram (Simple Icons, white)', url: 'https://cdn.simpleicons.org/telegram/ffffff' },
     { label: 'Telegram (Simple Icons, blue)', url: 'https://cdn.simpleicons.org/telegram/26A5E4' },
+    { label: 'Telegram (Simple Icons, deep blue)', url: 'https://cdn.simpleicons.org/telegram/229ED9' },
+    { label: 'Telegram (Simple Icons, dark)', url: 'https://cdn.simpleicons.org/telegram/1F2937' },
   ],
 };
-
-const universalSocialIcons = [
-  { label: 'WhatsApp', url: 'https://cdn.simpleicons.org/whatsapp/ffffff' },
-  { label: 'TikTok', url: 'https://cdn.simpleicons.org/tiktok/ffffff' },
-  { label: 'Facebook', url: 'https://cdn.simpleicons.org/facebook/ffffff' },
-  { label: 'X (Twitter)', url: 'https://cdn.simpleicons.org/x/ffffff' },
-  { label: 'Odnoklassniki', url: 'https://cdn.simpleicons.org/odnoklassniki/ffffff' },
-  { label: 'Rutube', url: 'https://cdn.simpleicons.org/rutube/ffffff' },
-  { label: 'Discord', url: 'https://cdn.simpleicons.org/discord/ffffff' },
-  { label: 'Twitch', url: 'https://cdn.simpleicons.org/twitch/ffffff' },
-] as const;
 
 const isValidHexColor = (value?: string | null) =>
   Boolean(value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value));
@@ -1020,7 +1017,7 @@ export default function SettingsPage() {
                 settings[iconBackgroundKey] as string | null,
                 '#c51f2e',
               );
-              const galleryItems = [...socialIconGallery[item.key], ...universalSocialIcons];
+              const galleryItems = socialIconGallery[item.key];
               return (
               <div key={item.key} className="rounded-lg border border-gray-200 p-4 space-y-3">
                 <div className="text-sm font-semibold text-gray-700">{item.label}</div>
